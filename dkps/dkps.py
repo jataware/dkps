@@ -7,48 +7,47 @@ from .utils import knn_graph
 
 
 class DataKernelPerspectiveSpace:
-    def __init__(self,
-                response_distribution_fn=np.mean,
-                response_distribution_axis=1,
-                metric_cmds='euclidean',
-                n_components_cmds=None,
-                n_elbows_cmds=2,
-                ):
-        self.response_distribution_fn=response_distribution_fn
-        self.response_distribution_axis=response_distribution_axis
-        self.metric_cmds=metric_cmds
-        self.n_components_cmds=n_components_cmds
-        self.n_elbows_cmds=n_elbows_cmds
-
-
-    def fit_transform(self, X):
-        if isinstance(X, dict):
-            self.model_list = list(X.keys())
-            X = list(X.values())
-
+    def __init__(
+            self,
+            response_distribution_fn=np.mean,
+            response_distribution_axis=1,
+            metric_cmds='euclidean',
+            n_components_cmds=None,
+            n_elbows_cmds=2,
+        ):
         
-        if isinstance(X, (list, np.ndarray)):
-            self.model_list = None
-            n_queries = len(X[0])
-            for i,x in enumerate(X):
-                x = np.array(x)
-                assert x.ndim >= 2
-                assert x.shape[0] == n_queries
+        self.response_distribution_fn   = response_distribution_fn
+        self.response_distribution_axis = response_distribution_axis
+        self.metric_cmds                = metric_cmds
+        self.n_components_cmds          = n_components_cmds
+        self.n_elbows_cmds              = n_elbows_cmds
 
-                X[i]=self.response_distribution_fn(x, self.response_distribution_axis)
-                    
+
+    def fit_transform(self, data, return_dict=True):
+        """
+        data: dict {model_name: np.array(n_queries, n_replicates, embedding_dim)}
+        """
+        
+        # qc checks
+        assert isinstance(data, dict),                                  'data must be a dict'
+        assert all([isinstance(x, np.ndarray) for x in data.values()]), 'all values must be numpy arrays'
+        assert all([x.ndim == 3 for x in data.values()]),               'all arrays must be 3D - np.array(n_queries, n_replicates, embedding_dim)'
+        assert len(set([x.shape for x in data.values()])) == 1,         'all arrays must have the same shape'
+
+        # aggregate over replicates -> (n_models, n_queries, embedding_dim)
+        X = np.stack([self.response_distribution_fn(v, axis=self.response_distribution_axis) for k,v in data.items()])
+        n_models, n_queries, embedding_dim = X.shape
+        
+        # flatten -> (n_models, n_queries * embedding_dim)
+        X_flat = X.reshape(len(X), -1)
+
+        dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
+        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds).fit_transform(dist_matrix)
+        
+        if return_dict:
+            return {key: cmds_embds[i] for i, key in enumerate(data.keys())}
         else:
-            raise ValueError('X must be a dict of array-like values or array-like with elements with at least 2 dimensions')
-
-        X = np.array(X)
-        #- this only works in cases where representation of models are matrices
-        dist_matrix = squareform(pdist(X.reshape(len(X), -1), metric=self.metric_cmds)) / np.sqrt(n_queries)
-        cmds_embds = ClassicalMDS(self.n_components_cmds, self.n_elbows_cmds).fit_transform(dist_matrix)
-        
-        if self.model_list:
-            return {key: cmds_embds[i] for i, key in enumerate(self.model_list)}
-        
-        return cmds_embds
+            return cmds_embds
 
 
 class DataKernelFunctionalSpace:
