@@ -138,7 +138,7 @@ def run_one(df_sample, n_samples, mode, seed):
         df_test  = df_sample[df_sample.model == target_model]
         
         # compute DKPS embeddings + get labels
-        P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2)
+        P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2, dissimilarity="precomputed") # [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TESTING]
         X_train = np.row_stack([P[m] for m in train_models])
         X_test  = np.row_stack([P[target_model]])
         y_train = np.array([y_acts[m] for m in train_models])
@@ -207,6 +207,7 @@ df_avg = df_res.groupby(['mode', 'n_samples']).agg({
     'e_knn_dkps2' : 'median',
 }).reset_index()
 
+breakpoint()
 
 # --
 # Plot

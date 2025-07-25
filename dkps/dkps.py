@@ -14,6 +14,7 @@ class DataKernelPerspectiveSpace:
             metric_cmds='euclidean',
             n_components_cmds=None,
             n_elbows_cmds=2,
+            dissimilarity="euclidean",
         ):
         
         self.response_distribution_fn   = response_distribution_fn
@@ -21,7 +22,7 @@ class DataKernelPerspectiveSpace:
         self.metric_cmds                = metric_cmds
         self.n_components_cmds          = n_components_cmds
         self.n_elbows_cmds              = n_elbows_cmds
-
+        self.dissimilarity              = dissimilarity
 
     def fit_transform(self, data, return_dict=True):
         """
@@ -42,7 +43,7 @@ class DataKernelPerspectiveSpace:
         X_flat = X.reshape(len(X), -1)
 
         dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
-        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds).fit_transform(dist_matrix)
+        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
         
         if return_dict:
             return {key: cmds_embds[i] for i, key in enumerate(data.keys())}
