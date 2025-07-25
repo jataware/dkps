@@ -126,31 +126,34 @@ def run_one(df_sample, n_samples, mode, seed):
     model_names = df_sample.model.unique()
     for target_model in model_names:
         
+        # split data
+        assert mode in ['model', 'family']
         if mode == 'model':
             train_models = np.array([m for m in model_names if m != target_model])
         elif mode == 'family':
-            train_models = np.array([m for m in model_names if model2family(m) != model2family(target_model)])
-        else:
-            raise ValueError(f'mode must be one of "model" or "family", got {mode}')
+            target_family = model2family(target_model)
+            train_models  = np.array([m for m in model_names if model2family(m) != target_family])
         
         df_train = df_sample[df_sample.model.isin(train_models)]
         df_test  = df_sample[df_sample.model == target_model]
-        y_train  = np.array([y_acts[m] for m in train_models])
-        y_test   = y_acts[target_model]
         
-        p_sample = df_test.score.mean()
-        
-        # linreg on embeddings
+        # compute DKPS embeddings + get labels
         P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2)
-        D_train = np.row_stack([P[m] for m in train_models])
-        D_test  = np.row_stack([P[target_model]])
+        X_train = np.row_stack([P[m] for m in train_models])
+        X_test  = np.row_stack([P[target_model]])
+        y_train = np.array([y_acts[m] for m in train_models])
+        y_test  = y_acts[target_model]
+
+        # average score over the `n_samples` evaluated
+        p_sample = df_test.score.mean()
+
+        # linear regression on DKPS embeddings        
+        lr         = LinearRegression().fit(X_train, y_train)
+        p_lr_dkps2 = float(lr.predict(X_test)[0])
         
-        lr         = LinearRegression().fit(D_train, y_train)
-        p_lr_dkps2 = float(lr.predict(D_test)[0])
-        
-        # knn on embeddings
-        knn         = KNeighborsRegressor(n_neighbors=3).fit(D_train, y_train)
-        p_knn_dkps2 = float(knn.predict(D_test)[0])
+        # knn on DKPS embeddings
+        knn         = KNeighborsRegressor(n_neighbors=3).fit(X_train, y_train)
+        p_knn_dkps2 = float(knn.predict(X_test)[0])
         
         out.append({
             "seed"         : seed,
