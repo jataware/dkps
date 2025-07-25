@@ -5,6 +5,7 @@
 
 import os
 import pickle
+from turtle import mode
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -73,16 +74,13 @@ model_names = list(embedding_dict.keys())
 
 dkps = DataKernelPerspectiveSpace().fit_transform(embedding_dict, return_dict=False)
 
+breakpoint()
+
 # --
 # Plotting
 
 model2score = df.groupby('model').score.mean().to_dict()
 _ = plt.scatter(dkps[:, 0], dkps[:,1], c=[model2score[xx] for xx in model_names], cmap='viridis')
-
-# for i, model_name in enumerate(model_names):
-#     _ = plt.annotate(
-#         model_name,(dkps[i, 0], dkps[i, 1]), ha='center', fontsize=8
-#     )
 
 _ = plt.xticks([])
 _ = plt.yticks([])
@@ -113,7 +111,6 @@ z = z - z.mean()
 z = z / z.std()
 
 _ = plt.scatter(z, [model2score[xx] for xx in model_names], c=dkps[:,0], cmap='inferno')
-# _ = plt.xlim(np.percentile(z, 2), z.max() + 0.1)
 _ = plt.xlabel('DKPS-1 (flipped, z-scored)')
 _ = plt.ylabel('BLEU-4')
 _ = plt.colorbar()
@@ -123,22 +120,84 @@ _ = plt.close()
 # --
 # Efficient estimation
 
+breakpoint()
+
 from scipy.stats import spearmanr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_predict, LeaveOneOut
+from sklearn.neighbors import KNeighborsRegressor
 
-y    = np.array([model2score[xx] for xx in model_names])
-uids = df.instance_id.unique()
+model_names = list(embedding_dict.keys())
+instance_scores = df.pivot(index='model', columns='instance_id', values='score')
+assert all(instance_scores.index.values == list(embedding_dict.keys()))
+instance_ids    = instance_scores.columns.values
+model_scores    = instance_scores.mean(axis=1).values
 
-def run_one(iter, n_records):
-    rng   = np.random.default_rng(123 + iter)
-    idxs_ = rng.choice(len(uids), size=n_records, replace=False)
-    uids_ = uids[idxs_]
+
+def compute_metrics(act, pred, prefix=None):
+    out = {
+        "err" : np.mean(np.abs(pred - act) / act),
+        "spr" : spearmanr(pred, act)[0],
+    }
+
+    if prefix is not None:
+        out = {f"{prefix}_{k}" : v for k,v in out.items()}
+
+    return out
+
+def get_splits(model_names, mode='loo'):
+    if mode == 'loo':
+        sels = LeaveOneOut().split(np.arange(len(model_names)))
+        sels = list([sel[0] for sel in sels])
+    
+    elif mode == 'lgo':
+        groups = [m.split('_')[0] for m in model_names]
+        
+        sels = []
+        for group in groups:
+            sel = np.array([i for i, g in enumerate(groups) if g != group])
+            sels.append(sel)
+            
+    return sels
+
+def predict_null(model_names, y, feats, uids, mode='loo'):
+    sels = get_splits(model_names, mode=mode)
+    return np.array([y[sel].mean() for sel in sels])
+
+def predict_mu(model_names, y, feats, uids, mode='loo'):
+    sels = get_splits(model_names, mode=mode)
+    return np.array([y[sel].mean() for sel in sels])
+
+
+def predict_rf():
+    pass
+
+def predict_lr():
+    pass
+
+def predict_knn():
+    pass
+
+
+
+
+def run_one(model_names, n_records, seed=None):
+    rng = np.random.default_rng(123 + seed) if seed else np.random
+    
+    idxs_sample           = rng.choice(len(uids), size=n_records, replace=False)
+    uids_sample           = uids[idxs_sample]
+    embedding_dict_sample = {k:v[idxs_sample] for k,v in embedding_dict.items()}
+    
+    model_names
+    y
     
     # predictions
-    dkps2  = DataKernelPerspectiveSpace(n_components_cmds=2).fit_transform({k:v[idxs_] for k,v in embedding_dict.items()}, return_dict=False)
-    dkps8  = DataKernelPerspectiveSpace(n_components_cmds=8).fit_transform({k:v[idxs_] for k,v in embedding_dict.items()}, return_dict=False)
+    all_feats = {
+        "dkps_2" : DataKernelPerspectiveSpace(n_components_cmds=2).fit_transform(embedding_dict_sample, return_dict=True),
+        "dkps_8" : DataKernelPerspectiveSpace(n_components_cmds=8).fit_transform(embedding_dict_sample, return_dict=True),
+    }
+
     
     rf2    = RandomForestRegressor(n_estimators=512, oob_score=True, random_state=234 + iter).fit(dkps2, y)    
     rf8    = RandomForestRegressor(n_estimators=512, oob_score=True, random_state=234 + iter).fit(dkps8, y)
@@ -146,17 +205,23 @@ def run_one(iter, n_records):
     p_lr2  = cross_val_predict(LinearRegression(), dkps2, y, cv=LeaveOneOut())
     p_lr8  = cross_val_predict(LinearRegression(), dkps8, y, cv=LeaveOneOut())
     
+    p_knn2  = cross_val_predict(KNeighborsRegressor(n_neighbors=1), dkps2, y, cv=LeaveOneOut())
+    p_knn8  = cross_val_predict(KNeighborsRegressor(n_neighbors=1), dkps8, y, cv=LeaveOneOut())
+    
     # mu - average of scores for each model
-    p_mu = df[df.instance_id.isin(uids_)].groupby('model').score.mean()
+    p_mu = df[df.instance_id.isin(uids_sample)].groupby('model').score.mean()
     assert all(p_mu.index == model_names)
     
     p_null_f = y.mean() # slight cheat - should be doing LOO
+    
     
     # metrics
     e_rf2_dkps = np.mean(np.abs(rf2.oob_prediction_ - y) / y)
     e_rf8_dkps = np.mean(np.abs(rf8.oob_prediction_ - y) / y)
     e_lr2_dkps = np.mean(np.abs(p_lr2 - y) / y)
     e_lr8_dkps = np.mean(np.abs(p_lr8 - y) / y)
+    e_knn2_dkps = np.mean(np.abs(p_knn2 - y) / y)
+    e_knn8_dkps = np.mean(np.abs(p_knn8 - y) / y)
     e_mu       = np.mean(np.abs(p_mu - y) / y)
     e_null     = np.mean(np.abs(p_null_f - y) / y)
     
@@ -164,6 +229,8 @@ def run_one(iter, n_records):
     r_rf8_dkps = spearmanr(rf8.oob_prediction_, y)[0]
     r_lr2_dkps = spearmanr(p_lr2, y)[0]
     r_lr8_dkps = spearmanr(p_lr8, y)[0]
+    r_knn2_dkps = spearmanr(p_knn2, y)[0]
+    r_knn8_dkps = spearmanr(p_knn8, y)[0]
     r_mu       = spearmanr(p_mu, y)[0]
     r_null      = 0
     
@@ -175,6 +242,8 @@ def run_one(iter, n_records):
         "e_rf8_dkps" : e_rf8_dkps,
         "e_lr2_dkps" : e_lr2_dkps,
         "e_lr8_dkps" : e_lr8_dkps,
+        "e_knn2_dkps" : e_knn2_dkps,
+        "e_knn8_dkps" : e_knn8_dkps,
         "e_mu"       : e_mu,
         "e_null"     : e_null,
         
@@ -182,12 +251,11 @@ def run_one(iter, n_records):
         "r_rf8_dkps" : r_rf8_dkps,
         "r_lr2_dkps" : r_lr2_dkps,
         "r_lr8_dkps" : r_lr8_dkps,
+        "r_knn2_dkps" : r_knn2_dkps,
+        "r_knn8_dkps" : r_knn8_dkps,
         "r_mu"       : r_mu,
         "r_null"     : r_null,
     }
-
-
-breakpoint()
 
 jobs = []
 for iter in range(10):
@@ -230,6 +298,3 @@ _ = plt.xscale('log')
 # _ = plt.yscale('log')
 _ = plt.savefig('res1.png')
 _ = plt.close()
-
-
-breakpoint()
