@@ -46,8 +46,8 @@ df['family'] = df.model.apply(model2family)
 # QC
 
 print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
-instance_ids = df.groupby('model').instance_id.apply(list)
-assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(instance_ids))]), 'instance_ids are not the same for each model'
+_instance_ids = df.groupby('model').instance_id.apply(list)
+assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
 
 # --
 # Get embeddings
@@ -63,8 +63,6 @@ if DROP_OUTLIERS:
     print('dropping', len(bad_models), 'models')
     df           = df[~df.model.isin(bad_models)].reset_index(drop=True)
     print('ending with', len(set(df.model.values)), 'models')
-
-breakpoint()
 
 # --
 # Run DKPS
@@ -85,27 +83,6 @@ def dkps_df(df, **kwargs):
     # >>
     
     return DataKernelPerspectiveSpace(**kwargs).fit_transform(embedding_dict, return_dict=True)
-
-feats = dkps_df(df, n_components_cmds=2)
-
-
-# sanity check
-# model2score = df.groupby('model').score.mean().to_dict()
-# _ = plt.scatter(
-#     [feats[k][0] for k in model2score.keys()], 
-#     [feats[k][1] for k in model2score.keys()], 
-#     c=[model2score[xx] for xx in model2score.keys()], 
-#     cmap='viridis'
-# )
-# _ = plt.xticks([])
-# _ = plt.yticks([])
-# _ = plt.xlabel('DKPS-0')
-# _ = plt.ylabel('DKPS-1')
-# _ = plt.grid('both', alpha=0.25, c='gray')
-# _ = plt.title(f'DKPS - {dataset}')
-# _ = plt.colorbar()
-# _ = plt.savefig('model-tmp.png')
-# _ = plt.close()
 
 # --
 # Efficient estimation
@@ -143,54 +120,47 @@ def predict_null(df, mode='model'):
     return out
 
 
-def predict_lr_dkps(feats, target, mode='model'):
+def predict_lr_dkps(feats, target_model, train_models, y_acts):
     """ linear regression on DKPS features - leave-one-out over model OR family """
     assert mode in ['model', 'family']
     
-    out = {}
-    for model in feats.keys():
-        if mode == 'model':
-            train_models = [m for m in feats.keys() if m != model]
-        elif mode == 'family':
-            train_models = [m for m in feats.keys() if model2family(m) != model2family(model)]
+    X_train = np.row_stack([feats[m] for m in train_models])
+    y_train = np.array([y_acts[m] for m in train_models])
+    lr      = LinearRegression().fit(X_train, y_train)
+    pred    = lr.predict(feats[target_model][None])
         
-        X_train = np.row_stack([feats[m] for m in train_models])
-        y_train = np.array([target[m] for m in train_models])
-        lr      = LinearRegression().fit(X_train, y_train)
-        pred    = lr.predict(feats[model][None])
-        
-        out[model] = float(pred[0])
-    
-    return out
+    return float(pred[0])
 
 
-def run_one(df_sample, target, n_records, mode='model', seed=None):    
+def run_one(df_sample, target_model, train_models, y_acts, n_records, seed=None):    
     # predictions
     all_feats = {
         "dkps_2" : dkps_df(df_sample, n_components_cmds=2),
         "dkps_8" : dkps_df(df_sample, n_components_cmds=8),
     }
     
+    y_act = y_acts[target_model]
+    
     # pred_sample - average of scores on the sampled instances
-    pred_sample = df_sample.groupby('model').score.mean().to_dict()
+    pred_sample = df_sample[df_sample.model == target_model].score.mean()
     
     # pred_lr{k} - linear regression on dkps_{k}
-    pred_lr2    = predict_lr_dkps(all_feats['dkps_2'], target, mode=mode)
-    pred_lr8    = predict_lr_dkps(all_feats['dkps_8'], target, mode=mode)
+    pred_lr2    = predict_lr_dkps(all_feats['dkps_2'], target_model, train_models, y_acts)
+    pred_lr8    = predict_lr_dkps(all_feats['dkps_8'], target_model, train_models, y_acts)
     
     return {
-        "seed"      : seed,
-        "n_records" : n_records,
-        "mode"      : mode,
+        "seed"         : seed,
+        "n_records"    : n_records,
+        "target_model" : target_model,
         
-        **compute_metrics(pred_sample, target, suffix='sample'),
-        **compute_metrics(pred_lr2, target,    suffix='lr2'),
-        **compute_metrics(pred_lr8, target,    suffix='lr8'),
+        "err_sample"   : float(np.abs(pred_sample - y_act) / y_act),
+        "err_lr2"      : float(np.abs(pred_lr2 - y_act) / y_act),
+        "err_lr8"      : float(np.abs(pred_lr8 - y_act) / y_act),
     }
 
 
 # act - actual performance on entire benchmark
-target = df.groupby('model').score.mean().to_dict()
+y_acts = df.groupby('model').score.mean().to_dict()
 
 # pred_null - average of scores on all instances for other models / families
 pred_null = {
@@ -200,6 +170,7 @@ pred_null = {
 
 np.random.seed(123)
 
+model_names  = df.model.unique()
 instance_ids = df.instance_id.unique()
 
 jobs = []
@@ -208,7 +179,25 @@ for seed in trange(10):
         for mode in ['model', 'family']:
             instance_ids_sample = np.random.choice(instance_ids, size=n_records, replace=False)
             df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-            jobs.append(delayed(run_one)(df_sample=df_sample, target=target, n_records=n_records, seed=seed, mode=mode))
+            
+            target_model = np.random.choice(model_names, size=1, replace=False)
+            
+            if mode == 'model':
+                train_models = [m for m in model_names if m != target_model]
+            elif mode == 'family':
+                train_models = [m for m in model_names if model2family(m) != model2family(target_model)]
+            
+            df_sample_train = df[(df.model == target_model) | df.model.isin(train_models)]
+            
+            jobs.append(delayed(run_one)(
+                df_sample     = df_sample,
+                target_model  = target_model,
+                train_models  = train_models,
+                
+                y_acts        = y_acts,
+                n_records     = n_records,
+                seed          = seed,
+            ))
 
 res    = Parallel(n_jobs=-1, verbose=10)(jobs)
 df_res = pd.DataFrame(res)
