@@ -4,71 +4,29 @@
 """
 
 import os
-from tkinter.constants import FALSE
 import numpy as np
 import pandas as pd
-from tqdm import trange
+from tqdm import trange, tqdm
 import matplotlib.pyplot as plt
 from rich import print as rprint
-from tqdm import tqdm
-from scipy.stats import spearmanr
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import cross_val_predict, LeaveOneOut
 from sklearn.neighbors import KNeighborsRegressor
-
 from joblib import Parallel, delayed
 
 from dkps.dkps import DataKernelPerspectiveSpace
 from dkps.embed import embed_google
 
 # --
-# Config
-
-dataset    = 'wmt_14'
-FIG_PATH   = f'fig-{dataset}.png'
-USE_CACHE  = True
-CACHE_PATH = f'.cache/{dataset}/embedding_dict.pkl'
-os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+# Helpers
 
 def model2family(model):
     return model.split('_')[0]
 
-# --
-# IO
 
-rprint('[blue]loading data ...[/blue]')
+def rel_err(act, pred):
+    return np.abs(pred - act) / act
 
-df = pd.read_csv('wmt_14.tsv', sep='\t')
-df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
-
-df['family'] = df.model.apply(model2family)
-
-# --
-# QC
-
-print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
-_instance_ids = df.groupby('model').instance_id.apply(list)
-assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
-
-# --
-# Get embeddings
-
-df['embedding'] = list(embed_google([str(xx) for xx in df.response.values]))
-breakpoint()
-
-# DROP_OUTLIERS = False
-# if DROP_OUTLIERS:
-#     print('starting with', len(set(df.model.values)), 'models')
-#     model_scores = df.groupby('model').score.mean()
-#     bad_models   = model_scores[model_scores <= 0.15].index
-#     print('dropping', len(bad_models), 'models')
-#     df           = df[~df.model.isin(bad_models)].reset_index(drop=True)
-#     print('ending with', len(set(df.model.values)), 'models')
-
-# --
-# Run DKPS
-
+    
 def dkps_df(df, **kwargs):
     model_names  = df.model.unique()
     instance_ids = df.instance_id.unique()
@@ -86,10 +44,6 @@ def dkps_df(df, **kwargs):
     
     return DataKernelPerspectiveSpace(**kwargs).fit_transform(embedding_dict, return_dict=True)
 
-def ez_dkps(X_train, X_test, **kwargs):
-    dist_matrix = squareform(pdist(np.row_stack([X_train, X_test]), metric='euclidean'))
-    cmds_embds  = ClassicalMDS(**kwargs).fit_transform(dist_matrix)
-    return cmds_embds[:-1], cmds_embds[[-1]]
 
 def predict_null(df, mode='model'):
     """ average score of other models / families """
@@ -100,11 +54,54 @@ def predict_null(df, mode='model'):
         if mode == 'model':
             sel = df.model != model
         elif mode == 'family':
-            sel = df.family != model2family(model)
+            sel = df.model.apply(model2family) != model2family(model)
         
         out[model] = df.score[sel].mean()
     
     return out
+
+
+# --
+# Config
+
+dataset    = 'wmt_14'
+FIG_PATH   = f'fig-{dataset}.png'
+USE_CACHE  = True
+CACHE_PATH = f'.cache/{dataset}/embedding_dict.pkl'
+os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+
+
+# --
+# IO
+
+rprint('[blue]loading data ...[/blue]')
+
+df = pd.read_csv('wmt_14.tsv', sep='\t')
+df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
+
+# --
+# QC
+
+print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
+_instance_ids = df.groupby('model').instance_id.apply(list)
+assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
+
+# --
+# Get embeddings
+
+df['embedding'] = list(embed_google([str(xx) for xx in df.response.values]))
+
+DROP_OUTLIERS = False
+if DROP_OUTLIERS:
+    print('starting with', len(set(df.model.values)), 'models')
+    model_scores = df.groupby('model').score.mean()
+    bad_models   = model_scores[model_scores <= 0.15].index
+    print('dropping', len(bad_models), 'models')
+    df           = df[~df.model.isin(bad_models)].reset_index(drop=True)
+    print('ending with', len(set(df.model.values)), 'models')
+
+# --
+# Run
 
 model_names  = df.model.unique()
 instance_ids = df.instance_id.unique()
@@ -115,101 +112,18 @@ pred_null = {
     "family" : predict_null(df, mode='family'),
 }
 
-def rel_err(act, pred):
-    return np.abs(pred - act) / act
 
 err_null = {
-    "model"  : {model_name: rel_err(y_acts[model_name], pred_null['model'][model_name]) for model_name in model_names},
-    "family" : {model_name: rel_err(y_acts[model_name], pred_null['family'][model_name]) for model_name in model_names},
+    "model"  : {model_name: rel_err(act=y_acts[model_name], pred=pred_null['model'][model_name]) for model_name in model_names},
+    "family" : {model_name: rel_err(act=y_acts[model_name], pred=pred_null['family'][model_name]) for model_name in model_names},
 }
-
-rprint(err_null['model'])
-print(sorted(err_null['model'].values()))
-
-# --
-# Simple - DKPS w/ one example
-
-from tqdm import trange
-from scipy.spatial.distance import pdist, squareform
-from graspologic.embed import ClassicalMDS
-
-mode = 'family'
-
-out = []
-for _ in trange(32):
-    
-    instance_ids_sample = np.random.choice(instance_ids, size=1, replace=False)
-    df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-    
-    for target_model in model_names:
-        
-        if mode == 'model':
-            train_models = np.array([m for m in model_names if m != target_model])
-        elif mode == 'family':
-            train_models = np.array([m for m in model_names if model2family(m) != model2family(target_model)])
-        else:
-            raise ValueError(f'mode must be one of "model" or "family", got {mode}')
-        
-        df_train = df_sample[df_sample.model.isin(train_models)]
-        df_test  = df_sample[df_sample.model == target_model]
-        
-        X_train = np.row_stack(df_train.embedding.values)
-        X_test  = np.row_stack(df_test.embedding.values)
-        y_train = np.array([y_acts[m] for m in df_train.model.values])
-        
-        p_sample = df_test.score.mean()
-        
-        # knn on features
-        knn    = KNeighborsRegressor(n_neighbors=1, metric='cosine').fit(X_train, y_train)
-        p_orig = float(knn.predict(X_test)[0])
-        
-        # lr on embeddings
-        P_train, P_test = ez_dkps(X_train, X_test, n_components=2, n_elbows=None)
-        lr              = LinearRegression().fit(P_train, y_train)
-        p_lr_dkps2      = float(lr.predict(P_test)[0])
-        
-        out.append({
-            "target_model" : target_model,
-            "y_act"        : y_acts[target_model],
-            "p_null"       : pred_null[mode][target_model],
-            "p_sample"     : p_sample,
-            "p_orig"       : p_orig,
-            "p_dkps2"      : p_lr_dkps2,
-        })
-
-df1 = pd.DataFrame(out)
-
-for c in df1.columns:
-    if 'p_' in c:
-        df1[c.replace('p_', 'e_')] = rel_err(df1.y_act, df1[c])
-
-
-df1['e_null'].mean(), df1['e_sample'].mean(), df1['e_orig'].mean(), df1['e_dkps2'].mean()
-
-z = df1.groupby('target_model').agg({
-    'y_act'   : 'mean',
-    'p_dkps2' : 'mean',
-})
-
-_ = plt.scatter(z.y_act, z.p_dkps2)
-plt.show()
-
-# --
 
 # --
 # Simple - DKPS w/ more than one example
 
-from tqdm import trange
-from scipy.spatial.distance import pdist, squareform
-from graspologic.embed import ClassicalMDS
-
-
-def run_one(df, n_samples, mode, seed):
-    rng = np.random.default_rng(seed)
-    
-    instance_ids_sample = rng.choice(instance_ids, size=2, replace=False)
-    df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-    
+def run_one(df_sample, n_samples, mode, seed):
+    out = []
+    model_names = df_sample.model.unique()
     for target_model in model_names:
         
         if mode == 'model':
@@ -224,15 +138,21 @@ def run_one(df, n_samples, mode, seed):
         y_train  = np.array([y_acts[m] for m in train_models])
         y_test   = y_acts[target_model]
         
-        # lr on embeddings
+        p_sample = df_test.score.mean()
+        
+        # linreg on embeddings
         P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2)
-        P_train = np.row_stack([P[m] for m in train_models])
-        P_test  = np.row_stack([P[target_model]])
+        D_train = np.row_stack([P[m] for m in train_models])
+        D_test  = np.row_stack([P[target_model]])
         
-        lr              = LinearRegression().fit(P_train, y_train)
-        p_lr_dkps2      = float(lr.predict(P_test)[0])
+        lr         = LinearRegression().fit(D_train, y_train)
+        p_lr_dkps2 = float(lr.predict(D_test)[0])
         
-        return {
+        # knn on embeddings
+        knn         = KNeighborsRegressor(n_neighbors=3).fit(D_train, y_train)
+        p_knn_dkps2 = float(knn.predict(D_test)[0])
+        
+        out.append({
             "seed"         : seed,
             "n_samples"    : n_samples,
             "mode"         : mode,
@@ -241,75 +161,79 @@ def run_one(df, n_samples, mode, seed):
             "y_act"        : y_test,
             "p_null"       : pred_null[mode][target_model],
             "p_sample"     : p_sample,
-            # "p_orig"       : p_orig,
             "p_dkps2"      : p_lr_dkps2,
-        }
+            "p_knn_dkps2"  : p_knn_dkps2,
+        })
+    
+    return out
+
 
 jobs = []
-for _ in trange(32):
-    jobs.append(delayed(run_one)(df, 2, 'family'))
-out = Parallel(n_jobs=-1)(jobs)
+for iter in trange(32):
+    rng = np.random.default_rng(iter)
+    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
+        instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+        df_sample           = df[df.instance_id.isin(instance_ids_sample)]
+        
+        jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
+res = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 
-mode = 'family'
+df_res = pd.DataFrame(res)
 
-out = []
-for _ in trange(32):
-    
-
-
-df1 = pd.DataFrame(out)
-
-for c in df1.columns:
+for c in df_res.columns:
     if 'p_' in c:
-        df1[c.replace('p_', 'e_')] = rel_err(df1.y_act, df1[c])
+        df_res[c.replace('p_', 'e_')] = rel_err(df_res.y_act, df_res[c])
 
 
-rprint(df1['e_null'].mean(), df1['e_sample'].mean(), df1['e_dkps2'].mean())
+df_per_model = df_res.groupby(['target_model', 'mode', 'n_samples']).agg({
+    'y_act'   : 'mean', # noop
+    'e_null'  : 'mean',
+    'e_sample': 'mean',
+    'e_dkps2' : 'mean',
+    'e_knn_dkps2' : 'mean',
+}).reset_index()
 
-z = df1.groupby('target_model').agg({
-    'y_act'   : 'mean',
-    'p_dkps2' : 'mean',
-})
-
-_ = plt.scatter(z.y_act, z.p_dkps2)
-plt.show()
-
-
-
-# --
-
-def plot_one(df_avg, pred_null, mode='model'):
-    # plot error
-    sub = df_avg[df_avg['mode'] == mode]
-    for c in sub.columns:
-        if 'err_' in c:
-            # _ = plt.scatter(df_res.n_records, df_res[c], alpha=0.25, s=8)
-            _ = plt.plot(sub.n_records, sub[c], label=f'{c}')
-    
-    err_null = pred_null[mode][target_model]
-    err_null = np.abs(err_null - y_acts[target_model]) / y_acts[target_model]
-    
-    _ = plt.axhline(err_null, c='gray', ls='--', label='null')
-    _ = plt.legend()
-    _ = plt.xlabel('n_records')
-    _ = plt.ylabel('mean(abs(pred - y) / y)')
-    _ = plt.title(f'DKPS vs. null - LOO {mode}')
-    _ = plt.xscale('log')
-    _ = plt.grid('both', alpha=0.25, c='gray')
-    _ = plt.savefig(f'err-{mode}.png')
-    _ = plt.close()
+df_avg = df_res.groupby(['mode', 'n_samples']).agg({
+    'y_act'   : 'median', # noop
+    'e_null'  : 'median',
+    'e_sample': 'median',
+    'e_dkps2' : 'median',
+    'e_knn_dkps2' : 'median',
+}).reset_index()
 
 
-plot_one(df_avg, pred_null, mode='model')
-plot_one(df_avg, pred_null, mode='family')
+_ = plt.plot(df_avg.n_samples, df_avg.e_null, label='null')
+_ = plt.plot(df_avg.n_samples, df_avg.e_sample, label='sample')
+_ = plt.plot(df_avg.n_samples, df_avg.e_dkps2, label='dkps2')
+_ = plt.plot(df_avg.n_samples, df_avg.e_knn_dkps2, label='knn')
+_ = plt.legend()
+_ = plt.grid('both', alpha=0.25, c='gray')
+_ = plt.xscale('log')
+_ = plt.savefig('err.png')
+_ = plt.close()
 
-z = df_avg.groupby('n_records').apply(lambda x: x[x['mode'] == 'family'].err_lr2.iloc[0] - x[x['mode'] == 'model'].err_lr2.iloc[0])
-z.values
 
-# !! This is probably wrong - models in the family should be excluded from DKPS as well.
+df_per_model['dkps2_gain']  = df_per_model.e_dkps2 - df_per_model.e_null
+df_per_model['sample_gain'] = df_per_model.e_sample - df_per_model.e_null
+df_per_model['knn_gain']    = df_per_model.e_knn_dkps2 - df_per_model.e_null
+
+for model in model_names:
+    sub = df_per_model[df_per_model.target_model == model]
+    _ = plt.plot(sub.n_samples, sub.dkps2_gain, c='red', alpha=0.1)
+    _ = plt.plot(sub.n_samples, sub.sample_gain, c='blue', alpha=0.1)
+    _ = plt.plot(sub.n_samples, sub.knn_gain, c='green', alpha=0.1)
 
 
+_ = plt.plot(df_per_model.groupby('n_samples').dkps2_gain.mean(), label='dkps2', c='red', linewidth=5)
+_ = plt.plot(df_per_model.groupby('n_samples').sample_gain.mean(), label='sample', c='blue', linewidth=5)
+_ = plt.plot(df_per_model.groupby('n_samples').knn_gain.mean(), label='knn', c='green', linewidth=5)
 
-# if family - exclude all other models in family from _everything_
-# if model  - 
+_ = plt.legend()
+_ = plt.ylim(-0.75, 0.75)
+# _ = plt.ylim(-0.1, 0.1)
+_ = plt.axhline(0, c='black')
+_ = plt.grid('both', alpha=0.25, c='gray')
+_ = plt.xscale('log')
+_ = plt.savefig(f'err_by_model.png')
+_ = plt.close()
