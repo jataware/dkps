@@ -107,15 +107,13 @@ model_names  = df.model.unique()
 instance_ids = df.instance_id.unique()
 y_acts       = df.groupby('model').score.mean().to_dict()
 
-pred_null = {
-    "model"  : predict_null(df, mode='model'),
-    "family" : predict_null(df, mode='family'),
-}
+modes = ['model', 'family']
 
-
-err_null = {
-    "model"  : {model_name: rel_err(act=y_acts[model_name], pred=pred_null['model'][model_name]) for model_name in model_names},
-    "family" : {model_name: rel_err(act=y_acts[model_name], pred=pred_null['family'][model_name]) for model_name in model_names},
+pred_null = {mode: predict_null(df, mode=mode) for mode in modes}
+err_null  = {
+    mode : {
+        model_name: rel_err(act=y_acts[model_name], pred=pred_null[mode][model_name]) for model_name in model_names
+    } for mode in modes
 }
 
 # --
@@ -138,7 +136,7 @@ def run_one(df_sample, n_samples, mode, seed):
         df_test  = df_sample[df_sample.model == target_model]
         
         # compute DKPS embeddings + get labels
-        P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2, dissimilarity="precomputed") # [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TESTING]
+        P       = dkps_df(pd.concat([df_train, df_test]).reset_index(drop=True), n_components_cmds=2, dissimilarity="euclidean") # [!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TESTING]
         X_train = np.row_stack([P[m] for m in train_models])
         X_test  = np.row_stack([P[target_model]])
         y_train = np.array([y_acts[m] for m in train_models])
@@ -220,7 +218,7 @@ _ = plt.plot(df_avg.n_samples, df_avg.e_knn_dkps2, label='knn')
 _ = plt.legend()
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.xscale('log')
-_ = plt.savefig('err.png')
+_ = plt.savefig('err2.png')
 _ = plt.close()
 
 
@@ -244,5 +242,5 @@ _ = plt.ylim(-0.75, 0.75)
 _ = plt.axhline(0, c='black')
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.xscale('log')
-_ = plt.savefig(f'err_by_model.png')
+_ = plt.savefig(f'err_by_model2.png')
 _ = plt.close()
