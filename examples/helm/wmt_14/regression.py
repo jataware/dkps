@@ -55,16 +55,16 @@ assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_i
 # Get embeddings
 
 df['embedding'] = list(embed_google([str(xx) for xx in df.response.values]))
+breakpoint()
 
-
-DROP_OUTLIERS = FALSE
-if DROP_OUTLIERS:
-    print('starting with', len(set(df.model.values)), 'models')
-    model_scores = df.groupby('model').score.mean()
-    bad_models   = model_scores[model_scores <= 0.15].index
-    print('dropping', len(bad_models), 'models')
-    df           = df[~df.model.isin(bad_models)].reset_index(drop=True)
-    print('ending with', len(set(df.model.values)), 'models')
+# DROP_OUTLIERS = False
+# if DROP_OUTLIERS:
+#     print('starting with', len(set(df.model.values)), 'models')
+#     model_scores = df.groupby('model').score.mean()
+#     bad_models   = model_scores[model_scores <= 0.15].index
+#     print('dropping', len(bad_models), 'models')
+#     df           = df[~df.model.isin(bad_models)].reset_index(drop=True)
+#     print('ending with', len(set(df.model.values)), 'models')
 
 # --
 # Run DKPS
@@ -86,8 +86,7 @@ def dkps_df(df, **kwargs):
     
     return DataKernelPerspectiveSpace(**kwargs).fit_transform(embedding_dict, return_dict=True)
 
-# --
-# Efficient estimation
+
 
 def predict_null(df, mode='model'):
     """ average score of other models / families """
@@ -103,6 +102,88 @@ def predict_null(df, mode='model'):
         out[model] = df.score[sel].mean()
     
     return out
+
+model_names  = df.model.unique()
+instance_ids = df.instance_id.unique()
+y_acts       = df.groupby('model').score.mean().to_dict()
+
+pred_null = {
+    "model"  : predict_null(df, mode='model'),
+    "family" : predict_null(df, mode='family'),
+}
+
+def rel_err(act, pred):
+    return np.abs(pred - act) / act
+
+err_null = {
+    "model"  : {model_name: rel_err(y_acts[model_name], pred_null['model'][model_name]) for model_name in model_names},
+    "family" : {model_name: rel_err(y_acts[model_name], pred_null['family'][model_name]) for model_name in model_names},
+}
+
+rprint(err_null['model'])
+print(sorted(err_null['model'].values()))
+
+from tqdm import trange
+from scipy.spatial.distance import pdist, squareform
+from graspologic.embed import ClassicalMDS
+
+mode = 'family'
+
+out = []
+for _ in trange(32):
+    
+    instance_ids_sample = np.random.choice(instance_ids, size=1, replace=False)
+    df_sample           = df[df.instance_id.isin(instance_ids_sample)]
+    
+    for target_model in model_names:
+        
+        if mode == 'model':
+            train_models = np.array([m for m in model_names if m != target_model])
+        elif mode == 'family':
+            train_models = np.array([m for m in model_names if model2family(m) != model2family(target_model)])
+        else:
+            raise ValueError(f'mode must be one of "model" or "family", got {mode}')
+        
+        df_train = df_sample[df_sample.model.isin(train_models)]
+        df_test  = df_sample[df_sample.model == target_model]
+        
+        X_train = np.row_stack(df_train.embedding.values)
+        X_test  = np.row_stack(df_test.embedding.values)
+        y_train = np.array([y_acts[m] for m in df_train.model.values])
+        
+        p_sample = df_test.score.mean()
+        
+        # knn on features
+        knn    = KNeighborsRegressor(n_neighbors=1, metric='cosine').fit(X_train, y_train)
+        p_orig = float(knn.predict(X_test)[0])
+        
+        # lr on embeddings
+        dist_matrix = squareform(pdist(np.row_stack([X_train, X_test]), metric='euclidean'))
+        cmds_embds  = ClassicalMDS(n_components=2, n_elbows=None).fit_transform(dist_matrix)
+        
+        lr         = LinearRegression().fit(cmds_embds[:-1], y_train)
+        p_lr_dkps2 = float(lr.predict(cmds_embds[[-1]])[0])
+        
+        out.append({
+            "target_model" : target_model,
+            "y_act"        : y_acts[target_model],
+            "p_null"       : pred_null[mode][target_model],
+            "p_sample"     : p_sample,
+            "p_orig"       : p_orig,
+            "p_dkps2"      : p_lr_dkps2,
+        })
+
+
+
+
+z = pd.DataFrame(out)
+
+z.e_0.mean(), z.e_1.mean(), z.e_null.mean()
+
+
+
+# --
+# Efficient estimation
 
 
 def predict_lr_dkps(feats, target_model, train_models, y_acts):
