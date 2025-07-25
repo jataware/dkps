@@ -6,12 +6,12 @@
 import os
 import numpy as np
 import pandas as pd
-from tqdm import trange, tqdm
+from tqdm import trange
 import matplotlib.pyplot as plt
 from rich import print as rprint
+from joblib import Parallel, delayed
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
-from joblib import Parallel, delayed
 
 from dkps.dkps import DataKernelPerspectiveSpace
 from dkps.embed import embed_google
@@ -180,32 +180,38 @@ for iter in trange(32):
         
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
-
+res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
+# --
+# Post-processing
+
+# compute errors - abs(pred - act) / act
 for c in df_res.columns:
     if 'p_' in c:
         df_res[c.replace('p_', 'e_')] = rel_err(df_res.y_act, df_res[c])
 
-
 df_per_model = df_res.groupby(['target_model', 'mode', 'n_samples']).agg({
-    'y_act'   : 'mean', # noop
-    'e_null'  : 'mean',
-    'e_sample': 'mean',
-    'e_dkps2' : 'mean',
+    'y_act'       : 'mean', # noop - they're all the same
+    'e_null'      : 'mean',
+    'e_sample'    : 'mean',
+    'e_dkps2'     : 'mean',
     'e_knn_dkps2' : 'mean',
 }).reset_index()
 
 df_avg = df_res.groupby(['mode', 'n_samples']).agg({
-    'y_act'   : 'median', # noop
-    'e_null'  : 'median',
-    'e_sample': 'median',
-    'e_dkps2' : 'median',
+    'y_act'       : 'median', # noop - they're all the same
+    'e_null'      : 'median',
+    'e_sample'    : 'median',
+    'e_dkps2'     : 'median',
     'e_knn_dkps2' : 'median',
 }).reset_index()
 
 
+# --
+# Plot
+
+# Plot performance averaged over models
 _ = plt.plot(df_avg.n_samples, df_avg.e_null, label='null')
 _ = plt.plot(df_avg.n_samples, df_avg.e_sample, label='sample')
 _ = plt.plot(df_avg.n_samples, df_avg.e_dkps2, label='dkps2')
@@ -217,6 +223,7 @@ _ = plt.savefig('err.png')
 _ = plt.close()
 
 
+# Plot gain over null, per model
 df_per_model['dkps2_gain']  = df_per_model.e_dkps2 - df_per_model.e_null
 df_per_model['sample_gain'] = df_per_model.e_sample - df_per_model.e_null
 df_per_model['knn_gain']    = df_per_model.e_knn_dkps2 - df_per_model.e_null
@@ -227,14 +234,12 @@ for model in model_names:
     _ = plt.plot(sub.n_samples, sub.sample_gain, c='blue', alpha=0.1)
     _ = plt.plot(sub.n_samples, sub.knn_gain, c='green', alpha=0.1)
 
-
 _ = plt.plot(df_per_model.groupby('n_samples').dkps2_gain.mean(), label='dkps2', c='red', linewidth=5)
 _ = plt.plot(df_per_model.groupby('n_samples').sample_gain.mean(), label='sample', c='blue', linewidth=5)
 _ = plt.plot(df_per_model.groupby('n_samples').knn_gain.mean(), label='knn', c='green', linewidth=5)
 
 _ = plt.legend()
 _ = plt.ylim(-0.75, 0.75)
-# _ = plt.ylim(-0.1, 0.1)
 _ = plt.axhline(0, c='black')
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.xscale('log')
