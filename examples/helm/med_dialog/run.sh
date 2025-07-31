@@ -11,4 +11,4 @@ python extract.py \
     --outpath ./med_dialog.tsv
 
 # run DKPS
-python run_dkps.py
+python plot_dkps.py

@@ -3,6 +3,7 @@ authors = [{name = "bkj", email = "bkj.322@gmail.com"}]
 name = "dkps"
 requires-python = ">= 3.11"
 version = "0.1.0"
+dependencies = ["sklearn-lmer>=0.0.5,<0.0.6"]
 
 [build-system]
 build-backend = "hatchling.build"
@@ -30,3 +31,6 @@ hyppo = ">=0.5.2,<0.6"
 google-cloud-sdk = { version = ">=530.0.0,<531", channel = "conda-forge" }
 nltk = ">=3.9.1,<4"
 einops = ">=0.8.1,<0.9"
+sacrebleu = ">=2.5.1,<3"
+linearmodels = ">=6.1,<7"
+polars = ">=1.31.0,<2"

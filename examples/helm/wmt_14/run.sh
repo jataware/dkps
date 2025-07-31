@@ -8,5 +8,8 @@
 # extract to .tsv
 python extract.py
 
-# run DKPS
-python run_dkps.py
+# run DKPS - generate plots
+python plot_dkps.py
+
+# use DKPS to predict model performance
+python model_dkps.py

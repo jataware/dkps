@@ -1,11 +1,19 @@
+import os
 import asyncio
 import numpy as np
 from tqdm import trange
 from google import genai
+from google.genai import types
+from google.genai.types import HttpOptions
 from tqdm.asyncio import tqdm
+import httpx
 
 from .cache import disk_cache
 
+# --
+# Provider-specific chunk functions
+
+# Google
 @disk_cache(cache_dir='./.cache/embed/google', verbose=False, ignore_fields=['client'])
 async def _aembed_google_chunk(chunk_id, client, chunk, model):
     chunk_response = await client.aio.models.embed_content(
@@ -14,16 +22,67 @@ async def _aembed_google_chunk(chunk_id, client, chunk, model):
     )
     return chunk_id, np.array([xx.values for xx in chunk_response.embeddings])
 
-@disk_cache(cache_dir='./.cache/embed/google', verbose=False)
-async def aembed_google(input_strs, chunk_size=100, model='gemini-embedding-001', max_concurrency=5):
-    # TODO - add error handling
+# Jina
+class JinaClient:
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.environ.get("JINA_API_KEY")
+        if not self.api_key:
+            raise Exception("JINA_API_KEY is not set")
+        
+        self.headers = {
+            "Accept"          : "application/json",
+            "Authorization"   : f"Bearer {self.api_key}",
+            "Content-Type"    : "application/json",
+        }
     
-    client = genai.Client()
+    async def embed(self, input_data, model):
+        async with httpx.AsyncClient(timeout=None, headers=self.headers) as client:
+            res = await client.post("https://api.jina.ai/v1/embeddings", json={
+                "model" : model,
+                "task"  : "text-matching",
+                "input" : input_data,
+            })
+            res.raise_for_status()
+            return res.json()
+
+@disk_cache(cache_dir="./.cache/embed/jina", verbose=False, ignore_fields=['client'])
+async def _aembed_jina_chunk(chunk_id, client, chunk, model):
+    data = await client.embed(chunk, model)
+    return chunk_id, np.array([item['embedding'] for item in data['data']])
+
+
+# Generic API embedding functions
+async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, model=None):
+    """Generic async embedding function that handles chunking and concurrency"""
+
+    if provider == 'google':
+        client = genai.Client(
+            api_key=os.getenv('GEMINI_API_KEY'),
+            http_options=HttpOptions(
+                api_version='v1beta',
+                timeout=10 * 1000, # 10 seconds
+            ),
+        )
+        _aembed_chunk = _aembed_google_chunk
+        if model is None:
+            model = 'gemini-embedding-001'
+        
+        
+    elif provider == 'jina':
+        client = JinaClient()
+        _aembed_chunk = _aembed_jina_chunk
+        if model is None:
+            model = 'jina-embeddings-v3'
     
+    
+    else:
+        raise Exception
+
+
     sem = asyncio.Semaphore(max_concurrency)
     async def _fn(chunk_id, chunk):
         async with sem:
-            return await _aembed_google_chunk(chunk_id, client, chunk, model)
+            return await _aembed_chunk(chunk_id, client, chunk, model)
     
     chunks = [input_strs[i:i+chunk_size] for i in range(0, len(input_strs), chunk_size)]
     
@@ -39,12 +98,10 @@ async def aembed_google(input_strs, chunk_size=100, model='gemini-embedding-001'
     
     return np.concatenate(out)
 
+# Synchronous wrapper functions
+def embed_api(provider, *args, **kwargs):
+    return asyncio.run(_aembed_api(provider, *args, **kwargs))
 
-def embed_google(*args, **kwargs):
-    return asyncio.run(aembed_google(*args, **kwargs))
 
 def embed_nomic(input_strs):
     raise NotImplementedError('Not implemented')
-
-# def embed_other_stuff(input_strs):
-#     raise NotImplementedError('Not implemented')
