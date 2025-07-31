@@ -58,6 +58,7 @@ Parameters / details:
  - DKPS dimension: 2
  - Error: mean absolute error `abs(act - pred)`
     - HELM MATH evaluation is 0/1 correct/incorrect, so benchmark scores mean percentage correct
+ - Plots show error averaged over all models and all replicates `np.mean(x)`.  Error bars are `1.96 * np.std(x) / np.sqrt(len(x))`
  
 Code:
  - https://github.com/jataware/dkps/blob/bkj/examples/helm/math/run.sh
