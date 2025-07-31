@@ -64,3 +64,9 @@ assert df.drop_duplicates(['dataset', 'model', 'instance_id']).shape[0] == df.sh
 df = df.reset_index(drop=True)
 
 df.to_csv(args.outpath, index=False, sep='\t')
+
+# with open('math.jsonl', 'w') as f:
+#     for _, row in df.iterrows():
+#         _ = f.write(json.dumps({
+#             'text': row.response,
+#         }) + '\n')
