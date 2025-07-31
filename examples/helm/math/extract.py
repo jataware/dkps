@@ -63,13 +63,4 @@ assert all(df.score.notna()), 'some instances are missing scores'
 assert df.drop_duplicates(['dataset', 'model', 'instance_id']).shape[0] == df.shape[0]
 df = df.reset_index(drop=True)
 
-# <<
-# warm cache
-from time import sleep
-from dkps.embed import embed_api
-# while True:
-df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
-del df['embedding']
-# >>
-
 df.to_csv(args.outpath, index=False, sep='\t')

@@ -4,13 +4,14 @@
 """
 
 import os
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from rich import print as rprint
 
 from dkps.dkps import DataKernelPerspectiveSpace
-from dkps.embed import embed_google
+from dkps.embed import embed_api
 
 # --
 # Helpers
@@ -34,34 +35,50 @@ def dkps_df(df, **kwargs):
 
 
 # --
-# Config
-
-os.makedirs('plots', exist_ok=True)
-dataset = 'math'
-
-# --
 # IO
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='math:subject=algebra')
+    parser.add_argument('--inpath',  type=str, default='math.tsv')
+    parser.add_argument('--score',   type=str, default='score')
+    return parser.parse_args()
+
+args = parse_args()
 
 rprint('[blue]loading data ...[/blue]')
 
-df = pd.read_csv('math.tsv', sep='\t')
+df = pd.read_csv(args.inpath, sep='\t')
+df = df[df.dataset == args.dataset]
+assert df.shape[0] > 0, f'no data for dataset {args.dataset}'
 
-# df = df[df.dataset == dataset]
 df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
+
+if args.score != 'score':
+    print('{args.score} -> score')
+    df['score'] = df[args.score]
+
+# <<
+# drop models w/ zero score?
+y_acts = df.groupby('model').score.mean().to_dict()
+for model, score in y_acts.items():
+    if score == 0:
+        df = df[df.model != model]
+
+df = df.reset_index(drop=True)
+# >>
 
 # --
 # QC
 
 print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
-
-# make sure all instance_ids are the same for each model
 instance_ids = df.groupby('model').instance_id.apply(list)
 assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(instance_ids))]), 'instance_ids are not the same for each model'
 
 # --
 # Get embeddings
 
-df['embedding'] = list(embed_google([str(xx) for xx in df.response.values]))
+df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
 
 # --
 # Run DKPS
@@ -74,6 +91,8 @@ P = np.row_stack([P[m] for m in model2score.keys()])
 # --
 # Plotting
 
+os.makedirs('plots', exist_ok=True)
+
 _ = plt.scatter(P[:, 0], P[:,1], c=model2score.values(), cmap='viridis')
 
 _ = plt.xticks([])
@@ -81,32 +100,27 @@ _ = plt.yticks([])
 _ = plt.xlabel('DKPS-0')
 _ = plt.ylabel('DKPS-1')
 _ = plt.grid('both', alpha=0.25, c='gray')
-_ = plt.title(f'DKPS - {dataset}')
+_ = plt.title(f'DKPS - {args.dataset}')
 _ = plt.colorbar()
-_ = plt.savefig('plots/dkps.png')
+_ = plt.savefig(f'plots/{args.dataset}-dkps.png')
 _ = plt.close()
 
 # Plot first DKPS dimension vs performance
-z = -1 * P[:,0]
-z = z - z.mean()
-z = z / z.std()
-
+z = P[:,0]
 _ = plt.scatter(z, model2score.values(), c=P[:,1], cmap='inferno')
-_ = plt.xlim(np.percentile(z, 2), z.max() + 0.1)
 _ = plt.xlabel('DKPS-0 (flipped, z-scored)')
-_ = plt.ylabel('BLEU-4')
+_ = plt.ylabel('Score')
 _ = plt.colorbar()
-_ = plt.savefig(f'plots/dkps0-vs-score.png')
+_ = plt.grid('both', alpha=0.25, c='gray')
+_ = plt.savefig(f'plots/{args.dataset}-dkps0-vs-score.png')
 _ = plt.close()
 
 # Plot second DKPS dimension vs performance
-z = -1 * P[:,1]
-z = z - z.mean()
-z = z / z.std()
-
+z = P[:,1]
 _ = plt.scatter(z, model2score.values(), c=P[:,0], cmap='inferno')
 _ = plt.xlabel('DKPS-1 (flipped, z-scored)')
-_ = plt.ylabel('BLEU-4')
+_ = plt.ylabel('Score')
 _ = plt.colorbar()
-_ = plt.savefig(f'plots/dkps1-vs-score.png')
+_ = plt.grid('both', alpha=0.25, c='gray')
+_ = plt.savefig(f'plots/{args.dataset}-dkps1-vs-score.png')
 _ = plt.close()
