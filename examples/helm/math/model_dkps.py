@@ -221,8 +221,6 @@ for iter in trange(n_replicates):
 res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
-df_res.to_csv(f'results/{args.dataset}-{args.score}-res.tsv', sep='\t', index=False)
-
 # --
 # Post-processing
 
@@ -230,6 +228,8 @@ df_res.to_csv(f'results/{args.dataset}-{args.score}-res.tsv', sep='\t', index=Fa
 for c in df_res.columns:
     if 'p_' in c:
         df_res[c.replace('p_', 'e_')] = err_fn(df_res.y_act, df_res[c])
+
+df_res.to_csv(f'results/{args.dataset}-{args.score}-res.tsv', sep='\t', index=False)
 
 # --
 # Plot
@@ -247,6 +247,7 @@ for i,c in enumerate(cnames):
 
 # <<
 # Add error bars to show 95% CI of mean
+# [TODO] double check this
 df_ci = df_res.groupby(['mode', 'n_samples']).agg({
     **{c: lambda x: 1.96 * np.std(x) / np.sqrt(len(x)) for c in cnames},  # 95% CI = 1.96 * SE
 }).reset_index()

@@ -37,6 +37,30 @@ DKPS method:
   - *Note*: This requires access to outputs of the original models.
   - English: "Predict benchmark score is close to scores of models that produce similar outputs."
 
+--
+
+Datasets:
+ - ~ 90 models
+ - 7 splits of [MATH](https://arxiv.org/pdf/2103.03874) dataset
+    - Examples: 
+        - https://crfm.stanford.edu/helm/lite/latest/#/runs/math:subject=algebra,level=1,use_official_examples=False,use_chain_of_thought=True,model=openai_gpt-4o-2024-05-13
+        - https://crfm.stanford.edu/helm/lite/latest/#/runs/math:subject=counting_and_probability,level=1,use_official_examples=False,use_chain_of_thought=True,model=openai_gpt-4o-2024-05-13
+        - ... etc ...
+
+ - Given a `new_model`, exclude all models trained by the same company from the set of original models.  This is to prevent leakage, since some models are finetuned versions of others.  However, it is probably _too_ aggressive depending on real-world setting.
+ 
+--
+
+Parameters / details:
+ - Sweep budget across [2, 4, 8, 16, 32, ...]
+ - 32 replicates at each budget
+ - Embedding model: `jina-embedding-v3`
+ - DKPS dimension: 2
+ - Error: mean absolute error `abs(act - pred)`
+    - HELM MATH evaluation is 0/1 correct/incorrect, so benchmark scores mean percentage correct
+ 
+Code:
+ - https://github.com/jataware/dkps/blob/bkj/examples/helm/math/run.sh
 
 
 
