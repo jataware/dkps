@@ -1,4 +1,9 @@
+"""
+    parsers/wmt_14.py
+"""
+
 import pandas as pd
+from tqdm import tqdm
 
 import nltk
 from nltk.tokenize import word_tokenize
