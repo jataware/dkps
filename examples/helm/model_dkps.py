@@ -145,7 +145,7 @@ def run_one(df_sample, n_samples, mode, seed):
         
         # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
-        for n_components_cmds in [2, 4, 8, 16, 32]:
+        for n_components_cmds in [2, 4, 8, 16]:
             P = dkps_df(
                 pd.concat([df_train, df_test]).reset_index(drop=True),
                 n_components_cmds=n_components_cmds,
