@@ -57,9 +57,10 @@ err_fns = {
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset',   type=str, default='math:subject=algebra')
-    parser.add_argument('--score_col', type=str, default='score')
-    parser.add_argument('--err_fn',    type=str, default='abs')
+    parser.add_argument('--dataset',        type=str, default='math:subject=algebra')
+    parser.add_argument('--score_col',      type=str, default='score')
+    parser.add_argument('--embed_provider', type=str, default='jina')
+    parser.add_argument('--embed_model',    type=str, default=None)
     args = parser.parse_args()
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
@@ -91,7 +92,11 @@ assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_i
 # --
 # Get embeddings
 
-df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
+df['embedding'] = list(embed_api(
+    provider   = args.embed_provider, 
+    input_strs = [str(xx) for xx in df.response.values],
+    model      = args.embed_model
+))
 
 # --
 # Run
@@ -132,7 +137,7 @@ def run_one(df_sample, n_samples, mode, seed):
         p_sample = df_test.score.mean()
 
         # knn on scores
-        S_train = S_all[np.in1d(model_names, train_models)]
+        S_train = S_all[np.isin(model_names, train_models)]
         S_test  = S_all[model_names == target_model]
         sknn    = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
         p_3nn_score  = float(sknn.predict(S_test)[0])
@@ -144,8 +149,8 @@ def run_one(df_sample, n_samples, mode, seed):
                 pd.concat([df_train, df_test]).reset_index(drop=True),
                 n_components_cmds=n_components_cmds,
             )
-            X_train = np.row_stack([P[m] for m in train_models])
-            X_test  = np.row_stack([P[target_model]])
+            X_train = np.vstack([P[m] for m in train_models])
+            X_test  = np.vstack([P[target_model]])
 
             # linear regression on DKPS embeddings        
             lr = LinearRegression().fit(X_train, y_train)
@@ -167,7 +172,7 @@ def run_one(df_sample, n_samples, mode, seed):
     
     return out
 
-n_replicates = 32
+n_replicates = 1
 
 outpath = f'results/{args.dataset}-{args.score_col}-res.tsv'
 # if os.path.exists(outpath):

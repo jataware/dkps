@@ -35,8 +35,16 @@ python model_dkps.py --dataset math:subject=precalculus
 
 python extract.py --dataset wmt_14
 
+# run DKPS - generate plots
 python plot_dkps.py --dataset wmt_14:language_pair=cs-en
 python plot_dkps.py --dataset wmt_14:language_pair=de-en
 python plot_dkps.py --dataset wmt_14:language_pair=fr-en
 python plot_dkps.py --dataset wmt_14:language_pair=hi-en
 python plot_dkps.py --dataset wmt_14:language_pair=ru-en
+
+# use DKPS to predict model performance
+python model_dkps.py --dataset wmt_14:language_pair=cs-en
+python model_dkps.py --dataset wmt_14:language_pair=de-en
+python model_dkps.py --dataset wmt_14:language_pair=fr-en
+python model_dkps.py --dataset wmt_14:language_pair=hi-en
+python model_dkps.py --dataset wmt_14:language_pair=ru-en

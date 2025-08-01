@@ -19,8 +19,10 @@ from dkps.embed import embed_api
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset',   type=str, default='math:subject=algebra')
-    parser.add_argument('--score_col', type=str, default='score')
+    parser.add_argument('--dataset',        type=str, default='math:subject=algebra')
+    parser.add_argument('--score_col',      type=str, default='score')
+    parser.add_argument('--embed_provider', type=str, default='jina')
+    parser.add_argument('--embed_model',    type=str, default=None)
     args = parser.parse_args()
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
@@ -52,11 +54,11 @@ assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(inst
 # --
 # Get embeddings
 
-# <<
-# df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
-# --
-df['embedding'] = list(embed_api('jlai_tei', [str(xx) for xx in df.response.values]))
-# >>
+df['embedding'] = list(embed_api(
+    provider   = args.embed_provider, 
+    input_strs = [str(xx) for xx in df.response.values],
+    model      = args.embed_model
+))
 
 # --
 # Run DKPS
