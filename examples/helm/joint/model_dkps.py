@@ -1,64 +1,28 @@
 #!/usr/bin/env python
 """
-    examples/helm/wmt_14/model_dkps.py
+    joint.model_dkps
 """
 
 import os
 import argparse
 import numpy as np
 import pandas as pd
-from tqdm import trange
+from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
+from tqdm import trange
 from joblib import Parallel, delayed
-from sklearn import metrics
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 
-from dkps.dkps import DataKernelPerspectiveSpace
+from utils import dkps_df
 from dkps.embed import embed_api
-
-os.makedirs('plots', exist_ok=True)
-os.makedirs('results', exist_ok=True)
 
 # --
 # Helpers
 
 def model2family(model):
     return model.split('_')[0]
-
-# <<
-# def rel_err(act, pred):
-#     return np.abs(pred - act) / act
-
-def abs_err(act, pred):
-    return np.abs(pred - act)
-
-
-err_fn = abs_err
-# >>
-
-def dkps_df(df, data='embedding', **kwargs):
-    model_names  = df.model.unique()
-    instance_ids = df.instance_id.unique()
-    
-    embedding_dict = {}
-    for model_name in model_names:
-        sub = df[df.model == model_name]
-        assert (sub.instance_id.values == instance_ids).all(), f'instance_ids are not the same for model {model_name}'
-        if data == 'embedding':
-            embedding_dict[model_name] = np.row_stack(sub.embedding.values)
-        elif data == 'score':
-            embedding_dict[model_name] = sub.score.values[None]
-        else:
-            raise ValueError(f'data must be either "embedding" or "score", got {data}')
-    
-    # <<
-    # Adding extra dimension because we only have one replicate
-    embedding_dict = {k:v[:,None] for k,v in embedding_dict.items()}
-    # >>
-    
-    return DataKernelPerspectiveSpace(**kwargs).fit_transform(embedding_dict, return_dict=True)
 
 
 def predict_null(df, mode='model'):
@@ -77,49 +41,45 @@ def predict_null(df, mode='model'):
     return out
 
 
+def _rel_err(act, pred):
+    return np.abs(pred - act) / act
+
+def _abs_err(act, pred):
+    return np.abs(pred - act)
+
+err_fns = {
+    "abs" : _abs_err,
+    "rel" : _rel_err,
+}
+
 # --
 # IO
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='math:subject=algebra')
-    parser.add_argument('--inpath',  type=str, default='math.tsv')
-    parser.add_argument('--score',   type=str, default='score')
-    return parser.parse_args()
-
-# --
-# IO
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='math:subject=algebra')
-    parser.add_argument('--inpath',  type=str, default='math.tsv')
-    parser.add_argument('--score',   type=str, default='score')
-    return parser.parse_args()
+    parser.add_argument('--dataset',   type=str, default='math:subject=algebra')
+    parser.add_argument('--score_col', type=str, default='score')
+    parser.add_argument('--err_fn',    type=str, default='abs')
+    args = parser.parse_args()
+    
+    args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
+    args.plot_dir = Path('plots')
+    
+    args.plot_dir.mkdir(parents=True, exist_ok=True)
+    
+    return args
 
 args = parse_args()
 
 rprint('[blue]loading data ...[/blue]')
 
-df = pd.read_csv(args.inpath, sep='\t')
+df = pd.read_csv(args.tsv_path, sep='\t')
 df = df[df.dataset == args.dataset]
-assert df.shape[0] > 0, f'no data for dataset {args.dataset}'
-
 df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
 
-if args.score != 'score':
-    print('{args.score} -> score')
-    df['score'] = df[args.score]
-
-# <<
-# drop models w/ zero score?
-y_acts = df.groupby('model').score.mean().to_dict()
-for model, score in y_acts.items():
-    if score == 0:
-        df = df[df.model != model]
-
-df = df.reset_index(drop=True)
-# >>
+if args.score_col != 'score':
+    print(f'{args.score_col} -> score')
+    df['score'] = df[args.score_col]
 
 # --
 # QC
@@ -177,11 +137,11 @@ def run_one(df_sample, n_samples, mode, seed):
         sknn    = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
         p_3nn_score  = float(sknn.predict(S_test)[0])
         
+        # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
         for n_components_cmds in [2, 4, 8, 16, 32]:
             P = dkps_df(
                 pd.concat([df_train, df_test]).reset_index(drop=True),
-                data='embedding',
                 n_components_cmds=n_components_cmds,
             )
             X_train = np.row_stack([P[m] for m in train_models])
@@ -209,7 +169,7 @@ def run_one(df_sample, n_samples, mode, seed):
 
 n_replicates = 32
 
-outpath = f'results/{args.dataset}-{args.score}-res.tsv'
+outpath = f'results/{args.dataset}-{args.score_col}-res.tsv'
 # if os.path.exists(outpath):
 #     df_res = pd.read_csv(outpath, sep='\t')
 # else:
@@ -230,13 +190,12 @@ df_res = pd.DataFrame(res)
 # compute errors - abs(pred - act) / act
 for c in df_res.columns:
     if 'p_' in c:
-        df_res[c.replace('p_', 'e_')] = err_fn(df_res.y_act, df_res[c])
+        df_res[c.replace('p_', 'e_')] = err_fns[args.err_fn](df_res.y_act, df_res[c])
 
 df_res.to_csv(outpath, sep='\t', index=False)
 
 # --
 # Plot
-
 
 # COLORS = ['black', 'blue', 'red', 'green', 'orange']
 cnames = [c for c in df_res.columns if 'e_' in c]
@@ -282,8 +241,8 @@ _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.xscale('log')
 _ = plt.ylabel(f'error (mean over {n_replicates} runs x {len(model_names)} models)')
 _ = plt.xlabel('n_samples')
-_ = plt.title(f'{args.dataset} - {args.score}')
-_ = plt.savefig(f'plots/{args.dataset}-{args.score}-err-big.png')
+_ = plt.title(f'{args.dataset} - {args.score_col}')
+_ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-err-big.png')
 _ = plt.close()
 
 # --
@@ -321,7 +280,7 @@ _ = plt.close()
 # _ = plt.axhline(0, c='black')
 # _ = plt.grid('both', alpha=0.25, c='gray')
 # _ = plt.xscale('log')
-# _ = plt.savefig(f'plots/{args.dataset}-{args.score}-err-by-model.png')
+# _ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-err-by-model.png')
 # _ = plt.close()
 
 
@@ -353,7 +312,7 @@ _ = plt.close()
 # _ = plt.legend()
 # _ = plt.grid('both', alpha=0.25, c='gray')
 # _ = plt.xscale('log')
-# _ = plt.savefig(f'plots/{args.dataset}-{args.score}-auc.png')
+# _ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-auc.png')
 # _ = plt.close()
 
 
@@ -408,5 +367,5 @@ _ = plt.close()
 # _ = plt.legend()
 # _ = plt.grid('both', alpha=0.25, c='gray')
 # _ = plt.xscale('log')
-# _ = plt.savefig(f'plots/{args.dataset}-{args.score}-win.png')
+# _ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-win.png')
 # _ = plt.close()

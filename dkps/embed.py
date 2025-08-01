@@ -8,6 +8,8 @@ from google.genai.types import HttpOptions
 from tqdm.asyncio import tqdm
 import httpx
 
+from jlai.embed.tei import embed_dataset as embed_jlai_tei
+
 from .cache import disk_cache
 
 # --
@@ -100,8 +102,7 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
 
 # Synchronous wrapper functions
 def embed_api(provider, *args, **kwargs):
-    return asyncio.run(_aembed_api(provider, *args, **kwargs))
-
-
-def embed_nomic(input_strs):
-    raise NotImplementedError('Not implemented')
+    if provider == 'jlai_tei':
+        return embed_jlai_tei(*args, **kwargs)
+    else:
+        return asyncio.run(_aembed_api(provider, *args, **kwargs))
