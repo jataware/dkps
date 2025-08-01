@@ -100,9 +100,15 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
     
     return np.concatenate(out)
 
+# jlai
+@disk_cache(cache_dir="./.cache/embed/jlai_tei", verbose=False, ignore_fields=['client'])
+def _embed_jlai_tei(input_strs, model='nomic-ai/nomic-embed-text-v1', **kwargs):
+    return embed_jlai_tei(input_strs, model_id=model)
+
+
 # Synchronous wrapper functions
 def embed_api(provider, *args, **kwargs):
     if provider == 'jlai_tei':
-        return embed_jlai_tei(*args, **kwargs)
+        return _embed_jlai_tei(*args, **kwargs)
     else:
         return asyncio.run(_aembed_api(provider, *args, **kwargs))

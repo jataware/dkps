@@ -52,7 +52,11 @@ assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(inst
 # --
 # Get embeddings
 
-df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
+# <<
+# df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values]))
+# --
+df['embedding'] = list(embed_api('jlai_tei', [str(xx) for xx in df.response.values]))
+# >>
 
 # --
 # Run DKPS
@@ -60,7 +64,7 @@ df['embedding'] = list(embed_api('jina', [str(xx) for xx in df.response.values])
 model2score = df.groupby('model').score.mean().to_dict()
 
 P = dkps_df(df, n_components_cmds=2)
-P = np.row_stack([P[m] for m in model2score.keys()])
+P = np.vstack([P[m] for m in model2score.keys()])
 
 # --
 # Plotting
