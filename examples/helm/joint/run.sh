@@ -43,8 +43,8 @@ python plot_dkps.py --dataset wmt_14:language_pair=hi-en
 python plot_dkps.py --dataset wmt_14:language_pair=ru-en
 
 # use DKPS to predict model performance
-python model_dkps.py --dataset wmt_14:language_pair=cs-en
-python model_dkps.py --dataset wmt_14:language_pair=de-en
-python model_dkps.py --dataset wmt_14:language_pair=fr-en
-python model_dkps.py --dataset wmt_14:language_pair=hi-en
-python model_dkps.py --dataset wmt_14:language_pair=ru-en
+python model_dkps.py --dataset wmt_14:language_pair=cs-en --score_col meteor
+python model_dkps.py --dataset wmt_14:language_pair=de-en --score_col meteor
+python model_dkps.py --dataset wmt_14:language_pair=fr-en --score_col meteor
+python model_dkps.py --dataset wmt_14:language_pair=hi-en --score_col meteor
+python model_dkps.py --dataset wmt_14:language_pair=ru-en --score_col meteor

@@ -1,26 +1,26 @@
 import pandas as pd
 
-# import nltk
-# from nltk.tokenize import word_tokenize
-# from nltk.translate.bleu_score import sentence_bleu
-# from nltk.translate.meteor_score import meteor_score
-# nltk.download('wordnet')
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.translate.meteor_score import meteor_score
+nltk.download('wordnet')
 
-# from sacrebleu.metrics import CHRF
+from sacrebleu.metrics import CHRF
 from joblib import Parallel, delayed
 
-# def bleu_4(gold: str, pred: str) -> float:
-#     return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(0, 0, 0, 1))
+def bleu_4(gold: str, pred: str) -> float:
+    return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(0, 0, 0, 1))
 
-# def bleu_flat(gold: str, pred: str) -> float:
-#     return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(0.25, 0.25, 0.25, 0.25))
+def bleu_flat(gold: str, pred: str) -> float:
+    return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(0.25, 0.25, 0.25, 0.25))
 
-# def chrf(gold: str, pred: str) -> float:
-#     metric = CHRF(word_order=2) # chrF++; set word_order=0 for plain chrF
-#     return metric.sentence_score(pred, [gold]).score
+def chrf(gold: str, pred: str) -> float:
+    metric = CHRF(word_order=2) # chrF++; set word_order=0 for plain chrF
+    return metric.sentence_score(pred, [gold]).score
 
-# def meteor(gold: str, pred: str) -> float:
-#     return meteor_score([word_tokenize(gold)], word_tokenize(pred))   # returns 0‑1; multiply by 100 if you prefer %
+def meteor(gold: str, pred: str) -> float:
+    return meteor_score([word_tokenize(gold)], word_tokenize(pred))   # returns 0‑1; multiply by 100 if you prefer %
 
 class WMT14Parser:
     @staticmethod
@@ -46,16 +46,16 @@ class WMT14Parser:
 
         df = df.reset_index(drop=True)
 
-        # def _compute_scores(target, response):
-        #     return {
-        #         "bleu_4"    : bleu_4(target, response),
-        #         "bleu_flat" : bleu_flat(target, response),
-        #         "chrf"      : chrf(target, response),
-        #         "meteor"    : meteor(target, response),
-        #     }
+        def _compute_scores(target, response):
+            return {
+                "bleu_4"    : bleu_4(target, response),
+                "bleu_flat" : bleu_flat(target, response),
+                "chrf"      : chrf(target, response),
+                "meteor"    : meteor(target, response),
+            }
 
-        # jobs    = [delayed(_compute_scores)(q, r) for q, r in tqdm(df[['target', 'response']].values, desc='computing scores')]
-        # _scores = Parallel(n_jobs=-1, verbose=10)(jobs)
+        jobs    = [delayed(_compute_scores)(q, r) for q, r in tqdm(df[['target', 'response']].values, desc='computing scores')]
+        _scores = Parallel(n_jobs=-1, verbose=10)(jobs)
 
-        # df[['bleu_4', 'bleu_flat', 'chrf', 'meteor']] = pd.DataFrame(_scores)
+        df[['bleu_4', 'bleu_flat', 'chrf', 'meteor']] = pd.DataFrame(_scores)
         return df

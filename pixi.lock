@@ -431,11 +431,11 @@ packages:
 - pypi: ./
   name: dkps
   version: 0.1.0
-  sha256: 651925859f11e02ea4ea099b41620a3e7840199360b1f5d08f60b9f7a5bec691
+  sha256: e431b8b4217bf681cb9981ea7425a025ba99259b66408e7deec2d341c8903c87
   requires_dist:
-  - nltk>=3.9.1,<4
   - graspologic @ git+https://github.com/jataware/graspologic
   - jlai @ git+https://github.com/jataware/jlai
+  - nltk>=3.9.1,<4
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/einops-0.8.1-pyhd8ed1ab_0.conda

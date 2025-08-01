@@ -61,6 +61,7 @@ def parse_args():
     parser.add_argument('--score_col',      type=str, default='score')
     parser.add_argument('--embed_provider', type=str, default='jina')
     parser.add_argument('--embed_model',    type=str, default=None)
+    parser.add_argument('--err_fn',         type=str, default='abs')
     args = parser.parse_args()
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
@@ -172,7 +173,7 @@ def run_one(df_sample, n_samples, mode, seed):
     
     return out
 
-n_replicates = 1
+n_replicates = 32
 
 outpath = f'results/{args.dataset}-{args.score_col}-res.tsv'
 # if os.path.exists(outpath):
