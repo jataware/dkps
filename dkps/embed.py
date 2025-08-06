@@ -56,7 +56,8 @@ async def _aembed_jina_chunk(chunk_id, client, chunk, model):
 # Generic API embedding functions
 async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, model=None):
     """Generic async embedding function that handles chunking and concurrency"""
-
+    assert isinstance(input_strs, list), 'input_strs must be a list'
+    
     if provider == 'google':
         client = genai.Client(
             api_key=os.getenv('GEMINI_API_KEY'),
@@ -103,6 +104,8 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
 # jlai
 @disk_cache(cache_dir="./.cache/embed/jlai_tei", verbose=False, ignore_fields=['client'])
 def _embed_jlai_tei(input_strs, model='nomic-ai/nomic-embed-text-v1', **kwargs):
+    assert isinstance(input_strs, list), 'input_strs must be a list'
+    
     return embed_jlai_tei(input_strs, model_id=model)
 
 

@@ -21,15 +21,22 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset',        type=str, default='math:subject=algebra')
     parser.add_argument('--score_col',      type=str, default='score')
-    parser.add_argument('--embed_provider', type=str, default='jina')
+    parser.add_argument('--embed_provider', type=str, default='jina', choices=['jina', 'google', 'jlai_tei'])
     parser.add_argument('--embed_model',    type=str, default=None)
     args = parser.parse_args()
+
+    if args.embed_model == 'jina':
+        assert os.environ.get('JINA_API_KEY') is not None, 'JINA_API_KEY is not set'
+    elif args.embed_model == 'google':
+        assert os.environ.get('GEMINI_API_KEY') is not None, 'GEMINI_API_KEY is not set'
+    elif args.embed_model == 'jlai_tei':
+        print('... jlai_tei requires some manual setup ... talk to @bkj ...')
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     args.plot_dir = Path('plots')
     
     args.plot_dir.mkdir(parents=True, exist_ok=True)
-    
+        
     return args
 
 args = parse_args()
