@@ -117,5 +117,7 @@ _ = plt.xscale('log')
 _ = plt.ylabel('$MAE(\hat{y}, y)$')
 _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset}')
+
+_ = plt.tight_layout()
 _ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-err-simple.png')
 _ = plt.close()

@@ -32,8 +32,8 @@ python model_dkps.py --dataset math:subject=intermediate_algebra
 # python model_dkps_analysis.py --dataset math:subject=algebra
 # python model_dkps_analysis.py --dataset math:subject=counting_and_probability
 # python model_dkps_analysis.py --dataset math:subject=geometry
-# python model_dkps_analysis.py --dataset math:subject=intermediate_algebra
-python model_dkps_analysis.py --dataset math:subject=number_theory
+python model_dkps_analysis.py --dataset math:subject=intermediate_algebra
+# python model_dkps_analysis.py --dataset math:subject=number_theory
 # python model_dkps_analysis.py --dataset math:subject=prealgebra
 # python model_dkps_analysis.py --dataset math:subject=precalculus
 
