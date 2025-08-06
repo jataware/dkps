@@ -62,6 +62,7 @@ def parse_args():
     parser.add_argument('--embed_provider', type=str, default='jina')
     parser.add_argument('--embed_model',    type=str, default=None)
     parser.add_argument('--err_fn',         type=str, default='abs')
+    parser.add_argument('--outdir',         type=str, default='results')
     args = parser.parse_args()
 
     if args.embed_model == 'jina':
@@ -71,18 +72,17 @@ def parse_args():
     elif args.embed_model == 'jlai_tei':
         print('... jlai_tei requires some manual setup ... talk to @bkj ...')
     
-    args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
-    args.plot_dir = Path('plots')
+    args.inpath = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
+    args.outdir = Path(args.outdir)
+    args.outdir.mkdir(parents=True, exist_ok=True)
     
-    args.plot_dir.mkdir(parents=True, exist_ok=True)
-        
     return args
 
 args = parse_args()
 
 rprint('[blue]loading data ...[/blue]')
 
-df = pd.read_csv(args.tsv_path, sep='\t')
+df = pd.read_csv(args.inpath, sep='\t')
 df = df[df.dataset == args.dataset]
 df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
 
@@ -152,7 +152,7 @@ def run_one(df_sample, n_samples, mode, seed):
         
         # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
-        for n_components_cmds in [2, 4, 8, 16]:
+        for n_components_cmds in [4, 8]:
             P = dkps_df(
                 pd.concat([df_train, df_test]).reset_index(drop=True),
                 n_components_cmds=n_components_cmds,
@@ -180,12 +180,12 @@ def run_one(df_sample, n_samples, mode, seed):
     
     return out
 
-n_replicates = 32
+N_REPLICATES = 32
 
-outpath = f'results/{args.dataset}-{args.score_col}-res.tsv'
+outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 
 jobs = []
-for iter in trange(n_replicates):
+for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
     for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
         if n_samples > len(instance_ids):
