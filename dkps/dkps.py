@@ -2,7 +2,7 @@ import numpy as np
 from graspologic.embed import ClassicalMDS
 # from graspologic.embed import OmnibusEmbed
 
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, cdist, squareform
 
 # from .utils import knn_graph
 
@@ -24,6 +24,11 @@ class DataKernelPerspectiveSpace:
         self.n_components_cmds          = n_components_cmds
         self.n_elbows_cmds              = n_elbows_cmds
         self.dissimilarity              = dissimilarity
+        
+        self._n_queries = None
+        self._X_flat     = None
+        self._mds_input  = None
+        self._cmds_embds = None
 
     def fit_transform(self, data, return_dict=True):
         """
@@ -38,18 +43,48 @@ class DataKernelPerspectiveSpace:
 
         # aggregate over replicates -> (n_models, n_queries, embedding_dim)
         X = np.stack([self.response_distribution_fn(v, axis=self.response_distribution_axis) for k,v in data.items()])
-        n_models, n_queries, embedding_dim = X.shape
+        n_models, self._n_queries, embedding_dim = X.shape
         
         # flatten -> (n_models, n_queries * embedding_dim)
-        X_flat = X.reshape(len(X), -1)
+        self._X_flat = X.reshape(len(X), -1)
 
-        dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
-        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
+        self._mds_input  = squareform(pdist(self._X_flat, metric=self.metric_cmds)) 
+        self._mds_input  = self._mds_input / np.sqrt(self._n_queries)
+        self._cmds_embds = ClassicalMDS(
+            n_components=self.n_components_cmds,
+            n_elbows=self.n_elbows_cmds,
+            dissimilarity=self.dissimilarity
+        ).fit_transform(self._mds_input)
         
         if return_dict:
-            return {key: cmds_embds[i] for i, key in enumerate(data.keys())}
+            return {key: self._cmds_embds[i] for i, key in enumerate(data.keys())}
         else:
-            return cmds_embds
+            return self._cmds_embds
+    
+    def transform(self, q):
+        # [BKJ] this looks weird, because the original implementation does distances twice
+        #       hayden says this is what we want to do, though
+        _oos_X         = self.response_distribution_fn(q, axis=self.response_distribution_axis)
+        _oos_X_flat    = _oos_X.reshape(-1)
+        sel            = ~np.isnan(_oos_X_flat) # don't use the missing values
+        
+        # <<
+        # _oos_mds_input = cdist(self._X_flat[:,sel], _oos_X_flat[sel][None], metric=self.metric_cmds)
+        # _oos_mds_input = _oos_mds_input.squeeze() / np.sqrt(self._n_queries) # [BKJ] this seems wrong? 
+        # # [BKJ] ^ I think there's some issue w/ scaling going on here
+        # --
+        # inmputing missing values.  this should address scaling issues ...
+        _oos_X_flat[~sel] = self._X_flat[:,~sel].mean(axis=0)
+        _oos_mds_input = cdist(self._X_flat, _oos_X_flat[None], metric=self.metric_cmds)
+        _oos_mds_input = _oos_mds_input.squeeze() / np.sqrt(self._n_queries)
+        # >>
+        
+        # breakpoint()
+        D2 = squareform(pdist(self._mds_input, metric='sqeuclidean'))
+        d2 = ((self._mds_input - _oos_mds_input) ** 2).sum(axis=1)
+        b  = -0.5 * (d2 - D2.mean(axis=1) - d2.mean() + D2.mean())
+        return (self._cmds_embds.T @ b) / (self._cmds_embds ** 2).sum(axis=0)
+
 
 
 # class DataKernelFunctionalSpace:

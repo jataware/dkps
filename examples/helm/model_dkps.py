@@ -119,7 +119,9 @@ pred_null = {mode: predict_null(df, mode=mode) for mode in modes}
 # --
 # Simple - DKPS w/ more than one example
 
-def run_one(df_sample, n_samples, mode, seed):
+def run_one(df_sample, n_samples, mode, seed, dkps_mode='is', df_full=None):
+    assert dkps_mode in ['is', 'oos']
+    
     out = []
     model_names = df_sample.model.unique()
     
@@ -137,6 +139,8 @@ def run_one(df_sample, n_samples, mode, seed):
         
         df_train = df_sample[df_sample.model.isin(train_models)]
         df_test  = df_sample[df_sample.model == target_model]
+        if df_full is not None:
+            df_train_full = df_full[df_full.model.isin(train_models)]
 
         y_train = np.array([y_acts[m] for m in train_models])
         y_test  = y_acts[target_model]
@@ -145,18 +149,26 @@ def run_one(df_sample, n_samples, mode, seed):
         p_sample = df_test.score.mean()
 
         # knn on scores
-        S_train = S_all[np.isin(model_names, train_models)]
-        S_test  = S_all[model_names == target_model]
-        sknn    = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
+        S_train      = S_all[np.isin(model_names, train_models)]
+        S_test       = S_all[model_names == target_model]
+        sknn         = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
         p_3nn_score  = float(sknn.predict(S_test)[0])
         
         # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
         for n_components_cmds in [4, 8]:
-            P = dkps_df(
-                pd.concat([df_train, df_test]).reset_index(drop=True),
-                n_components_cmds=n_components_cmds,
-            )
+            if dkps_mode == 'is':
+                P = dkps_df(
+                    df                = pd.concat([df_train, df_test]).reset_index(drop=True),
+                    n_components_cmds = n_components_cmds,
+                )
+            elif dkps_mode == 'oos':
+                P = dkps_df(
+                    df                = pd.concat([df_train, df_test]).reset_index(drop=True),
+                    n_components_cmds = n_components_cmds,
+                    oos               = [target_model],
+                )
+            
             X_train = np.vstack([P[m] for m in train_models])
             X_test  = np.vstack([P[target_model]])
 
@@ -182,18 +194,20 @@ def run_one(df_sample, n_samples, mode, seed):
 
 N_REPLICATES = 32
 
-outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
+outpath = args.outdir / f'{args.dataset}-{args.score_col}-res-oos.tsv'
 
 jobs = []
 for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
-    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
+    for n_samples in [1, 2, 4, 8]: # , 16, 32, 64, 128]:
         if n_samples > len(instance_ids):
             continue
         
         instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-        jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
+        
+        # jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
+        jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter, dkps_mode='oos', df_full=df))
 
 res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)

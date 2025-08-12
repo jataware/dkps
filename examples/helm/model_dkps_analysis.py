@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument('--outdir',    type=str, default='results')
     args = parser.parse_args()
     
-    args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res.tsv'
+    args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res-oos.tsv'
     args.plot_dir = Path('plots')
     
     args.plot_dir.mkdir(parents=True, exist_ok=True)
