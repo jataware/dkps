@@ -11,7 +11,7 @@ This algorithm predicts the performance of a new model `m_new` on a dataset in a
 We use the (precomputed) scored outputs from a (large) set of models plus _unscored_ outputs from a new model to learn a regressor in DKPS space that predicts the performance of the new model on the entire dataset.
 
 **Pseudocode:**
-```
+```python
 def run_dkps_performance_estimation(
   models_old : list[LLM],
   dataset    : list[str],
