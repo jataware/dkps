@@ -164,7 +164,7 @@ def run_one(df_sample, n_samples, mode, seed, dkps_mode='is', df_full=None):
                 )
             elif dkps_mode == 'oos':
                 P = dkps_df(
-                    df                = pd.concat([df_train, df_test]).reset_index(drop=True),
+                    df                = pd.concat([df_train_full, df_test]).reset_index(drop=True),
                     n_components_cmds = n_components_cmds,
                     oos               = [target_model],
                 )
@@ -199,7 +199,7 @@ outpath = args.outdir / f'{args.dataset}-{args.score_col}-res-oos.tsv'
 jobs = []
 for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
-    for n_samples in [1, 2, 4, 8]: # , 16, 32, 64, 128]:
+    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
         if n_samples > len(instance_ids):
             continue
         
