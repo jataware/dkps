@@ -85,6 +85,55 @@ rprint(f'{len(model_names)} models, {n_replicates} replicates')
 # --
 # Plot (Simple)
 
+if args.dataset == 'med_qa':
+    df_res = df_res[df_res.n_samples > 2]
+
+# # <<
+# 2025-09-09
+# _ = plt.figure(figsize=(6, 6))
+# _ = plt.scatter(df_res.e_sample[df_res.n_samples == 16], df_res.e_lr_dkps8[df_res.n_samples == 16], s=1, alpha=0.1)
+
+# # Get the data ranges to set equal x and y limits
+# x_data  = df_res.e_sample[df_res.n_samples == 4]
+# y_data  = df_res.e_lr_dkps8[df_res.n_samples == 4]
+# min_val = min(x_data.min(), y_data.min())
+# max_val = max(x_data.max(), y_data.max())
+
+# _ = plt.plot([min_val, max_val], [min_val, max_val], c='black', lw=2)
+# _ = plt.xlim(min_val, max_val)
+# _ = plt.ylim(min_val, max_val)
+# _ = plt.gca().set_aspect('equal', adjustable='box')
+# _ = plt.grid('both', alpha=0.25, c='gray')
+# _ = plt.savefig('tmp.png')
+# _ = plt.close()
+
+# df_res['win'] = df_res.e_sample - df_res.e_lr_dkps8
+# df_res.groupby(['n_samples']).win.mean()
+
+# z = df_res[df_res.n_samples == 4]
+
+# _ = plt.scatter(z.p_lr_dkps8, z.y_act, s=3, alpha=0.5)
+# _ = plt.scatter(z.p_sample, z.y_act, s=3, alpha=0.5)
+# _ = plt.show()
+
+# from scipy.stats import spearmanr
+# spearmanr(z.p_lr_dkps8, z.y_act)
+# spearmanr(z.p_sample, z.y_act)
+
+# from sklearn.linear_model import LinearRegression
+# lr = LinearRegression().fit(z.p_lr_dkps8.values.reshape(-1, 1), z.y_act.values)
+# lr.coef_
+# lr.intercept_
+
+# np.abs(z.p_lr_dkps8 - z.y_act.values).mean()
+# np.abs(lr.predict(z.p_lr_dkps8.values.reshape(-1, 1)) - z.y_act.values).mean()
+
+# lr = LinearRegression().fit(z.p_sample.values.reshape(-1, 1), z.y_act.values)
+# lr.coef_
+# lr.intercept_
+# # >>
+
+
 _cols = [
     {
         "colname" : "e_null",
@@ -100,7 +149,7 @@ _cols = [
         "colname" : "e_lr_dkps8",
         "label"   : "DKPS(d=8)",
         "color"   : "red",
-    }
+    },
 ]
 
 df_avg = df_res.groupby(['mode', 'n_samples']).agg({
@@ -108,8 +157,9 @@ df_avg = df_res.groupby(['mode', 'n_samples']).agg({
     **{c['colname']: lambda x: np.mean(x) for c in _cols},
 }).reset_index()
 
+
 for c in _cols:
-    _ = plt.plot(df_avg.n_samples, df_avg[c['colname']], label=c['label'], c=c['color'], lw=3)
+    _ = plt.plot(df_avg.n_samples, df_avg[c['colname']], label=c['label'], c=c['color'], lw=3, marker='o')
 
 _ = plt.legend()
 _ = plt.grid('both', alpha=0.25, c='gray')

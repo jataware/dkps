@@ -61,11 +61,24 @@ assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(inst
 # --
 # Get embeddings
 
-df['embedding'] = list(embed_api(
-    provider   = args.embed_provider, 
-    input_strs = [str(xx) for xx in df.response.values],
-    model      = args.embed_model
-))
+if args.embed_model != 'onehot':
+    df['embedding'] = list(embed_api(
+        provider   = args.embed_provider, 
+        input_strs = [str(xx) for xx in df.response.values],
+        model      = args.embed_model
+    ))
+else:
+    if args.dataset == 'med_qa':
+        lookup = {'A' : 0, 'B' : 1, 'C' : 2, 'D' : 3}
+        
+        embeddings = np.zeros((len(df), 4))
+        for i, xx in enumerate(df.response.values):
+            if xx in lookup:
+                embeddings[i, lookup[xx]] = 1
+        
+        df['embedding'] = embeddings.tolist()
+    else:
+        raise ValueError(f'{args.dataset} is not supported for onehot embeddings')
 
 # --
 # Run DKPS
@@ -86,7 +99,7 @@ _ = plt.xlabel('DKPS-0')
 _ = plt.ylabel('DKPS-1')
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.title(f'DKPS - {args.dataset}')
-_ = plt.colorbar()
+_ = plt.colorbar(label='Score')
 _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps.png')
 _ = plt.close()
 
@@ -95,7 +108,7 @@ z = P[:,0]
 _ = plt.scatter(z, model2score.values(), c=P[:,1], cmap='inferno')
 _ = plt.xlabel('DKPS-0')
 _ = plt.ylabel('Score')
-_ = plt.colorbar()
+_ = plt.colorbar(label='DKPS-1')
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps0-vs-score.png')
 _ = plt.close()
@@ -105,7 +118,7 @@ z = P[:,1]
 _ = plt.scatter(z, model2score.values(), c=P[:,0], cmap='inferno')
 _ = plt.xlabel('DKPS-1')
 _ = plt.ylabel('Score')
-_ = plt.colorbar()
+_ = plt.colorbar(label='DKPS-0')
 _ = plt.grid('both', alpha=0.25, c='gray')
 _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps1-vs-score.png')
 _ = plt.close()

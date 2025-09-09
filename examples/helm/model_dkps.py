@@ -109,11 +109,24 @@ assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_i
 # --
 # Get embeddings
 
-df['embedding'] = list(embed_api(
-    provider   = args.embed_provider, 
-    input_strs = [str(xx) for xx in df.response.values],
-    model      = args.embed_model
-))
+if args.embed_model != 'onehot':
+    df['embedding'] = list(embed_api(
+        provider   = args.embed_provider, 
+        input_strs = [str(xx) for xx in df.response.values],
+        model      = args.embed_model
+    ))
+else:
+    if args.dataset == 'med_qa':
+        lookup = {'A' : 0, 'B' : 1, 'C' : 2, 'D' : 3}
+        
+        embeddings = np.zeros((len(df), len(lookup)))
+        for i, xx in enumerate(df.response.values):
+            if xx in lookup:
+                embeddings[i, lookup[xx]] = 1
+        
+        df['embedding'] = embeddings.tolist()
+    else:
+        raise ValueError(f'{args.dataset} is not supported for onehot embeddings')
 
 # --
 # Run
@@ -196,7 +209,7 @@ outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 jobs = []
 for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
-    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
+    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]:
         if n_samples > len(instance_ids):
             continue
         

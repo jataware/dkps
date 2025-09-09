@@ -41,8 +41,14 @@ for inpath in tqdm(inpaths, desc='loading data'):
     run = json.loads(inpath.read_text())    
     dps = json.loads((inpath.parent / 'display_predictions.json').read_text())
     
+    def dir2dataset(dir):
+        if args.dataset == 'med_qa':
+            return 'med_qa'
+        else:
+            return dir.split(',')[0]
+    
     _params = {    
-        "dataset" : inpath.parent.name.split(',')[0],
+        "dataset" : dir2dataset(inpath.parent.name),
         **dict([x.split('=') for x in inpath.parent.name.split(':')[1].split(',')])
     }
 
