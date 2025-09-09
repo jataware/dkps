@@ -15,7 +15,7 @@ class DataKernelPerspectiveSpace:
             metric_cmds='euclidean',
             n_components_cmds=None,
             n_elbows_cmds=2,
-            dissimilarity="euclidean",
+            dissimilarity="euclidean", # [TODO] change default to precomputed
         ):
         
         self.response_distribution_fn   = response_distribution_fn
