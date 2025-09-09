@@ -57,12 +57,14 @@ err_fns = {
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset',        type=str, default='math:subject=algebra')
-    parser.add_argument('--score_col',      type=str, default='score')
-    parser.add_argument('--embed_provider', type=str, default='jina')
-    parser.add_argument('--embed_model',    type=str, default=None)
-    parser.add_argument('--err_fn',         type=str, default='abs')
-    parser.add_argument('--outdir',         type=str, default='results')
+    parser.add_argument('--dataset',        type=str,   default='math:subject=algebra')
+    parser.add_argument('--score_col',      type=str,   default='score')
+    parser.add_argument('--embed_provider', type=str,   default='jina')
+    parser.add_argument('--embed_model',    type=str,   default=None)
+    parser.add_argument('--err_fn',         type=str,   default='abs')
+    parser.add_argument('--outdir',         type=str,   default='results')
+    parser.add_argument('--sample',         type=float)
+    parser.add_argument('--seed',           type=int,   default=123)
     args = parser.parse_args()
 
     if args.embed_model == 'jina':
@@ -84,6 +86,13 @@ rprint('[blue]loading data ...[/blue]')
 
 df = pd.read_csv(args.inpath, sep='\t')
 df = df[df.dataset == args.dataset]
+
+if args.sample:
+    rng           = np.random.default_rng(args.seed)
+    uinstance_ids = df.instance_id.unique()
+    keep          = rng.choice(uinstance_ids, int(len(uinstance_ids) * args.sample), replace=False)
+    df            = df[df.instance_id.isin(keep)]
+
 df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
 
 if args.score_col != 'score':
@@ -145,10 +154,10 @@ def run_one(df_sample, n_samples, mode, seed):
         p_sample = df_test.score.mean()
 
         # knn on scores
-        S_train = S_all[np.isin(model_names, train_models)]
-        S_test  = S_all[model_names == target_model]
-        sknn    = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
-        p_3nn_score  = float(sknn.predict(S_test)[0])
+        S_train     = S_all[np.isin(model_names, train_models)]
+        S_test      = S_all[model_names == target_model]
+        sknn        = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
+        p_3nn_score = float(sknn.predict(S_test)[0])
         
         # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
