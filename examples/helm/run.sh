@@ -28,7 +28,7 @@ python model_dkps.py --dataset math:subject=intermediate_algebra
 # python model_dkps.py --dataset math:subject=prealgebra
 # python model_dkps.py --dataset math:subject=precalculus
 
-# analyze DKPS model performance results
+# plot DKPS model performance results
 python model_dkps_analysis.py --dataset math:subject=algebra
 python model_dkps_analysis.py --dataset math:subject=counting_and_probability
 python model_dkps_analysis.py --dataset math:subject=geometry
@@ -58,6 +58,7 @@ python model_dkps.py --dataset wmt_14:language_pair=fr-en --score_col meteor --s
 python model_dkps.py --dataset wmt_14:language_pair=hi-en --score_col meteor --sample 0.2
 python model_dkps.py --dataset wmt_14:language_pair=ru-en --score_col meteor --sample 0.2
 
+# plot DKPS model performance results
 python model_dkps_analysis.py --dataset wmt_14:language_pair=cs-en --score_col meteor
 python model_dkps_analysis.py --dataset wmt_14:language_pair=de-en --score_col meteor
 python model_dkps_analysis.py --dataset wmt_14:language_pair=fr-en --score_col meteor
@@ -70,6 +71,34 @@ python model_dkps_analysis.py --dataset wmt_14:language_pair=ru-en --score_col m
 bash download-scripts/download-med_qa.sh
 
 python extract.py             --dataset med_qa
+
 python plot_dkps.py           --dataset med_qa --embed_model onehot
 python model_dkps.py          --dataset med_qa --embed_model onehot
 python model_dkps_analysis.py --dataset med_qa
+
+# --
+# LegalBench
+
+bash download-scripts/download-legalbench.sh
+
+python extract.py --dataset legalbench
+
+
+python plot_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot             
+python plot_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot                                     
+python plot_dkps.py --dataset legalbench:subset=corporate_lobbying                  --embed_model onehot                    
+python plot_dkps.py --dataset legalbench:subset=function_of_decision_section        --embed_model onehot                              
+python plot_dkps.py --dataset legalbench:subset=proa                                --embed_model onehot      
+
+python model_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot
+python model_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot
+python model_dkps.py --dataset legalbench:subset=corporate_lobbying                  --embed_model onehot
+python model_dkps.py --dataset legalbench:subset=function_of_decision_section        --embed_model onehot
+python model_dkps.py --dataset legalbench:subset=proa                                --embed_model onehot
+
+python model_dkps_analysis.py --dataset legalbench:subset=abercrombie
+python model_dkps_analysis.py --dataset legalbench:subset=international_citizenship_questions
+python model_dkps_analysis.py --dataset legalbench:subset=corporate_lobbying
+python model_dkps_analysis.py --dataset legalbench:subset=function_of_decision_section
+python model_dkps_analysis.py --dataset legalbench:subset=proa
+

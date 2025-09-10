@@ -11,7 +11,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
 
-from utils import dkps_df
+from utils import dkps_df, onehot_embedding
 from dkps.embed import embed_api
 
 # --
@@ -61,24 +61,14 @@ assert all([instance_ids.iloc[0] == instance_ids.iloc[i] for i in range(len(inst
 # --
 # Get embeddings
 
-if args.embed_model != 'onehot':
+if args.embed_model == 'onehot':
+    df = onehot_embedding(df, dataset=args.dataset)
+else:
     df['embedding'] = list(embed_api(
         provider   = args.embed_provider, 
         input_strs = [str(xx) for xx in df.response.values],
         model      = args.embed_model
     ))
-else:
-    if args.dataset == 'med_qa':
-        lookup = {'A' : 0, 'B' : 1, 'C' : 2, 'D' : 3}
-        
-        embeddings = np.zeros((len(df), 4))
-        for i, xx in enumerate(df.response.values):
-            if xx in lookup:
-                embeddings[i, lookup[xx]] = 1
-        
-        df['embedding'] = embeddings.tolist()
-    else:
-        raise ValueError(f'{args.dataset} is not supported for onehot embeddings')
 
 # --
 # Run DKPS

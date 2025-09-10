@@ -16,7 +16,7 @@ from joblib import Parallel, delayed
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 
-from utils import make_embedding_dict
+from utils import make_embedding_dict, onehot_embedding
 from dkps.embed import embed_api
 from dkps.dkps import DataKernelPerspectiveSpace as DKPS
 
@@ -111,24 +111,14 @@ assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_i
 # --
 # Get embeddings
 
-if args.embed_model != 'onehot':
+if args.embed_model == 'onehot':
+    df = onehot_embedding(df, dataset=args.dataset)
+else:
     df['embedding'] = list(embed_api(
         provider   = args.embed_provider, 
         input_strs = [str(xx) for xx in df.response.values],
         model      = args.embed_model
     ))
-else:
-    if args.dataset == 'med_qa':
-        lookup = {'A' : 0, 'B' : 1, 'C' : 2, 'D' : 3}
-        
-        embeddings = np.zeros((len(df), len(lookup)))
-        for i, xx in enumerate(df.response.values):
-            if xx in lookup:
-                embeddings[i, lookup[xx]] = 1
-        
-        df['embedding'] = embeddings.tolist()
-    else:
-        raise ValueError(f'{args.dataset} is not supported for onehot embeddings')
 
 # --
 # Run
