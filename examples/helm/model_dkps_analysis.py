@@ -133,6 +133,11 @@ if args.dataset == 'med_qa':
 # lr.intercept_
 # # >>
 
+# <<
+max_samples = df_res.n_samples.max()
+df_res['p_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) *df_res.p_lr_dkps8) / max_samples
+df_res['e_interp'] = np.abs(df_res.p_interp - df_res.y_act)
+# >>
 
 _cols = [
     {
@@ -150,8 +155,13 @@ _cols = [
         "label"   : "DKPS(d=8)",
         "color"   : "red",
     },
+    {
+        "colname" : "e_interp",
+        "label"   : "interp(e_sample+e_lr_dkps8)",
+        "color"   : "blue",
+    },
 ]
-
+    
 df_avg = df_res.groupby(['mode', 'n_samples']).agg({
     'y_act' : lambda x: np.mean(x),
     **{c['colname']: lambda x: np.mean(x) for c in _cols},

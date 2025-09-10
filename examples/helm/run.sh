@@ -5,7 +5,7 @@
 # --
 # MATH
 
-bash download-math.sh
+bash download-scripts/download-math.sh
 
 # extract to .tsv
 python extract.py --dataset math
@@ -20,7 +20,7 @@ python plot_dkps.py --dataset math:subject=intermediate_algebra
 # python plot_dkps.py --dataset math:subject=precalculus
 
 # use DKPS to predict model performance
-# python model_dkps.py --dataset math:subject=algebra
+python model_dkps.py --dataset math:subject=algebra
 # python model_dkps.py --dataset math:subject=counting_and_probability
 # python model_dkps.py --dataset math:subject=geometry
 python model_dkps.py --dataset math:subject=intermediate_algebra
@@ -29,18 +29,18 @@ python model_dkps.py --dataset math:subject=intermediate_algebra
 # python model_dkps.py --dataset math:subject=precalculus
 
 # analyze DKPS model performance results
-# python model_dkps_analysis.py --dataset math:subject=algebra
-# python model_dkps_analysis.py --dataset math:subject=counting_and_probability
-# python model_dkps_analysis.py --dataset math:subject=geometry
+python model_dkps_analysis.py --dataset math:subject=algebra
+python model_dkps_analysis.py --dataset math:subject=counting_and_probability
+python model_dkps_analysis.py --dataset math:subject=geometry
 python model_dkps_analysis.py --dataset math:subject=intermediate_algebra
-# python model_dkps_analysis.py --dataset math:subject=number_theory
-# python model_dkps_analysis.py --dataset math:subject=prealgebra
-# python model_dkps_analysis.py --dataset math:subject=precalculus
+python model_dkps_analysis.py --dataset math:subject=number_theory
+python model_dkps_analysis.py --dataset math:subject=prealgebra
+python model_dkps_analysis.py --dataset math:subject=precalculus
 
 # --
 # WMT 14
 
-bash download-wmt_14.sh
+bash download-scripts/download-wmt_14.sh
 
 python extract.py --dataset wmt_14
 
@@ -67,4 +67,9 @@ python model_dkps_analysis.py --dataset wmt_14:language_pair=ru-en --score_col m
 # --
 # MEDQA
 
-python extract.py --dataset med_qa
+bash download-scripts/download-med_qa.sh
+
+python extract.py             --dataset med_qa
+python plot_dkps.py           --dataset med_qa --embed_model onehot
+python model_dkps.py          --dataset med_qa --embed_model onehot
+python model_dkps_analysis.py --dataset med_qa

@@ -4,6 +4,7 @@
 """
 
 import os
+
 import argparse
 import numpy as np
 import pandas as pd
@@ -15,8 +16,9 @@ from joblib import Parallel, delayed
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 
-from utils import dkps_df
+from utils import make_embedding_dict
 from dkps.embed import embed_api
+from dkps.dkps import DataKernelPerspectiveSpace as DKPS
 
 # --
 # Helpers
@@ -147,6 +149,8 @@ def run_one(df_sample, n_samples, mode, seed):
     
     S_all = df_sample.pivot(index='model', columns='instance_id', values='score').values
     
+    embedding_dict = make_embedding_dict(df_sample)
+    
     for target_model in model_names:
         
         # split data
@@ -157,14 +161,14 @@ def run_one(df_sample, n_samples, mode, seed):
             target_family = model2family(target_model)
             train_models  = np.array([m for m in model_names if model2family(m) != target_family])
         
-        df_train = df_sample[df_sample.model.isin(train_models)]
-        df_test  = df_sample[df_sample.model == target_model]
-
+        # df_train = df_sample[df_sample.model.isin(train_models)]
+        # df_test  = df_sample[df_sample.model == target_model]
+        
         y_train = np.array([y_acts[m] for m in train_models])
         y_test  = y_acts[target_model]
 
         # average score over the `n_samples` evaluated
-        p_sample = df_test.score.mean()
+        p_sample = df_sample[df_sample.model == target_model].score.mean()
 
         # knn on scores
         S_train     = S_all[np.isin(model_names, train_models)]
@@ -173,12 +177,11 @@ def run_one(df_sample, n_samples, mode, seed):
         p_3nn_score = float(sknn.predict(S_test)[0])
         
         # lr on DKPS embeddings of varying dimension
+        _embedding_dict = {k:embedding_dict[k] for k in (set(train_models) | set([target_model]))}
         p_lr_dkps = {}
         for n_components_cmds in [4, 8]:
-            P = dkps_df(
-                pd.concat([df_train, df_test]).reset_index(drop=True),
-                n_components_cmds=n_components_cmds,
-            )
+            P = DKPS(n_components_cmds=n_components_cmds).fit_transform(_embedding_dict, return_dict=True)
+            
             X_train = np.vstack([P[m] for m in train_models])
             X_test  = np.vstack([P[target_model]])
 
@@ -202,6 +205,7 @@ def run_one(df_sample, n_samples, mode, seed):
     
     return out
 
+
 N_REPLICATES = 32
 
 outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
@@ -209,7 +213,7 @@ outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 jobs = []
 for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
-    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]:
+    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
         if n_samples > len(instance_ids):
             continue
         
@@ -217,7 +221,7 @@ for iter in trange(N_REPLICATES):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act

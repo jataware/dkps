@@ -33,7 +33,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/freetype-2.13.3-hce30654_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/frozenlist-1.7.0-py312h512c567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/google-auth-2.40.3-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/google-cloud-sdk-530.0.0-py312h81bd7bf_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/google-cloud-sdk-537.0.0-py312h81bd7bf_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/google-genai-1.28.0-pyhe01879c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h11-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/h2-4.2.0-pyhd8ed1ab_0.conda
@@ -143,7 +143,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/7e/d4/7ebdbd03970677812aac39c869717059dbb71a4cfc033ca6e5221787892c/click-8.1.8-py3-none-any.whl
       - pypi: git+https://github.com/jataware/graspologic#3517c30ee1627947021fb8022a0819388f012c48
       - pypi: https://files.pythonhosted.org/packages/03/8b/ad381ec1b8195fa4a9a693cb8087e031b99530c0d6b8ad036dcb99e144c4/grpclib-0.4.8-py3-none-any.whl
-      - pypi: git+https://github.com/jataware/jlai#8034bc1192e036ce55090e84a96e9206db027f50
+      - pypi: git+https://github.com/jataware/jlai#b9ab2844695a15305c597091a9e5bb380e0823c9
       - pypi: https://files.pythonhosted.org/packages/56/19/96c8cc6334225b7e880d1dd2aa4c96e236a7c914d90204ce8b51711912e9/modal-1.1.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4d/66/7d9e26593edda06e8cb531874633f7c2372279c3b0f46235539fe546df8b/nltk-3.9.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6a/c9/b9689a2a250264a84e66c46d8862ba788ee7a641cdca39bccf64f59284b7/protobuf-6.31.1-cp39-abi3-macosx_10_9_universal2.whl
@@ -431,7 +431,7 @@ packages:
 - pypi: ./
   name: dkps
   version: 0.1.0
-  sha256: e431b8b4217bf681cb9981ea7425a025ba99259b66408e7deec2d341c8903c87
+  sha256: 9fde9ef37ced6b0366e6a26dc7706f32e6918c2f545e167bd661ea4045468830
   requires_dist:
   - graspologic @ git+https://github.com/jataware/graspologic
   - jlai @ git+https://github.com/jataware/jlai
@@ -521,9 +521,9 @@ packages:
   - pkg:pypi/google-auth?source=hash-mapping
   size: 120329
   timestamp: 1749108371961
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/google-cloud-sdk-530.0.0-py312h81bd7bf_0.conda
-  sha256: 3c959fe17b42c6a07ed01bb586a54969d35c4012e0c1f02c33144e3fe4965ee9
-  md5: b92c63fc3d2b533091669a201b35784e
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/google-cloud-sdk-537.0.0-py312h81bd7bf_0.conda
+  sha256: 2b03cfe001f42e0e154df1745a2b25a44f9289fb8be530e378dd998dd4441b7c
+  md5: d66c3da1532298c32c3bafb8ce877dd8
   depends:
   - python >=3.12,<3.13.0a0
   - python >=3.12,<3.13.0a0 *_cpython
@@ -531,8 +531,8 @@ packages:
   license: Apache-2.0
   license_family: Apache
   purls: []
-  size: 86552362
-  timestamp: 1752646028999
+  size: 87559336
+  timestamp: 1756907762550
 - conda: https://conda.anaconda.org/conda-forge/noarch/google-genai-1.28.0-pyhe01879c_0.conda
   sha256: 146bd83aee827c374078e1547fe951dab916dcf41bb7ee76887c83a7d62cf6b8
   md5: ca4666cf03b54aa2e13fb0d4f7473bde
@@ -672,7 +672,7 @@ packages:
   - pkg:pypi/idna?source=hash-mapping
   size: 49765
   timestamp: 1733211921194
-- pypi: git+https://github.com/jataware/jlai#8034bc1192e036ce55090e84a96e9206db027f50
+- pypi: git+https://github.com/jataware/jlai#b9ab2844695a15305c597091a9e5bb380e0823c9
   name: jlai
   version: 0.1.0
   requires_dist:
