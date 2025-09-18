@@ -2,13 +2,20 @@ import os
 import asyncio
 import numpy as np
 from tqdm import trange
-from google import genai
-from google.genai import types
-from google.genai.types import HttpOptions
 from tqdm.asyncio import tqdm
 import httpx
 
-from jlai.embed.tei import embed_dataset as embed_jlai_tei
+try:
+    from google import genai
+    from google.genai import types
+    from google.genai.types import HttpOptions
+except:
+    print('dkps.embed: unable to load google-genai')
+
+try:
+    from jlai.embed.tei import embed_dataset as embed_jlai_tei
+except:
+    print('dkps.embed: unable to load jlai')
 
 from .cache import disk_cache
 
