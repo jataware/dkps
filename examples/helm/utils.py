@@ -34,6 +34,7 @@ def onehot_embedding(df, dataset):
                 embeddings[i, lookup[xx]] = 1
         
         df['embedding'] = embeddings.tolist()
+    
     elif 'legalbench' in dataset:
         # slightly different - bad values get mapped to 0
         n_levels   = len(df.response.unique())

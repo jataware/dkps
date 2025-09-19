@@ -60,6 +60,23 @@ _ = plt.title(f'{args.dataset} - Gain by model')
 _ = plt.tight_layout()
 _ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-err-bymodel.png')
 _ = plt.close()
+
+# --
+
+for target_model in df_res.target_model.unique():
+    sub = df_res[df_res.target_model == target_model]
+    _ = plt.scatter(sub.n_samples * np.random.uniform(0.9, 1.1), sub.e_sample - sub.e_interp, label=target_model, alpha=0.05, c='black')
+
+_ = plt.axhline(0, c='black')
+# _ = plt.legend()
+_ = plt.grid('both', alpha=0.25, c='gray')
+_ = plt.xscale('log')
+_ = plt.ylabel('err_sample - err_interp')
+_ = plt.xlabel('Number of queries (m)')
+_ = plt.title(f'{args.dataset} - Gain by model')
+_ = plt.tight_layout()
+_ = plt.savefig(f'plots/{args.dataset}-{args.score_col}-err-bymodel-ind.png')
+_ = plt.close()
 # >>
 
 

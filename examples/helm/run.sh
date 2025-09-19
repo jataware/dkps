@@ -83,12 +83,11 @@ bash download-scripts/download-legalbench.sh
 
 python extract.py --dataset legalbench
 
-
-python plot_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot             
-python plot_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot                                     
-python plot_dkps.py --dataset legalbench:subset=corporate_lobbying                  --embed_model onehot                    
-python plot_dkps.py --dataset legalbench:subset=function_of_decision_section        --embed_model onehot                              
-python plot_dkps.py --dataset legalbench:subset=proa                                --embed_model onehot      
+python plot_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot
+python plot_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot
+python plot_dkps.py --dataset legalbench:subset=corporate_lobbying                  --embed_model onehot
+python plot_dkps.py --dataset legalbench:subset=function_of_decision_section        --embed_model onehot
+python plot_dkps.py --dataset legalbench:subset=proa                                --embed_model onehot
 
 python model_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot
 python model_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot
