@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 """
-    joint.plot_dkps
+    helm.plot_dkps
 """
 
 import os
 import argparse
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
@@ -23,6 +24,7 @@ def parse_args():
     parser.add_argument('--score_col',      type=str, default='score')
     parser.add_argument('--embed_provider', type=str, default='jina', choices=['jina', 'google', 'jlai_tei'])
     parser.add_argument('--embed_model',    type=str, default=None)
+    parser.add_argument('--seed',           type=int,   default=123)
     args = parser.parse_args()
 
     if args.embed_model == 'jina':
@@ -40,6 +42,7 @@ def parse_args():
     return args
 
 args = parse_args()
+np.random.seed(args.seed)
 
 rprint('[blue]loading data ...[/blue]')
 
@@ -93,22 +96,60 @@ _ = plt.colorbar(label='Score')
 _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps.png')
 _ = plt.close()
 
-# Plot first DKPS dimension vs performance
-z = P[:,0]
-_ = plt.scatter(z, model2score.values(), c=P[:,1], cmap='inferno')
-_ = plt.xlabel('DKPS-0')
-_ = plt.ylabel('Score')
-_ = plt.colorbar(label='DKPS-1')
-_ = plt.grid('both', alpha=0.25, c='gray')
-_ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps0-vs-score.png')
-_ = plt.close()
+# <<
+# [BKJ 2025-09-19 - I don't think this is useful ...]
+# # Plot first DKPS dimension vs performance
+# z = P[:,0]
+# _ = plt.scatter(z, model2score.values(), c=P[:,1], cmap='inferno')
+# _ = plt.xlabel('DKPS-0')
+# _ = plt.ylabel('Score')
+# _ = plt.colorbar(label='DKPS-1')
+# _ = plt.grid('both', alpha=0.25, c='gray')
+# _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps0-vs-score.png')
+# _ = plt.close()
 
-# Plot second DKPS dimension vs performance
-z = P[:,1]
-_ = plt.scatter(z, model2score.values(), c=P[:,0], cmap='inferno')
-_ = plt.xlabel('DKPS-1')
-_ = plt.ylabel('Score')
-_ = plt.colorbar(label='DKPS-0')
-_ = plt.grid('both', alpha=0.25, c='gray')
-_ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps1-vs-score.png')
+# # Plot second DKPS dimension vs performance
+# z = P[:,1]
+# _ = plt.scatter(z, model2score.values(), c=P[:,0], cmap='inferno')
+# _ = plt.xlabel('DKPS-1')
+# _ = plt.ylabel('Score')
+# _ = plt.colorbar(label='DKPS-0')
+# _ = plt.grid('both', alpha=0.25, c='gray')
+# _ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps1-vs-score.png')
+# _ = plt.close()
+# >>
+
+# --
+# 2x2 Plot
+
+mids = np.random.choice(df.instance_id.unique(), size=50, replace=False)
+Ps = {}
+for i in tqdm([2, 5, 20, 50]):
+    df_sub = df[df.instance_id.isin(mids[:i])]
+    P_sub  = dkps_df(df_sub, n_components_cmds=2)
+    P_sub  = np.vstack([P_sub[m] for m in model2score.keys()])
+    Ps[i]  = P_sub
+    
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+axes = axes.flatten()
+
+for idx, (i, P_sub) in enumerate(Ps.items()):
+    ax = axes[idx]
+    scatter = ax.scatter(P_sub[:, 0], P_sub[:, 1], c=list(model2score.values()), cmap='viridis')
+    _ = ax.set_xticks([])
+    _ = ax.set_yticks([])
+    _ = ax.set_xlabel('DKPS-0')
+    _ = ax.set_ylabel('DKPS-1')
+    _ = ax.grid('both', alpha=0.25, c='gray')
+    _ = ax.set_title(f'n_instances={i}')
+
+_ = plt.suptitle(f'DKPS - {args.dataset}')
+_ = plt.tight_layout()
+
+# Add colorbar to the figure
+cbar = plt.colorbar(scatter, ax=axes, shrink=0.8, aspect=20)
+cbar.set_label('Score')
+
+_ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps-2x2.png')
 _ = plt.close()
