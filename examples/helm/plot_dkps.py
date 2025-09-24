@@ -122,27 +122,31 @@ _ = plt.close()
 # --
 # 2x2 Plot
 
-mids = np.random.choice(df.instance_id.unique(), size=50, replace=False)
+uinstance_ids = np.random.choice(df.instance_id.unique(), size=50, replace=False)
+umodels       = np.random.permutation(df.model.unique())
+
+fig, axes = plt.subplots(2, 3, figsize=(12, 10))
+
 Ps = {}
-for i in tqdm([2, 5, 20, 50]):
-    df_sub = df[df.instance_id.isin(mids[:i])]
-    P_sub  = dkps_df(df_sub, n_components_cmds=2)
-    P_sub  = np.vstack([P_sub[m] for m in model2score.keys()])
-    Ps[i]  = P_sub
-    
+for c, n_instances in enumerate([2, 10, 50]):
+    _instance_ids = uinstance_ids[:n_instances]
+    for r, n_models in enumerate([20, len(umodels)]):
+        _models      = umodels[:n_models]
+        _model2score = {m:model2score[m] for m in _models}
+        
+        df_sub = df[df.instance_id.isin(_instance_ids)]
+        df_sub = df_sub[df_sub.model.isin(_models)]
+        P_sub  = dkps_df(df_sub, n_components_cmds=2)
+        P_sub  = np.vstack([P_sub[m] for m in _model2score.keys()])
 
-fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-axes = axes.flatten()
-
-for idx, (i, P_sub) in enumerate(Ps.items()):
-    ax = axes[idx]
-    scatter = ax.scatter(P_sub[:, 0], P_sub[:, 1], c=list(model2score.values()), cmap='viridis')
-    _ = ax.set_xticks([])
-    _ = ax.set_yticks([])
-    _ = ax.set_xlabel('DKPS-0')
-    _ = ax.set_ylabel('DKPS-1')
-    _ = ax.grid('both', alpha=0.25, c='gray')
-    _ = ax.set_title(f'n_instances={i}')
+        ax = axes[r, c]
+        scatter = ax.scatter(P_sub[:, 0], P_sub[:, 1], c=list(_model2score.values()), cmap='viridis')
+        _ = ax.set_xticks([])
+        _ = ax.set_yticks([])
+        _ = ax.set_xlabel('DKPS-0')
+        _ = ax.set_ylabel('DKPS-1')
+        _ = ax.grid('both', alpha=0.25, c='gray')
+        _ = ax.set_title(f'n_models={n_models} | n_instances={n_instances}')
 
 _ = plt.suptitle(f'DKPS - {args.dataset}')
 _ = plt.tight_layout()
@@ -151,5 +155,5 @@ _ = plt.tight_layout()
 cbar = plt.colorbar(scatter, ax=axes, shrink=0.8, aspect=20)
 cbar.set_label('Score')
 
-_ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps-2x2.png')
+_ = plt.savefig(args.plot_dir / f'{args.dataset}-dkps-grid.png')
 _ = plt.close()

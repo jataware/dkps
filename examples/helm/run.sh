@@ -11,7 +11,7 @@ bash download-scripts/download-math.sh
 python extract.py --dataset math
 
 # run DKPS - generate plots
-# python plot_dkps.py --dataset math:subject=algebra
+python plot_dkps.py --dataset math:subject=algebra
 # python plot_dkps.py --dataset math:subject=counting_and_probability
 # python plot_dkps.py --dataset math:subject=geometry
 python plot_dkps.py --dataset math:subject=intermediate_algebra

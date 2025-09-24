@@ -154,30 +154,39 @@ def run_one(df_sample, n_samples, mode, seed):
         # df_train = df_sample[df_sample.model.isin(train_models)]
         # df_test  = df_sample[df_sample.model == target_model]
         
-        y_train = np.array([y_acts[m] for m in train_models])
+        # y_train = np.array([y_acts[m] for m in train_models])
         y_test  = y_acts[target_model]
 
         # average score over the `n_samples` evaluated
         p_sample = df_sample[df_sample.model == target_model].score.mean()
 
-        # knn on scores
-        S_train     = S_all[np.isin(model_names, train_models)]
-        S_test      = S_all[model_names == target_model]
-        sknn        = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
-        p_3nn_score = float(sknn.predict(S_test)[0])
+        # # knn on scores
+        # S_train     = S_all[np.isin(model_names, train_models)]
+        # S_test      = S_all[model_names == target_model]
+        # sknn        = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
+        # p_3nn_score = float(sknn.predict(S_test)[0])
         
         # lr on DKPS embeddings of varying dimension
-        _embedding_dict = {k:embedding_dict[k] for k in (set(train_models) | set([target_model]))}
         p_lr_dkps = {}
-        for n_components_cmds in [4, 8]:
-            P = DKPS(n_components_cmds=n_components_cmds).fit_transform(_embedding_dict, return_dict=True)
-            
-            X_train = np.vstack([P[m] for m in train_models])
-            X_test  = np.vstack([P[target_model]])
+        for n_components_cmds in [8]:
+            for n_models in [20, 50, len(train_models)]:
+                _train_models   = np.random.choice(train_models, size=n_models, replace=False)
+                _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
+                
+                P = DKPS(n_components_cmds=n_components_cmds)
+                P = P.fit_transform(_embedding_dict, return_dict=True)
+                
+                _X_train = np.vstack([P[m] for m in _train_models])
+                _y_train = np.array([y_acts[m] for m in _train_models])
+                _X_test  = np.vstack([P[target_model]])
 
-            # linear regression on DKPS embeddings        
-            lr = LinearRegression().fit(X_train, y_train)
-            p_lr_dkps[f'p_lr_dkps{n_components_cmds}'] = float(lr.predict(X_test)[0])
+                # linear regression on DKPS embeddings        
+                lr = LinearRegression().fit(_X_train, _y_train)
+                
+                if n_models != len(train_models):
+                    p_lr_dkps[f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'] = float(lr.predict(_X_test)[0])
+                else:
+                    p_lr_dkps[f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'] = float(lr.predict(_X_test)[0])
 
         out.append({
             "seed"         : seed,
@@ -188,7 +197,7 @@ def run_one(df_sample, n_samples, mode, seed):
             "y_act"        : y_test,
             "p_null"       : pred_null[mode][target_model],
             "p_sample"     : p_sample,
-            "p_3nn_score"  : p_3nn_score,
+            # "p_3nn_score"  : p_3nn_score,
             
             **p_lr_dkps,
         })
@@ -196,7 +205,7 @@ def run_one(df_sample, n_samples, mode, seed):
     return out
 
 
-N_REPLICATES = 32
+N_REPLICATES = 128
 
 outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 
@@ -211,7 +220,7 @@ for iter in trange(N_REPLICATES):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=1, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act
