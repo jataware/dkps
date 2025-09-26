@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-    joint.model_dkps
+    helm.model_dkps
 """
 
 import os
@@ -220,7 +220,7 @@ for iter in trange(N_REPLICATES):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=-2, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act
