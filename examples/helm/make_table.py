@@ -37,7 +37,7 @@ df['e_interp']        = np.abs(df.p_interp - df.y_act)
 # --
 # per split
 
-tab = df[df.n_samples.isin([4, 16, 64])].groupby(['dataset', 'split', 'n_samples']).agg({
+tab = df[df.n_samples.isin([1, 4, 16, 64])].groupby(['dataset', 'split', 'n_samples']).agg({
     'e_null'                                        : 'mean',
     'e_sample'                                      : 'mean',
     'e_lr_dkps8__n_components_cmds=8__n_models=ALL' : 'mean',
@@ -52,14 +52,17 @@ tab.rename(columns={
 }, inplace=True)
 
 tab = tab.reset_index()
+print(tab)
+tab.to_csv('table-by_dataset_split.tsv', sep='\t')
 
 # --
 # per dataset
 
-split_size = 100
+split_sizes = df[['dataset_split', 'n_dataset_split']].drop_duplicates()
+split_sizes = dict(zip(split_sizes.dataset_split.values, split_sizes.n_dataset_split.values))
 
-def _compute_pred(sub):
-    split_sizes = np.array([split_size for _ in sub.dataset_split]) # [TODO] fix this to actually be weighted by split size
+def _compute_pred(sub, split_sizes):
+    split_sizes = np.array([split_sizes[dataset_split] for dataset_split in sub.dataset_split.values])
     
     methods = ['y_act', 'p_null', 'p_sample', 'p_lr_dkps8__n_components_cmds=8__n_models=ALL', 'p_interp']
     preds   = {method:sub[method].values @ split_sizes / split_sizes.sum() for method in methods}
@@ -68,9 +71,9 @@ def _compute_pred(sub):
     return pd.Series(errs)
 
 # takes a while ...
-df_sub = df[df.n_samples.isin([1, 4, 16, 64])]
+df_sub = df[df.n_samples.isin([1, 2, 4, 8, 16, 32, 64])]
 
-df_dataset = df_sub.groupby(['dataset', 'n_samples', 'seed', 'target_model']).apply(_compute_pred)
+df_dataset = df_sub.groupby(['dataset', 'n_samples', 'seed', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
 df_dataset.reset_index(inplace=True)
 
 
@@ -92,4 +95,4 @@ tab_dataset.rename(columns={
 tab_dataset = tab_dataset.reset_index()
 print(tab_dataset.T)
 
-tab_dataset.T.to_csv('table_dataset.tsv', sep='\t')
+tab_dataset.T.to_csv('table-by_dataset.tsv', sep='\t')
