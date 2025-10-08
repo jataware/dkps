@@ -9,6 +9,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
 
+rprint('[yellow] Assumption - all metrics are bounded between 0 and 1[/yellow]')
+
 # --
 # CLI
 
@@ -34,6 +36,19 @@ args   = parse_args()
 df_res = pd.read_csv(args.tsv_path, sep='\t')
 model_names  = df_res.target_model.unique()
 n_replicates = df_res.seed.nunique()
+
+# <<
+# Hotfix
+
+dkps_cols = [c for c in df_res.columns if 'p_' in c]
+rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
+for c in dkps_cols:
+    df_res[c] = df_res[c].clip(0, 1)
+
+for c in dkps_cols:
+    df_res[c.replace('p_', 'e_')] = np.abs(df_res[c] - df_res.y_act)
+
+# >>
 
 # alias the run with all models
 df_res['p_lr_dkps8'] = df_res['p_lr_dkps8__n_components_cmds=8__n_models=ALL']

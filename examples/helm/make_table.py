@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from glob import glob
 from tqdm import tqdm
+from rich import print as rprint
+
+rprint('[yellow] Assumption - all metrics are bounded between 0 and 1[/yellow]')
+rprint('[yellow] Assumption - metrics are averages of per-sample metrics[/yellow]')
 
 pd.set_option('display.float_format', lambda x: f'{x:.3f}')
 
@@ -27,6 +31,20 @@ df['dataset']       = df.dataset_split.apply(lambda x: x.split(':')[0] if ':' in
 df['split']         = df.dataset_split.apply(lambda x: x.split(':')[1] if ':' in x else x)
 
 # --
+
+# <<
+# Hotfix
+
+dkps_cols = [c for c in df.columns if 'p_' in c]
+rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
+for c in dkps_cols:
+    df[c] = df[c].clip(0, 1)
+
+for c in dkps_cols:
+    df[c.replace('p_', 'e_')] = np.abs(df[c] - df.y_act)
+
+# >>
+
 
 df['p_lr_dkps8'] = df['p_lr_dkps8__n_components_cmds=8__n_models=ALL']
 
@@ -71,7 +89,7 @@ def _compute_pred(sub, split_sizes):
     return pd.Series(errs)
 
 # takes a while ...
-df_sub = df[df.n_samples.isin([1, 2, 4, 8, 16, 32, 64])]
+df_sub = df[df.n_samples.isin([1, 4, 16, 64])]
 
 df_dataset = df_sub.groupby(['dataset', 'n_samples', 'seed', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
 df_dataset.reset_index(inplace=True)
@@ -94,5 +112,6 @@ tab_dataset.rename(columns={
 
 tab_dataset = tab_dataset.reset_index()
 print(tab_dataset.T)
+print(tab_dataset.T.to_latex())
 
 tab_dataset.T.to_csv('table-by_dataset.tsv', sep='\t')
