@@ -77,7 +77,7 @@ _ = plt.ylabel('err_sample - err_interp')
 _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset} \n Performance gain (average per model)')
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-bymodel.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-bymodel-clip.png')
 _ = plt.close()
 
 # --
@@ -94,7 +94,7 @@ _ = plt.ylabel('err_sample - err_interp')
 _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset} \n Performance gain (per replicate)')
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-byreplicate.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-byreplicate-clip.png')
 _ = plt.close()
 
 # --
@@ -163,7 +163,7 @@ _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset}')
 
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-0.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-0-clip.png')
 _ = plt.close()
 
 
@@ -180,5 +180,5 @@ _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset}')
 
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-1.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-1-clip.png')
 _ = plt.close()
