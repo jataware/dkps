@@ -45,11 +45,11 @@ bash download-scripts/download-wmt_14.sh
 python extract.py --dataset wmt_14
 
 # run DKPS - generate plots
-python plot_dkps.py --dataset wmt_14:language_pair=cs-en
-python plot_dkps.py --dataset wmt_14:language_pair=de-en
-python plot_dkps.py --dataset wmt_14:language_pair=fr-en
-python plot_dkps.py --dataset wmt_14:language_pair=hi-en
-python plot_dkps.py --dataset wmt_14:language_pair=ru-en
+python plot_dkps.py --dataset wmt_14:language_pair=cs-en --sample 0.2
+python plot_dkps.py --dataset wmt_14:language_pair=de-en --sample 0.2
+python plot_dkps.py --dataset wmt_14:language_pair=fr-en --sample 0.2
+python plot_dkps.py --dataset wmt_14:language_pair=hi-en --sample 0.2
+python plot_dkps.py --dataset wmt_14:language_pair=ru-en --sample 0.2
 
 # use DKPS to predict model performance
 python model_dkps.py --dataset wmt_14:language_pair=cs-en --score_col meteor --sample 0.2
