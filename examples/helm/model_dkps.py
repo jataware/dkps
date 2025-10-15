@@ -65,6 +65,7 @@ def parse_args():
     parser.add_argument('--embed_model',    type=str,   default=None)
     parser.add_argument('--err_fn',         type=str,   default='abs')
     parser.add_argument('--outdir',         type=str,   default='results')
+    parser.add_argument('--sample_method',  type=str,   default='random') # choices: random, cluster_input
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int,   default=123)
     args = parser.parse_args()
@@ -76,7 +77,7 @@ def parse_args():
     elif args.embed_model == 'jlai_tei':
         print('... jlai_tei requires some manual setup ... talk to @bkj ...')
     
-    args.inpath = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
+    args.inpath = Path('data') / f'{args.sample_method}-{args.dataset.split(":")[0]}.tsv' # this will break downstream stuff
     args.outdir = Path(args.outdir)
     args.outdir.mkdir(parents=True, exist_ok=True)
     
@@ -119,6 +120,13 @@ else:
         input_strs = [str(xx) for xx in df.response.values],
         model      = args.embed_model
     ))
+
+# [TODO]
+# df['query_embedding'] = list(embed_api(
+#     provider   = args.embed_provider, 
+#     input_strs = [str(xx) for xx in df.query.values],
+#     model      = args.embed_model
+# ))
 
 # --
 # Run
@@ -215,8 +223,12 @@ for iter in trange(N_REPLICATES):
     for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
         if n_samples > len(instance_ids):
             continue
-        
-        instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+
+        if args.sample_method == 'random':
+            instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+        elif args.sample_method == 'cluster_input':
+            instance_ids_sample = get_n_inputs_from_cluster(df.query_embedding, size=n_samples) # [TODO]
+            
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
