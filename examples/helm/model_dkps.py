@@ -198,6 +198,7 @@ def run_one(df_sample, n_samples, mode, seed):
 
         out.append({
             "seed"         : seed,
+            # "instance_ids_sample" : instance_ids_sample, # [TODO] make sure these are actual IDs, not just indices
             "n_samples"    : n_samples,
             "mode"         : mode,
             "target_model" : target_model,
