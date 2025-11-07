@@ -9,6 +9,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
 
+rprint('[yellow] Assumption - all metrics are bounded between 0 and 1[/yellow]')
+
 # --
 # CLI
 
@@ -34,6 +36,19 @@ args   = parse_args()
 df_res = pd.read_csv(args.tsv_path, sep='\t')
 model_names  = df_res.target_model.unique()
 n_replicates = df_res.seed.nunique()
+
+# <<
+# Hotfix
+
+dkps_cols = [c for c in df_res.columns if 'p_' in c]
+rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
+for c in dkps_cols:
+    df_res[c] = df_res[c].clip(0, 1)
+
+for c in dkps_cols:
+    df_res[c.replace('p_', 'e_')] = np.abs(df_res[c] - df_res.y_act)
+
+# >>
 
 # alias the run with all models
 df_res['p_lr_dkps8'] = df_res['p_lr_dkps8__n_components_cmds=8__n_models=ALL']
@@ -62,7 +77,7 @@ _ = plt.ylabel('err_sample - err_interp')
 _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset} \n Performance gain (average per model)')
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-bymodel.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-bymodel-clip.png')
 _ = plt.close()
 
 # --
@@ -79,7 +94,7 @@ _ = plt.ylabel('err_sample - err_interp')
 _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset} \n Performance gain (per replicate)')
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-byreplicate.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-byreplicate-clip.png')
 _ = plt.close()
 
 # --
@@ -148,7 +163,7 @@ _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset}')
 
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-0.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-0-clip.png')
 _ = plt.close()
 
 
@@ -165,5 +180,5 @@ _ = plt.xlabel('Number of queries (m)')
 _ = plt.title(f'{args.dataset}')
 
 _ = plt.tight_layout()
-_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-1.png')
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-err-simple-1-clip.png')
 _ = plt.close()
