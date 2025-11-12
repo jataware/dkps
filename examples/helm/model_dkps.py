@@ -68,6 +68,8 @@ def parse_args():
     parser.add_argument('--outdir',         type=str,   default='results')
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int,   default=123)
+    parser.add_argument('--n_replicates',   type=int,   default=128)
+    parser.add_argument('--n_jobs',         type=int,   default=-2)
     args = parser.parse_args()
 
     if args.embed_model == 'jina':
@@ -232,13 +234,10 @@ def run_one(df_sample, n_samples, mode, seed):
     return out
 
 
-
-N_REPLICATES = 512
-
 outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 
 jobs = []
-for iter in trange(N_REPLICATES):
+for iter in trange(args.n_replicates):
     rng = np.random.default_rng(iter)
     for n_samples in [2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
         if n_samples > len(instance_ids):
@@ -248,7 +247,7 @@ for iter in trange(N_REPLICATES):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=args.n_jobs, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act

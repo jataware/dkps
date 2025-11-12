@@ -35,17 +35,18 @@ async def _aembed_google_chunk(chunk_id, client, chunk, model):
 class JinaClient:
     def __init__(self, api_key=None):
         self.api_key = api_key or os.environ.get("JINA_API_KEY")
+    
+    async def embed(self, input_data, model):
         if not self.api_key:
             raise Exception("JINA_API_KEY is not set")
         
-        self.headers = {
+        headers = {
             "Accept"          : "application/json",
             "Authorization"   : f"Bearer {self.api_key}",
             "Content-Type"    : "application/json",
         }
-    
-    async def embed(self, input_data, model):
-        async with httpx.AsyncClient(timeout=None, headers=self.headers) as client:
+
+        async with httpx.AsyncClient(timeout=None, headers=headers) as client:
             res = await client.post("https://api.jina.ai/v1/embeddings", json={
                 "model" : model,
                 "task"  : "text-matching",
