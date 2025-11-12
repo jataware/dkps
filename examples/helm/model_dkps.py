@@ -14,7 +14,8 @@ from rich import print as rprint
 from tqdm import trange
 from joblib import Parallel, delayed
 from sklearn.linear_model import LinearRegression
-from sklearn.neighbors import KNeighborsRegressor
+# from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import LeaveOneOut, cross_val_predict
 
 from utils import make_embedding_dict, onehot_embedding
 from dkps.embed import embed_api
@@ -137,9 +138,19 @@ def run_one(df_sample, n_samples, mode, seed):
     out = []
     model_names = df_sample.model.unique()
     
-    S_all = df_sample.pivot(index='model', columns='instance_id', values='score').values
+    # S_all = df_sample.pivot(index='model', columns='instance_id', values='score').values
     
     embedding_dict = make_embedding_dict(df_sample)
+
+    # # <<
+    # def entropy(tab):
+    #     p = tab / tab.sum(axis=1, keepdims=True)
+    #     p = np.where(p > 0, p, 1)
+    #     return - np.sum(np.where(tab > 0, p * np.log(p), 0), axis=1)
+    
+    # tab = pd.crosstab(df_sample.instance_id, df_sample.response).values
+    # ent = entropy(tab)
+    # # >>
     
     for target_model in model_names:
         
@@ -184,10 +195,20 @@ def run_one(df_sample, n_samples, mode, seed):
                 lr = LinearRegression().fit(_X_train, _y_train)
                 
                 if n_models != len(train_models):
-                    p_lr_dkps[f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'] = float(lr.predict(_X_test)[0])
+                    _name = f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'
                 else:
-                    p_lr_dkps[f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'] = float(lr.predict(_X_test)[0])
+                    _name = f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'
 
+                p_lr_dkps[_name] = float(lr.predict(_X_test)[0])
+                
+                # <<
+                lr_pred_train = lr.predict(_X_train)
+                cv_pred_train = cross_val_predict(LinearRegression(), _X_train, _y_train, cv=LeaveOneOut())
+
+                p_lr_dkps[_name + '--er'] = ((lr_pred_train - _y_train) ** 2).mean()
+                p_lr_dkps[_name + '--lo'] = ((cv_pred_train - _y_train) ** 2).mean()
+                # >>
+        
         out.append({
             "seed"         : seed,
             "n_samples"    : n_samples,
@@ -199,20 +220,27 @@ def run_one(df_sample, n_samples, mode, seed):
             "p_sample"     : p_sample,
             # "p_3nn_score"  : p_3nn_score,
             
+            # # <<
+            # "mean_entropy" : ent.mean(),
+            # "max_entropy"  : ent.max(),
+            # "min_entropy"  : ent.min(),
+            # # >>
+            
             **p_lr_dkps,
         })
     
     return out
 
 
-N_REPLICATES = 128
+
+N_REPLICATES = 512
 
 outpath = args.outdir / f'{args.dataset}-{args.score_col}-res.tsv'
 
 jobs = []
 for iter in trange(N_REPLICATES):
     rng = np.random.default_rng(iter)
-    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
+    for n_samples in [2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
         if n_samples > len(instance_ids):
             continue
         
@@ -220,7 +248,7 @@ for iter in trange(N_REPLICATES):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=-2, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=-1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act
