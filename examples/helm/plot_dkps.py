@@ -27,13 +27,6 @@ def parse_args():
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int, default=123)
     args = parser.parse_args()
-
-    if args.embed_model == 'jina':
-        assert os.environ.get('JINA_API_KEY') is not None, 'JINA_API_KEY is not set'
-    elif args.embed_model == 'google':
-        assert os.environ.get('GEMINI_API_KEY') is not None, 'GEMINI_API_KEY is not set'
-    elif args.embed_model == 'jlai_tei':
-        print('... jlai_tei requires some manual setup ... talk to @bkj ...')
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     args.plot_dir = Path('plots') / args.dataset.replace(':', '-')

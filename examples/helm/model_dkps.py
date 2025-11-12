@@ -13,9 +13,10 @@ import matplotlib.pyplot as plt
 from rich import print as rprint
 from tqdm import trange
 from joblib import Parallel, delayed
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 # from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import LeaveOneOut, cross_val_predict
+from sklearn.metrics import r2_score
 
 from utils import make_embedding_dict, onehot_embedding
 from dkps.embed import embed_api
@@ -194,21 +195,28 @@ def run_one(df_sample, n_samples, mode, seed):
                 _X_test  = np.vstack([P[target_model]])
 
                 # linear regression on DKPS embeddings        
+                # <<
                 lr = LinearRegression().fit(_X_train, _y_train)
+                # --
+                # lr = Ridge(alpha=100).fit(_X_train, _y_train)
+                # >>
                 
                 if n_models != len(train_models):
-                    _name = f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'
+                    _suffix = f'lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'
                 else:
-                    _name = f'p_lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'
+                    _suffix = f'lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'
 
-                p_lr_dkps[_name] = float(lr.predict(_X_test)[0])
+                p_lr_dkps['p_' + _suffix] = float(lr.predict(_X_test)[0])
                 
                 # <<
                 lr_pred_train = lr.predict(_X_train)
-                cv_pred_train = cross_val_predict(LinearRegression(), _X_train, _y_train, cv=LeaveOneOut())
+                # cv_pred_train = cross_val_predict(LinearRegression(), _X_train, _y_train, cv=LeaveOneOut())
 
-                p_lr_dkps[_name + '--er'] = ((lr_pred_train - _y_train) ** 2).mean()
-                p_lr_dkps[_name + '--lo'] = ((cv_pred_train - _y_train) ** 2).mean()
+                p_lr_dkps['er_' + _suffix] = ((lr_pred_train - _y_train) ** 2).mean()
+                p_lr_dkps['ss_' + _suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
+                p_lr_dkps['r2_' + _suffix] = r2_score(_y_train, lr_pred_train)
+                
+                # p_lr_dkps[_name + '--lo'] = ((cv_pred_train - _y_train) ** 2).mean()
                 # >>
         
         out.append({
@@ -253,6 +261,9 @@ df_res = pd.DataFrame(res)
 # compute errors - abs(pred - act) / act
 for c in df_res.columns:
     if 'p_' in c:
+        assert c.startswith('p_')
+        assert 'p_' not in c[2:]
+        
         df_res[c.replace('p_', 'e_')] = err_fns[args.err_fn](df_res.y_act, df_res[c])
 
 

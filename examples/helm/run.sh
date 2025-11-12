@@ -101,3 +101,23 @@ python model_dkps_analysis.py --dataset legalbench:subset=corporate_lobbying
 python model_dkps_analysis.py --dataset legalbench:subset=function_of_decision_section
 python model_dkps_analysis.py --dataset legalbench:subset=proa
 
+
+
+
+# <<<
+python model_dkps.py --dataset math:subject=algebra --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=counting_and_probability --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=geometry --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=intermediate_algebra --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=number_theory --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=prealgebra --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset math:subject=precalculus --n_replicates 512 --n_jobs -1
+
+python model_dkps.py --dataset med_qa --embed_model onehot --n_replicates 512 --n_jobs -1
+
+python model_dkps.py --dataset legalbench:subset=abercrombie                         --embed_model onehot --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset legalbench:subset=international_citizenship_questions --embed_model onehot --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset legalbench:subset=corporate_lobbying                  --embed_model onehot --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset legalbench:subset=function_of_decision_section        --embed_model onehot --n_replicates 512 --n_jobs -1
+python model_dkps.py --dataset legalbench:subset=proa                                --embed_model onehot --n_replicates 512 --n_jobs -1
+# >>>
