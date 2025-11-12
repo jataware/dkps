@@ -123,7 +123,7 @@ axes = axes.flatten()
 
 _suffix  = 'lr_dkps8__n_components_cmds=8__n_models=ALL'
 e_col    = 'e_' + _suffix
-gof_col  = 'er_' + _suffix
+gof_col  = 'r2_' + _suffix
 
 for ax, n_samples in zip(axes, n_samples_values):
     sub = df_res[df_res.n_samples == n_samples]
@@ -147,8 +147,8 @@ for ax, n_samples in zip(axes, n_samples_values):
     _ = ax.plot(Z.index, Z['z50'], label='50%', c='blue', linewidth=2)
     _ = ax.plot(Z.index, Z['mu'], label='mean', c='blue', linestyle='--', linewidth=2)
     
-    _ = ax.axhline(np.percentile(err, 50), c='black', linestyle='--', alpha=0.5)
-    _ = ax.axvline(np.percentile(gof, 80), c='black', linestyle='--', alpha=0.5)
+    _ = ax.axhline(np.mean(err), c='black', linestyle='--', alpha=0.5)
+    # _ = ax.axvline(np.percentile(gof, 80), c='black', linestyle='--', alpha=0.5)
     
     _ = ax.set_title(f'n_samples={n_samples}')
     _ = ax.set_xlabel(f'{gof_col}')
@@ -164,6 +164,10 @@ _ = fig.suptitle(f'{args.dataset}', fontsize=14, y=1.00)
 _ = plt.tight_layout()
 _ = plt.savefig(args.plot_dir / f'{args.score_col}-error-percentiles-grid.png')
 _ = plt.close()
+
+
+
+
 
 # >>>>>>>>>>>>>>>
 
@@ -206,6 +210,7 @@ _ = plt.close()
 # --
 # Plot error vs number of queries
 
+
 _cols = [
     {
         "colname"   : "e_null",
@@ -225,20 +230,20 @@ _cols = [
         "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=20",
         "label"     : "DKPS(d=8, n_models=20)",
         "c"         : "red",
-        "linestyle" : ":",
+        "linestyle" : "-",
         "plots"     : [0],
     },
     {
         "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=50",
         "label"     : "DKPS(d=8, n_models=50)",
-        "c"         : "red",
-        "linestyle" : "--",
+        "c"         : "purple",
+        "linestyle" : "-",
         "plots"     : [0],
     },
     {
         "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=ALL",
         "label"     : "DKPS(d=8, n_models=ALL)",
-        "c"         : "red",
+        "c"         : "orange",
         "linestyle" : "-",
         "plots"     : [0, 1],
     },
@@ -249,6 +254,11 @@ _cols = [
         "linestyle" : "-",
         "plots"     : [1],
     },
+    
+    {
+        "colname"   : "r2_lr_dkps8__n_components_cmds=8__n_models=ALL",
+        "plots"     : [],
+    }
 ]
     
 df_avg = df_res.groupby(['mode', 'n_samples']).agg({
@@ -257,6 +267,40 @@ df_avg = df_res.groupby(['mode', 'n_samples']).agg({
 }).reset_index()
 
 
+df_ind = df_res.groupby(['mode', 'n_samples', 'seed']).agg({
+    'y_act' : lambda x: np.mean(x),
+    **{c['colname']: lambda x: np.mean(x) for c in _cols}, # nanmean?
+}).reset_index()
+
+# <<
+n_samples_list = sorted(df_ind.n_samples.unique())
+n_plots = len(n_samples_list)
+n_cols = min(4, n_plots)
+n_rows = (n_plots + n_cols - 1) // n_cols
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+axes = axes.flatten() if n_plots > 1 else [axes]
+
+for idx, n_samples in enumerate(n_samples_list):
+    sub = df_ind[df_ind.n_samples == n_samples]
+    axes[idx].scatter(
+        sub['r2_lr_dkps8__n_components_cmds=8__n_models=ALL'], 
+        sub['e_lr_dkps8__n_components_cmds=8__n_models=ALL'],
+    )
+    axes[idx].set_title(f'n_samples={n_samples}')
+    axes[idx].set_xlabel('R²')
+    axes[idx].set_ylabel('Error')
+
+# Hide any unused subplots
+for idx in range(n_plots, len(axes)):
+    axes[idx].axis('off')
+
+plt.tight_layout()
+plt.show()
+# >>
+
+
+# find seed w/ highest average r2
 c = 'r2_lr_dkps8__n_components_cmds=8__n_models=ALL'
 z = df_res.groupby(['n_samples', 'seed'])[c].mean().reset_index()
 z = z[z.groupby('n_samples')[c].transform(lambda x: x == x.max())]
@@ -268,11 +312,22 @@ df_best = df_best.groupby(['mode', 'n_samples']).agg({
 }).reset_index()
 
 
+
+
+
 # 0th version
 for c in _cols:
     if 0 not in c['plots']: continue
-    _ = plt.plot(df_avg.n_samples, df_avg[c['colname']], label=c['label'], c=c['c'], linestyle=c['linestyle'], lw=2)
-    _ = plt.plot(df_best.n_samples, df_best[c['colname']], label=c['label'], c=c['c'], linestyle=c['linestyle'], lw=4, alpha=0.25)
+    # _ = plt.plot(df_avg.n_samples, df_avg[c['colname']], label=c['label'], c=c['c'], linestyle=c['linestyle'], lw=2)
+    
+    qs = df_ind.groupby('n_samples')[c['colname']].apply(lambda x: np.percentile(x, [10, 25, 50, 75, 90]))
+    _ = plt.fill_between(qs.index, qs.apply(lambda x: x[0]), qs.apply(lambda x: x[4]), color=c['c'], alpha=0.1)
+    _ = plt.fill_between(qs.index, qs.apply(lambda x: x[1]), qs.apply(lambda x: x[3]), color=c['c'], alpha=0.1)
+    
+    if c['colname'] in ['e_null', 'e_sample']:
+        continue
+    
+    _ = plt.plot(df_best.n_samples, df_best[c['colname']], c=c['c'], linestyle=c['linestyle'], lw=2, alpha=1)
 
 _ = plt.legend()
 _ = plt.grid('both', alpha=0.25, c='gray')
@@ -290,7 +345,15 @@ _ = plt.close()
 for c in _cols:
     if 1 not in c['plots']: continue
     _ = plt.plot(df_avg.n_samples, df_avg[c['colname']], label=c['label'], c=c['c'], linestyle=c['linestyle'], lw=2)
-    _ = plt.plot(df_best.n_samples, df_best[c['colname']], label=c['label'], c=c['c'], linestyle=c['linestyle'], lw=4, alpha=0.25)
+    
+    qs = df_ind.groupby('n_samples')[c['colname']].apply(lambda x: np.percentile(x, [10, 25, 50, 75, 90]))
+    _ = plt.fill_between(qs.index, qs.apply(lambda x: x[0]), qs.apply(lambda x: x[4]), color=c['c'], alpha=0.1)
+    _ = plt.fill_between(qs.index, qs.apply(lambda x: x[1]), qs.apply(lambda x: x[3]), color=c['c'], alpha=0.1)
+    
+    if c['colname'] in ['e_null', 'e_sample']:
+        continue
+    
+    _ = plt.plot(df_best.n_samples, df_best[c['colname']], c=c['c'], linestyle=c['linestyle'], lw=2, alpha=1)
 
 _ = plt.legend()
 _ = plt.grid('both', alpha=0.25, c='gray')

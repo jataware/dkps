@@ -141,19 +141,7 @@ def run_one(df_sample, n_samples, mode, seed):
     out = []
     model_names = df_sample.model.unique()
     
-    # S_all = df_sample.pivot(index='model', columns='instance_id', values='score').values
-    
     embedding_dict = make_embedding_dict(df_sample)
-
-    # # <<
-    # def entropy(tab):
-    #     p = tab / tab.sum(axis=1, keepdims=True)
-    #     p = np.where(p > 0, p, 1)
-    #     return - np.sum(np.where(tab > 0, p * np.log(p), 0), axis=1)
-    
-    # tab = pd.crosstab(df_sample.instance_id, df_sample.response).values
-    # ent = entropy(tab)
-    # # >>
     
     for target_model in model_names:
         
@@ -165,20 +153,10 @@ def run_one(df_sample, n_samples, mode, seed):
             target_family = model2family(target_model)
             train_models  = np.array([m for m in model_names if model2family(m) != target_family])
         
-        # df_train = df_sample[df_sample.model.isin(train_models)]
-        # df_test  = df_sample[df_sample.model == target_model]
-        
-        # y_train = np.array([y_acts[m] for m in train_models])
         y_test  = y_acts[target_model]
 
         # average score over the `n_samples` evaluated
         p_sample = df_sample[df_sample.model == target_model].score.mean()
-
-        # # knn on scores
-        # S_train     = S_all[np.isin(model_names, train_models)]
-        # S_test      = S_all[model_names == target_model]
-        # sknn        = KNeighborsRegressor(n_neighbors=3).fit(S_train, y_train)
-        # p_3nn_score = float(sknn.predict(S_test)[0])
         
         # lr on DKPS embeddings of varying dimension
         p_lr_dkps = {}
@@ -195,11 +173,7 @@ def run_one(df_sample, n_samples, mode, seed):
                 _X_test  = np.vstack([P[target_model]])
 
                 # linear regression on DKPS embeddings        
-                # <<
                 lr = LinearRegression().fit(_X_train, _y_train)
-                # --
-                # lr = Ridge(alpha=100).fit(_X_train, _y_train)
-                # >>
                 
                 if n_models != len(train_models):
                     _suffix = f'lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'
@@ -210,13 +184,17 @@ def run_one(df_sample, n_samples, mode, seed):
                 
                 # <<
                 lr_pred_train = lr.predict(_X_train)
-                # cv_pred_train = cross_val_predict(LinearRegression(), _X_train, _y_train, cv=LeaveOneOut())
-
                 p_lr_dkps['er_' + _suffix] = ((lr_pred_train - _y_train) ** 2).mean()
                 p_lr_dkps['ss_' + _suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
                 p_lr_dkps['r2_' + _suffix] = r2_score(_y_train, lr_pred_train)
                 
-                # p_lr_dkps[_name + '--lo'] = ((cv_pred_train - _y_train) ** 2).mean()
+                # Note: This is slightly illegal, because DKPS looks at the test query as well,
+                #       and we search over a function of these embeddings to find the best query set.
+                #       Really, we should do a train/valid split over model families, do query selection using the train set,
+                #       and then evaluate on the test set.
+                #       
+                #       However, under the assumption that including the single test model does not change the DKPS space
+                #       too much, I think this is very likely directionally correct.
                 # >>
         
         out.append({
@@ -228,13 +206,6 @@ def run_one(df_sample, n_samples, mode, seed):
             "y_act"        : y_test,
             "p_null"       : pred_null[mode][target_model],
             "p_sample"     : p_sample,
-            # "p_3nn_score"  : p_3nn_score,
-            
-            # # <<
-            # "mean_entropy" : ent.mean(),
-            # "max_entropy"  : ent.max(),
-            # "min_entropy"  : ent.min(),
-            # # >>
             
             **p_lr_dkps,
         })
