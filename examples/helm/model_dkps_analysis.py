@@ -272,7 +272,10 @@ df_ind = df_res.groupby(['mode', 'n_samples', 'seed']).agg({
     **{c['colname']: lambda x: np.mean(x) for c in _cols}, # nanmean?
 }).reset_index()
 
+
 # <<
+# Scatter plot of R2 vs error
+
 n_samples_list = sorted(df_ind.n_samples.unique())
 n_plots = len(n_samples_list)
 n_cols = min(4, n_plots)
@@ -295,8 +298,9 @@ for idx, n_samples in enumerate(n_samples_list):
 for idx in range(n_plots, len(axes)):
     axes[idx].axis('off')
 
-plt.tight_layout()
-plt.show()
+_ = plt.tight_layout()
+_ = plt.savefig(args.plot_dir / f'{args.score_col}-r2-vs-error-scatter.png')
+_ = plt.close()
 # >>
 
 
