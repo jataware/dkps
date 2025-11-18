@@ -1,5 +1,10 @@
 """
     helm.model_dkps_analysis
+    
+    Don't re-use seeds across models -- LOO style.  
+    It looks a little weak - I think because individual models are noisy, so a training set w/ good R2
+        may be a good embedding, but still not always work well on a given model.
+    Correspones to model_dkps_holdout_v2.py
 """
 
 import argparse
@@ -70,57 +75,50 @@ if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
 
 breakpoint()
 
-df_avg = df_res.groupby(['seed', 'n_samples']).agg({
-    f'e_lr_dkps__n_components_cmds=8__n_models=20'   : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=20'  : np.nanmean,
-    f'e_lr_dkps__n_components_cmds=8__n_models=50'   : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=50'  : np.nanmean,
-    f'e_lr_dkps__n_components_cmds=8__n_models=ALL'  : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=ALL' : np.nanmean,
-}).reset_index()
+# For each target_model, compute mean e_interp and e_interp at highest r2
+model_stats = []
 
+n_samples = 4
+e_col  = 'e_lr_dkps__n_components_cmds=8__n_models=ALL'
+r2_col = 'r2_lr_dkps__n_components_cmds=8__n_models=ALL'
 
-# PLOT 6 - R2 vs Error by target_model (using original df_res)
-# Filter to n_samples=32 to match other plots
-df_res_32 = df_res[df_res.n_samples == 32]
-
-plt.figure(figsize=(12, 8))
-
-# Get unique models and assign colors
-models = df_res_32.target_model.unique()
-model_colors = plt.cm.Set3(np.linspace(0, 1, len(models)))
-model_color_map = {model: model_colors[i] for i, model in enumerate(models)}
-
-for model in models:
-    sub = df_res_32[df_res_32.target_model == model]
-    color = model_color_map[model]
+for target_model in df_res.target_model.unique():
+    model_data = df_res[(df_res.target_model == target_model) & (df_res.n_samples == n_samples)]
     
-    # Plot scatter with some transparency
-    plt.scatter(1 - sub.r2_lr_dkps, sub.e_lr_dkps, 
-               color=color, alpha=0.3, s=8, label=model)
+    # Mean e_interp
+    mean_e_interp = model_data[e_col].mean()
     
-    # Add trend line for each model
-    x = (1 - sub.r2_lr_dkps).values
-    y = sub.e_lr_dkps.values
-    if len(x) > 10:  # Only fit if enough points
-        log_x = np.log(x + 1e-10)  # Add small epsilon to avoid log(0)
-        log_y = np.log(y + 1e-10)
-        poly = np.polyfit(log_x, log_y, 1)
-        x_fit = np.linspace(x.min(), x.max(), 100)
-        log_x_fit = np.log(x_fit + 1e-10)
-        log_y_fit = np.polyval(poly, log_x_fit)
-        y_fit = np.exp(log_y_fit)
-        plt.plot(x_fit, y_fit, color=color, linewidth=2, alpha=0.8)
+    # e_interp at highest r2
+    best_r2_idx = model_data[r2_col].idxmax()
+    e_interp_at_best_r2 = model_data.loc[best_r2_idx, e_col]
+    
+    # Compute percentile of e_interp_at_best_r2
+    percentile_e_interp_at_best_r2 = (model_data[e_col] < e_interp_at_best_r2).mean()
+    
+    model_stats.append({
+        'target_model': target_model,
+        'mean_e_interp': mean_e_interp,
+        'e_interp_at_best_r2': e_interp_at_best_r2,
+        'percentile_e_interp_at_best_r2': percentile_e_interp_at_best_r2
+    })
 
-plt.xlabel('1 - R²')
-plt.ylabel('Error')
-plt.title(f'{args.dataset} - R² vs Error by Model (n_samples=32)')
-plt.xscale('log')
-plt.yscale('log')
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-plt.savefig(args.plot_dir / f'{args.score_col}-r2-vs-error-by-model.png', bbox_inches='tight')
-plt.close()
+df_model_stats = pd.DataFrame(model_stats)
+print(df_model_stats)
+
+(df_model_stats.e_interp_at_best_r2 < df_model_stats.mean_e_interp).mean()
+
+plt.scatter(df_model_stats.mean_e_interp, df_model_stats.e_interp_at_best_r2)
+plt.xlabel('Mean e_interp')
+plt.ylabel('e_interp at best R²')
+plt.title('Mean e_interp vs e_interp at best R²')
+
+# Add slope 1 line
+min_val = min(df_model_stats.mean_e_interp.min(), df_model_stats.e_interp_at_best_r2.min())
+max_val = max(df_model_stats.mean_e_interp.max(), df_model_stats.e_interp_at_best_r2.max())
+plt.plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.5, label='y=x')
+plt.legend()
+
+plt.show()
 
 # -------------------------------------------------------
 # PLOT 1 - R2 vs Error by n_models
@@ -444,15 +442,11 @@ _ = plt.close()
 
 
 # -------------------------------------------------------
-# PLOT 6 - Error distribution by model with best seed
+# PLOT 6 - Error distribution by model with best seed per model
 
 # Filter to n_samples=32 to match other plots
 _n_samples = 8
 df_res_n = df_res[df_res.n_samples == _n_samples]
-
-# Find the single best seed based on average R² across all models
-avg_r2_by_seed = df_res_n.groupby('seed')['r2_lr_dkps'].mean()
-best_seed      = avg_r2_by_seed.idxmax()
 
 # Get unique models
 models = sorted(df_res_n.target_model.unique())
@@ -467,8 +461,11 @@ for model in models:
     errors = model_data['e_lr_dkps'].values
     violin_data.append(errors)
     
+    # Find the best seed for this specific model based on R²
+    best_seed_for_model = model_data.loc[model_data['r2_lr_dkps'].idxmax(), 'seed']
+    
     # Get the error for the best seed for this model
-    best_seed_model_data = model_data[model_data.seed == best_seed]
+    best_seed_model_data = model_data[model_data.seed == best_seed_for_model]
     if len(best_seed_model_data) > 0:
         best_seed_error = best_seed_model_data['e_lr_dkps'].values[0]
     else:
@@ -478,6 +475,13 @@ for model in models:
     # Get the average error for this model
     avg_error = errors.mean()
     avg_errors.append(avg_error)
+
+# Sort models by average error
+sorted_indices = np.argsort(avg_errors)
+models = [models[i] for i in sorted_indices]
+violin_data = [violin_data[i] for i in sorted_indices]
+best_seed_errors = [best_seed_errors[i] for i in sorted_indices]
+avg_errors = [avg_errors[i] for i in sorted_indices]
 
 # Create figure
 plt.figure(figsize=(14, 8))
@@ -496,7 +500,7 @@ for pc in parts['bodies']:
     pc.set_linewidth(1)
 
 # Plot best seed errors as points
-_ = plt.scatter(positions, best_seed_errors, color='red', s=50, zorder=5, label=f'Best seed (seed={best_seed}, highest avg R²)')
+_ = plt.scatter(positions, best_seed_errors, color='red', s=50, zorder=5, label='Best seed per model (highest R²)')
 
 # Plot average errors as points
 _ = plt.scatter(positions, avg_errors, color='blue', s=50, zorder=5, label='Average error')
