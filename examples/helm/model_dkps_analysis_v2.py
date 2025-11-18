@@ -181,7 +181,6 @@ def make_upper_right(n_samples=4, n_components_cmds=8):
 
     # Define markers and line styles for n_models
     n_models_values = [20, 'ALL']
-    markers = {20: 'o', 'ALL': '^'}
     linestyles = {20: '-', 'ALL': '--'}
 
     for n_samples in n_samples_list:
@@ -193,37 +192,56 @@ def make_upper_right(n_samples=4, n_components_cmds=8):
             r2_col = 'r2_' + _suffix
             e_col = 'e_' + _suffix
             
-            # Plot scatter points
-            _ = plt.scatter(1 - sub[r2_col], sub[e_col], marker=markers[n_models], color=color, s=2, alpha=0.05)
-            
-            # Add polynomial fit
+            # Get data points
             x_data = 1 - sub[r2_col].values
             y_data = sub[e_col].values
+            
             if len(x_data) > 1:
+                # Fit 2D Gaussian to the point cloud
+                from scipy.stats import gaussian_kde
+                
+                # Create log-transformed data for better visualization
                 log_x_data = np.log(x_data)
                 log_y_data = np.log(y_data)
-                poly = np.polyfit(log_x_data, log_y_data, 1)
-                x_fit = np.linspace(x_data.min(), x_data.max(), 100)
-                log_x_fit = np.log(x_fit)
-                log_y_fit = np.polyval(poly, log_x_fit)
-                y_fit = np.exp(log_y_fit)
-                _ = plt.plot(x_fit, y_fit, color=color, linestyle=linestyles[n_models], linewidth=1.5)
+                
+                # Fit KDE
+                xy = np.vstack([log_x_data, log_y_data])
+                kde = gaussian_kde(xy)
+                
+                # Create grid for contour plot
+                x_min, x_max = log_x_data.min(), log_x_data.max()
+                y_min, y_max = log_y_data.min(), log_y_data.max()
+                x_range = x_max - x_min
+                y_range = y_max - y_min
+                
+                xx, yy = np.meshgrid(
+                    np.linspace(x_min - 0.1*x_range, x_max + 0.1*x_range, 100),
+                    np.linspace(y_min - 0.1*y_range, y_max + 0.1*y_range, 100)
+                )
+                
+                # Evaluate KDE on grid
+                positions = np.vstack([xx.ravel(), yy.ravel()])
+                zz = kde(positions).reshape(xx.shape)
+                
+                # Transform back to original scale for plotting
+                xx_orig = np.exp(xx)
+                yy_orig = np.exp(yy)
+                
+                # Plot contours
+                _ = plt.contour(xx_orig, yy_orig, zz, levels=3, colors=color, linestyles=linestyles[n_models], linewidths=1.5, alpha=0.7)
 
-    # Create separate legends for colors (n_samples) and markers (n_models)
+    # Create legends
     from matplotlib.lines import Line2D
-    color_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color_map[n_samples], markersize=8, label=f'n_samples={n_samples}') for n_samples in n_samples_list]
-    marker_handles = [Line2D([0], [0], marker=markers[n_models], color='w', markerfacecolor='gray', markersize=8, label=f'n_models={n_models}') for n_models in n_models_values]
-    line_handles = [Line2D([0], [0], color='gray', linestyle=linestyles[n_models], linewidth=1.5, label=f'n_models={n_models} fit') for n_models in n_models_values]
+    color_handles = [Line2D([0], [0], color=color_map[n_samples], linewidth=2, label=f'n_samples={n_samples}') for n_samples in n_samples_list]
+    line_handles = [Line2D([0], [0], color='gray', linestyle=linestyles[n_models], linewidth=1.5, label=f'n_models={n_models}') for n_models in n_models_values]
 
     first_legend = plt.legend(handles=color_handles, title='n_samples', bbox_to_anchor=(1.01, 1), loc='upper left')
     plt.gca().add_artist(first_legend)
-    second_legend = plt.legend(handles=marker_handles, title='n_models (markers)', bbox_to_anchor=(1.01, 0.5), loc='upper left')
-    plt.gca().add_artist(second_legend)
-    _ = plt.legend(handles=line_handles, title='n_models (lines)', bbox_to_anchor=(1.01, 0), loc='upper left')
+    _ = plt.legend(handles=line_handles, title='n_models', bbox_to_anchor=(1.01, 0.5), loc='upper left')
 
     _ = plt.xlabel('1 - R²')
     _ = plt.ylabel('Error')
-    _ = plt.title(f'{args.dataset} - R² vs Error by n_models')
+    _ = plt.title(f'{args.dataset} - R² vs Error by n_models (Gaussian KDE)')
     _ = plt.yscale('log')
     _ = plt.xscale('log')
     _ = plt.grid(alpha=0.25)
