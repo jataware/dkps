@@ -13,9 +13,8 @@ import matplotlib.pyplot as plt
 from rich import print as rprint
 from tqdm import trange
 from joblib import Parallel, delayed
-from sklearn.linear_model import LinearRegression, Ridge
-# from sklearn.neighbors import KNeighborsRegressor
-from sklearn.model_selection import LeaveOneOut, cross_val_predict
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import r2_score
 
 from utils import make_embedding_dict, onehot_embedding
@@ -159,12 +158,46 @@ def run_one(df_sample, n_samples, mode, seed):
         p_sample = df_sample[df_sample.model == target_model].score.mean()
         
         # lr on DKPS embeddings of varying dimension
-        p_lr_dkps = {}
+        res = {}
         for n_components_cmds in [8]:
             for n_models in [20, 50, len(train_models)]:
-                _train_models   = np.random.choice(train_models, size=n_models, replace=False)
-                _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
+                if n_models != len(train_models):
+                    _lr_suffix  = f'lr_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
+                    _knn_suffix = f'knn5_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
+                else:
+                    _lr_suffix  = f'lr_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
+                    _knn_suffix = f'knn5_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
+
+                _train_models = np.random.choice(train_models, size=n_models, replace=False)
                 
+                # --
+                # dkps w/o target model - for GOF metrics only
+                
+                _embedding_dict = {k:embedding_dict[k] for k in set(_train_models)}
+                P = DKPS(n_components_cmds=n_components_cmds)
+                P = P.fit_transform(_embedding_dict, return_dict=True)
+                
+                _X_train = np.vstack([P[m] for m in _train_models])
+                _y_train = np.array([y_acts[m] for m in _train_models])
+                # _X_test  = np.vstack([P[target_model]]) # [NOT USED IN GOF METRICS]
+
+                # linear regression on DKPS embeddings        
+                lr = LinearRegression().fit(_X_train, _y_train)
+                
+                # goodness of fit metrics
+                lr_pred_train = lr.predict(_X_train)
+                res['er_' + _lr_suffix] = ((lr_pred_train - _y_train) ** 2).mean()
+                res['ss_' + _lr_suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
+                res['r2_' + _lr_suffix] = r2_score(_y_train, lr_pred_train)
+                
+                # res['p_' + _lr_suffix] = float(lr.predict(_X_test)[0]) # [NOT USED IN GOF METRICS]
+                
+                del P, lr, _X_train, _y_train, lr_pred_train
+                
+                # --
+                # dkps w/ target model
+                
+                _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
                 P = DKPS(n_components_cmds=n_components_cmds)
                 P = P.fit_transform(_embedding_dict, return_dict=True)
                 
@@ -175,27 +208,19 @@ def run_one(df_sample, n_samples, mode, seed):
                 # linear regression on DKPS embeddings        
                 lr = LinearRegression().fit(_X_train, _y_train)
                 
-                if n_models != len(train_models):
-                    _suffix = f'lr_dkps8__n_components_cmds={n_components_cmds}__n_models={n_models}'
-                else:
-                    _suffix = f'lr_dkps8__n_components_cmds={n_components_cmds}__n_models=ALL'
-
-                p_lr_dkps['p_' + _suffix] = float(lr.predict(_X_test)[0])
-                
-                # <<
+                # goodness of fit metrics (for regression testing - these are "bad")
                 lr_pred_train = lr.predict(_X_train)
-                p_lr_dkps['er_' + _suffix] = ((lr_pred_train - _y_train) ** 2).mean()
-                p_lr_dkps['ss_' + _suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
-                p_lr_dkps['r2_' + _suffix] = r2_score(_y_train, lr_pred_train)
+                res['trans-er_' + _lr_suffix] = ((lr_pred_train - _y_train) ** 2).mean()
+                res['trans-ss_' + _lr_suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
+                res['trans-r2_' + _lr_suffix] = r2_score(_y_train, lr_pred_train)
                 
-                # Note: This is slightly illegal, because DKPS looks at the test query as well,
-                #       and we search over a function of these embeddings to find the best query set.
-                #       Really, we should do a train/valid split over model families, do query selection using the train set,
-                #       and then evaluate on the test set.
-                #       
-                #       However, under the assumption that including the single test model does not change the DKPS space
-                #       too much, I think this is very likely directionally correct.
-                # >>
+                res['p_' + _lr_suffix] = float(lr.predict(_X_test)[0])
+                
+                # knn regression on DKPS embeddings
+                knn = KNeighborsRegressor(n_neighbors=5).fit(_X_train, _y_train)
+                res['p_' + _knn_suffix] = float(knn.predict(_X_test)[0])
+                
+                del P, lr, _X_train, _y_train, lr_pred_train
         
         out.append({
             "seed"         : seed,
@@ -207,7 +232,7 @@ def run_one(df_sample, n_samples, mode, seed):
             "p_null"       : pred_null[mode][target_model],
             "p_sample"     : p_sample,
             
-            **p_lr_dkps,
+            **res,
         })
     
     return out
