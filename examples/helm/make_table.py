@@ -26,9 +26,18 @@ df = pd.concat(df)
 def _parse_path(path):
     return '-'.join(path.split('/')[-1].split('-')[:-2])
 
-df['dataset_split'] = df._path.apply(_parse_path)
-df['dataset']       = df.dataset_split.apply(lambda x: x.split(':')[0] if ':' in x else x)
-df['split']         = df.dataset_split.apply(lambda x: x.split(':')[1] if ':' in x else x)
+df['dataset_split']   = df._path.apply(_parse_path)
+df['dataset']         = df.dataset_split.apply(lambda x: x.split(':')[0] if ':' in x else x)
+df['split']           = df.dataset_split.apply(lambda x: x.split(':')[1] if ':' in x else x)
+
+df['n_dataset_split'] = df.groupby('dataset_split').n_samples.transform(max)
+
+dataset_sizes = df[['dataset', 'dataset_split', 'n_dataset_split']].drop_duplicates()
+dataset_sizes = dataset_sizes.groupby('dataset').n_dataset_split.sum()
+dataset_sizes = dataset_sizes.to_dict()
+df['n_dataset'] = df.dataset.apply(lambda x: dataset_sizes[x])
+
+df['weight'] = df.n_dataset_split / df.n_dataset
 
 # --
 
@@ -46,7 +55,6 @@ for c in dkps_cols:
 
 p_lr_dkps = df['p_lr_dkps__n_components_cmds=8__n_models=ALL']
 
-df['n_dataset_split'] = df.groupby('dataset_split').n_samples.transform(max)
 df['p_interp']        = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * p_lr_dkps) / df.n_dataset_split
 df['e_interp']        = np.abs(df.p_interp - df.y_act)
 
@@ -62,6 +70,7 @@ df_best             = pd.merge(df, _df_r2_best, on=['dataset_split', 'n_samples'
 for c in [
     'e_interp', 
     'e_lr_dkps__n_components_cmds=8__n_models=ALL',
+    
     'p_interp',
     'p_lr_dkps__n_components_cmds=8__n_models=ALL',
 ]:
@@ -102,7 +111,7 @@ tab.rename(columns={
 tab = tab.reset_index()
 print(tab)
 
-# tab.to_csv('table-by_dataset_split.tsv', sep='\t')
+tab.to_csv('table-by_dataset_split.tsv', sep='\t')
 
 # --
 # per dataset
@@ -123,26 +132,40 @@ def _compute_pred(sub, split_sizes):
         'p_lr_dkps__n_components_cmds=8__n_models=ALL_best',
         'p_interp_best',
     ]
-    preds   = {method:sub[method].values @ split_sizes / split_sizes.sum() for method in methods}
     
-    errs = {method.replace('p_', 'e_'):np.abs(preds[method] - preds['y_act']) for method in methods}
+    preds = {method:sub[method].values @ split_sizes / split_sizes.sum() for method in methods}
+    # replace '^p_' with '^e_'
+    errs  = {('e_' + method[2:]):np.abs(preds[method] - preds['y_act']) for method in methods}
     return pd.Series(errs)
 
 # takes a while ...
+# [BUG] for small datasets, the max number may be less than these
+#       so when we average across datasets, we may drop subsets
 df_sub = df_best[df_best.n_samples.isin([1, 4, 16, 64])]
 
 df_dataset = df_sub.groupby(['dataset', 'n_samples', 'seed', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
 df_dataset.reset_index(inplace=True)
 
-
 tab_dataset = df_dataset.groupby(['dataset', 'n_samples']).agg({
-    'e_null'                                            : 'mean',
-    'e_sample'                                          : 'mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL'      : 'mean',
-    'e_interp'                                          : 'mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best' : 'mean',
-    'e_interp_best'                                     : 'mean',
+    'e_null'                                            : np.nanmean,
+    'e_sample'                                          : np.nanmean,
+    'e_lr_dkps__n_components_cmds=8__n_models=ALL'      : np.nanmean,
+    'e_interp'                                          : np.nanmean,
 })
+
+
+df_sub_best = df_best[df_best._r2_best.notna()]
+df_sub_best = df_sub_best[df_sub_best.n_samples.isin([1, 4, 16, 64])]
+df_sub_best = df_sub_best.groupby(['dataset', 'n_samples', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
+df_sub_best.reset_index(inplace=True)
+
+tab_dataset_best = df_sub_best.groupby(['dataset', 'n_samples']).agg({
+    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best' : np.nanmean,
+    'e_interp_best'                                     : np.nanmean,
+})
+
+assert (tab_dataset.index == tab_dataset_best.index).all()
+tab_dataset = pd.concat([tab_dataset, tab_dataset_best], axis=1)
 
 tab_dataset[tab_dataset > 9999] = np.nan
 
@@ -166,4 +189,4 @@ tab_dataset = tab_dataset.reset_index()
 print(tab_dataset.T)
 # print(tab_dataset.T.to_latex())
 
-# tab_dataset.T.to_csv('table-by_dataset.tsv', sep='\t')
+tab_dataset.T.to_csv('table-by_dataset.tsv', sep='\t')
