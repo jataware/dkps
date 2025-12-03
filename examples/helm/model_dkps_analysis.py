@@ -18,10 +18,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset',   type=str, default='math:subject=intermediate_algebra')
     parser.add_argument('--score_col', type=str, default='score')
-    parser.add_argument('--outdir',    type=str, default='results')
+    parser.add_argument('--outdir',    type=str, default='results-20251202')
     args = parser.parse_args()
     
-    args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res.tsv'
+    args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res--holdout.tsv'
     args.plot_dir = Path('plots-20251202') / args.dataset.replace(':', '-')
     
     args.plot_dir.mkdir(parents=True, exist_ok=True)
@@ -52,12 +52,16 @@ for c in dkps_cols:
 
 # alias the run with all models
 df_res['p_lr_dkps']   = df_res['p_lr_dkps__n_components_cmds=8__n_models=ALL']
-df_res['p_knn5_dkps'] = df_res['p_knn5_dkps__n_components_cmds=8__n_models=ALL']
+df_res['p_knn4_dkps'] = df_res['p_knn4_dkps__n_components_cmds=8__n_models=ALL']
 
 # compute interpolation
 max_samples           = df_res.n_samples.max()
 df_res['p_lr_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_lr_dkps) / max_samples
 df_res['e_lr_interp'] = np.abs(df_res.p_lr_interp - df_res.y_act)
+
+df_res['p_knn4_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_knn4_dkps) / max_samples
+df_res['e_knn4_interp'] = np.abs(df_res.p_knn4_interp - df_res.y_act)
+
 
 if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
     df_res = df_res[df_res.n_samples > 2]
@@ -140,22 +144,22 @@ _cols = [
     },
 
     {
-        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=20",
-        "label"     : "DKPS(d=8, n_models=20, model=knn5)",
+        "colname"   : "e_knn2_dkps__n_components_cmds=8__n_models=20",
+        "label"     : "DKPS(d=8, n_models=20, model=knn2)",
         "c"         : "orange",
         "linestyle" : ":",
         "plots"     : [0],
     },
     {
-        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=50",
-        "label"     : "DKPS(d=8, n_models=50, model=knn5)",
+        "colname"   : "e_knn3_dkps__n_components_cmds=8__n_models=50",
+        "label"     : "DKPS(d=8, n_models=50, model=knn3)",
         "c"         : "orange",
         "linestyle" : "--",
         "plots"     : [0],
     },
     {
-        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=ALL",
-        "label"     : "DKPS(d=8, n_models=ALL, model=knn5)",
+        "colname"   : "e_knn4_dkps__n_components_cmds=8__n_models=ALL",
+        "label"     : "DKPS(d=8, n_models=ALL, model=knn4)",
         "c"         : "orange",
         "linestyle" : "-",
         "plots"     : [0, 1],
@@ -165,6 +169,13 @@ _cols = [
         "colname"   : "e_lr_interp",
         "label"     : "interp(e_sample+e_lr_dkps)",
         "c"         : "blue",
+        "linestyle" : "-",
+        "plots"     : [1],
+    },
+    {
+        "colname"   : "e_knn4_interp",
+        "label"     : "interp(e_sample+e_knn4_dkps)",
+        "c"         : "purple",
         "linestyle" : "-",
         "plots"     : [1],
     },

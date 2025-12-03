@@ -96,7 +96,7 @@ def parse_args():
     parser.add_argument('--embed_provider', type=str,   default='jina')
     parser.add_argument('--embed_model',    type=str,   default=None)
     parser.add_argument('--err_fn',         type=str,   default='abs')
-    parser.add_argument('--outdir',         type=str,   default='results')
+    parser.add_argument('--outdir',         type=str,   default='results-20251202')
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int,   default=123)
     parser.add_argument('--n_replicates',   type=int,   default=128)
@@ -256,11 +256,7 @@ def run_one(df_sample, n_samples, mode, seed):
                 # knn regression on DKPS embeddings
                 p_knns, _ = knn_predict(_X_train, _y_train, _X_test)
                 for k, p_knn in p_knns.items():
-                    res['p_knn' + _suffix] = float(p_knn[0])
-                
-                del P, lr, _X_train, _y_train
-                
-                breakpoint()
+                    res[f'p_knn{k}' + _suffix] = float(p_knn[0])
         
         out.append({
             "seed"         : seed,
@@ -291,7 +287,7 @@ for iter in trange(args.n_replicates):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=1, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=args.n_jobs, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act
