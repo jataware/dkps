@@ -22,7 +22,7 @@ def parse_args():
     args = parser.parse_args()
     
     args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res.tsv'
-    args.plot_dir = Path('plots') / args.dataset.replace(':', '-')
+    args.plot_dir = Path('plots-20251202') / args.dataset.replace(':', '-')
     
     args.plot_dir.mkdir(parents=True, exist_ok=True)
         
@@ -51,12 +51,13 @@ for c in dkps_cols:
 # >>
 
 # alias the run with all models
-df_res['p_lr_dkps8'] = df_res['p_lr_dkps8__n_components_cmds=8__n_models=ALL']
+df_res['p_lr_dkps']   = df_res['p_lr_dkps__n_components_cmds=8__n_models=ALL']
+df_res['p_knn5_dkps'] = df_res['p_knn5_dkps__n_components_cmds=8__n_models=ALL']
 
 # compute interpolation
-max_samples        = df_res.n_samples.max()
-df_res['p_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_lr_dkps8) / max_samples
-df_res['e_interp'] = np.abs(df_res.p_interp - df_res.y_act)
+max_samples           = df_res.n_samples.max()
+df_res['p_lr_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_lr_dkps) / max_samples
+df_res['e_lr_interp'] = np.abs(df_res.p_lr_interp - df_res.y_act)
 
 if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
     df_res = df_res[df_res.n_samples > 2]
@@ -64,7 +65,7 @@ if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
 # --
 # Plot gain (average per model)
 
-gain_model = df_res.groupby(['n_samples', 'target_model']).apply(lambda x: (x.e_sample - x.e_interp).mean()).reset_index(name='gain')
+gain_model = df_res.groupby(['n_samples', 'target_model']).apply(lambda x: (x.e_sample - x.e_lr_interp).mean()).reset_index(name='gain')
 
 for target_model in gain_model.target_model.unique():
     sub = gain_model[gain_model.target_model == target_model]
@@ -85,7 +86,7 @@ _ = plt.close()
 
 for target_model in df_res.target_model.unique():
     sub = df_res[df_res.target_model == target_model]
-    _ = plt.scatter(sub.n_samples * np.random.uniform(0.9, 1.1), sub.e_sample - sub.e_interp, label=target_model, alpha=0.05, c='black', s=2)
+    _ = plt.scatter(sub.n_samples * np.random.uniform(0.9, 1.1), sub.e_sample - sub.e_lr_interp, label=target_model, alpha=0.05, c='black', s=2)
 
 _ = plt.axhline(0, c='black')
 _ = plt.grid('both', alpha=0.25, c='gray')
@@ -115,30 +116,54 @@ _cols = [
         "linestyle" : "-",
         "plots"     : [0, 1],
     },
+    
     {
-        "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=20",
-        "label"     : "DKPS(d=8, n_models=20)",
+        "colname"   : "e_lr_dkps__n_components_cmds=8__n_models=20",
+        "label"     : "DKPS(d=8, n_models=20, model=lr)",
         "c"         : "red",
         "linestyle" : ":",
         "plots"     : [0],
     },
     {
-        "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=50",
-        "label"     : "DKPS(d=8, n_models=50)",
+        "colname"   : "e_lr_dkps__n_components_cmds=8__n_models=50",
+        "label"     : "DKPS(d=8, n_models=50, model=lr)",
         "c"         : "red",
         "linestyle" : "--",
         "plots"     : [0],
     },
     {
-        "colname"   : "e_lr_dkps8__n_components_cmds=8__n_models=ALL",
-        "label"     : "DKPS(d=8, n_models=ALL)",
+        "colname"   : "e_lr_dkps__n_components_cmds=8__n_models=ALL",
+        "label"     : "DKPS(d=8, n_models=ALL, model=lr)",
         "c"         : "red",
         "linestyle" : "-",
         "plots"     : [0, 1],
     },
+
     {
-        "colname"   : "e_interp",
-        "label"     : "interp(e_sample+e_lr_dkps8)",
+        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=20",
+        "label"     : "DKPS(d=8, n_models=20, model=knn5)",
+        "c"         : "orange",
+        "linestyle" : ":",
+        "plots"     : [0],
+    },
+    {
+        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=50",
+        "label"     : "DKPS(d=8, n_models=50, model=knn5)",
+        "c"         : "orange",
+        "linestyle" : "--",
+        "plots"     : [0],
+    },
+    {
+        "colname"   : "e_knn5_dkps__n_components_cmds=8__n_models=ALL",
+        "label"     : "DKPS(d=8, n_models=ALL, model=knn5)",
+        "c"         : "orange",
+        "linestyle" : "-",
+        "plots"     : [0, 1],
+    },
+    
+    {
+        "colname"   : "e_lr_interp",
+        "label"     : "interp(e_sample+e_lr_dkps)",
         "c"         : "blue",
         "linestyle" : "-",
         "plots"     : [1],

@@ -56,6 +56,36 @@ err_fns = {
     "rel" : _rel_err,
 }
 
+from sklearn.metrics import r2_score
+from scipy.spatial.distance import cdist
+
+def knn_predict(X_train, y_train, X_valid=None, n_neighbors=[2, 3, 4]):
+    """
+        custom knn function
+    """
+    
+    # predict
+    y_preds, r2_scores = {}, {}
+    
+    if X_valid is not None:
+        dists = cdist(X_valid, X_train)
+        neibs = np.argsort(dists, axis=1)
+        for k in n_neighbors:
+            neibs_k    = neibs[:, :k]
+            y_preds[k] = np.mean(y_train[neibs_k], axis=1)
+    
+    # compute r2 on training data
+    dists = cdist(X_train, X_train)
+    np.fill_diagonal(dists, np.inf)
+    neibs = np.argsort(dists, axis=1)
+    
+    for k in n_neighbors:
+        neibs_k      = neibs[:, :k]
+        y_pred_train = np.mean(y_train[neibs_k], axis=1)
+        r2_scores[k] = r2_score(y_train, y_pred_train)
+    
+    return y_preds, r2_scores
+
 # --
 # IO
 
@@ -152,6 +182,7 @@ def run_one(df_sample, n_samples, mode, seed):
     
     for target_model in model_names:
         # <<
+        # Only keep target models in VALID_FAMILIES
         if model2family(target_model) not in VALID_FAMILIES:
             continue
         # >>
@@ -165,6 +196,7 @@ def run_one(df_sample, n_samples, mode, seed):
             train_models  = np.array([m for m in model_names if model2family(m) != target_family])
         
         # <<
+        # only keep models in TRAIN_FAMILIES
         train_models = np.array([m for m in model_names if model2family(m) in TRAIN_FAMILIES])
         # >>
         
@@ -178,11 +210,9 @@ def run_one(df_sample, n_samples, mode, seed):
         for n_components_cmds in [8]:
             for n_models in [20, 50, len(train_models)]:
                 if n_models != len(train_models):
-                    _lr_suffix  = f'lr_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
-                    _knn_suffix = f'knn5_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
+                    _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
                 else:
-                    _lr_suffix  = f'lr_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
-                    _knn_suffix = f'knn5_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
+                    _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
 
                 _train_models = np.random.choice(train_models, size=n_models, replace=False)
                 
@@ -195,21 +225,19 @@ def run_one(df_sample, n_samples, mode, seed):
                 
                 _X_train0 = np.vstack([P0[m] for m in _train_models])
                 _y_train0 = np.array([y_acts[m] for m in _train_models])
-                # _X_test  = np.vstack([P[target_model]]) # [NOT USED IN GOF METRICS]
 
                 # linear regression on DKPS embeddings        
                 lr0 = LinearRegression().fit(_X_train0, _y_train0)
                 
                 # goodness of fit metrics
                 lr_pred_train0 = lr0.predict(_X_train0)
-                # res['er_' + _lr_suffix] = ((lr_pred_train0 - _y_train0) ** 2).mean()
-                # res['ss_' + _lr_suffix] = ((_y_train0.mean() - _y_train0) ** 2).mean()
-                res['r2_' + _lr_suffix] = r2_score(_y_train0, lr_pred_train0)
+                res['r2_lr' + _suffix] = r2_score(_y_train0, lr_pred_train0)
                 
-                # res['p_' + _lr_suffix] = float(lr.predict(_X_test)[0]) # [NOT USED IN GOF METRICS]
-                
-                del P0, lr0, _X_train0, _y_train0, lr_pred_train0
-                
+                # knn regression on DKPS embeddings
+                _, r2_knns = knn_predict(_X_train0, _y_train0)
+                for k, r2_knn in r2_knns.items():
+                    res[f'r2_knn{k}' + _suffix] = float(r2_knn)
+                                
                 # --
                 # dkps w/ target model
                 
@@ -223,13 +251,16 @@ def run_one(df_sample, n_samples, mode, seed):
 
                 # linear regression on DKPS embeddings        
                 lr = LinearRegression().fit(_X_train, _y_train)
-                res['p_' + _lr_suffix] = float(lr.predict(_X_test)[0])
+                res['p_lr' + _suffix] = float(lr.predict(_X_test)[0])
                 
                 # knn regression on DKPS embeddings
-                knn = KNeighborsRegressor(n_neighbors=5).fit(_X_train, _y_train)
-                res['p_' + _knn_suffix] = float(knn.predict(_X_test)[0])
+                p_knns, _ = knn_predict(_X_train, _y_train, _X_test)
+                for k, p_knn in p_knns.items():
+                    res['p_knn' + _suffix] = float(p_knn[0])
                 
                 del P, lr, _X_train, _y_train
+                
+                breakpoint()
         
         out.append({
             "seed"         : seed,
@@ -260,7 +291,7 @@ for iter in trange(args.n_replicates):
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         jobs.append(delayed(run_one)(df_sample=df_sample, n_samples=n_samples, mode='family', seed=iter))
 
-res    = sum(Parallel(n_jobs=args.n_jobs, verbose=10)(jobs), [])
+res    = sum(Parallel(n_jobs=1, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # compute errors - abs(pred - act) / act
