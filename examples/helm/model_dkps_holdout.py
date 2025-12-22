@@ -209,6 +209,9 @@ def run_one(df_sample, n_samples, mode, seed):
         res = {}
         for n_components_cmds in [8]:
             for n_models in [20, 50, len(train_models)]:
+                if n_models > len(train_models):
+                    continue
+                
                 if n_models != len(train_models):
                     _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
                 else:
