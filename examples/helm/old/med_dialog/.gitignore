@@ -1,4 +1,0 @@
-*.png
-*.tsv
-.cache/*
-helm/*

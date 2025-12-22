@@ -27,6 +27,16 @@ try:
 except:
     print('dkps.embed: unable to load litellm')
 
+try:
+    from huggingface_hub import InferenceClient as HFInferenceClient
+except:
+    print('dkps.embed: unable to load huggingface_hub')
+
+try:
+    from sentence_transformers import SentenceTransformer
+except:
+    print('dkps.embed: unable to load sentence_transformers')
+
 from .cache import disk_cache
 
 # --
@@ -120,6 +130,56 @@ async def _aembed_litellm_chunk(chunk_id, client, chunk, model):
     response = await loop.run_in_executor(None, lambda: client.embed(chunk, model))
     return chunk_id, np.array([item['embedding'] for item in response.data])
 
+# Hugging Face
+class HuggingFaceClient:
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.environ.get("HF_TOKEN")
+        self.client = HFInferenceClient(
+            provider="hf-inference",
+            api_key=self.api_key,
+        )
+
+    def embed(self, input_data, model):
+        if not self.api_key:
+            raise Exception("HF_TOKEN is not set")
+
+        result     = self.client.feature_extraction(input_data[0], model=model)
+        print(result.shape)
+        embeddings = [np.array(x) for x in result]
+        return np.array(embeddings)
+
+@disk_cache(cache_dir="./.cache/embed/huggingface", verbose=False, ignore_fields=['client'])
+async def _aembed_huggingface_chunk(chunk_id, client, chunk, model):
+    # HuggingFace client is sync, run in executor
+    loop = asyncio.get_event_loop()
+    embeddings = await loop.run_in_executor(None, lambda: client.embed(chunk, model))
+    return chunk_id, np.array(embeddings)
+
+# Sentence Transformers (local)
+class SentenceTransformersClient:
+    def __init__(self, model=None):
+        self.model_name = model
+        self._model = None
+
+    def _get_model(self, model):
+        # Lazy load model, cache it if same model
+        if self._model is None or self.model_name != model:
+            self.model_name = model
+            self._model = SentenceTransformer(model, trust_remote_code=True)
+        return self._model
+
+    def embed(self, input_data, model):
+        st_model = self._get_model(model)
+        embeddings = st_model.encode(input_data, convert_to_numpy=True)
+        return embeddings
+
+@disk_cache(cache_dir="./.cache/embed/sentence_transformers", verbose=False, ignore_fields=['client'])
+async def _aembed_sentence_transformers_chunk(chunk_id, client, chunk, model):
+    # Sentence Transformers is sync, run in executor
+    loop = asyncio.get_event_loop()
+    embeddings = await loop.run_in_executor(None, lambda: client.embed(chunk, model))
+    return chunk_id, np.array(embeddings)
+
 
 # Generic API embedding functions
 async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, model=None):
@@ -156,6 +216,18 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
         _aembed_chunk = _aembed_litellm_chunk
         if model is None:
             model = 'text-embedding-3-small'
+
+    elif provider == 'huggingface':
+        client = HuggingFaceClient()
+        _aembed_chunk = _aembed_huggingface_chunk
+        if model is None:
+            model = 'intfloat/multilingual-e5-large'
+
+    elif provider == 'sentence-transformers':
+        client = SentenceTransformersClient()
+        _aembed_chunk = _aembed_sentence_transformers_chunk
+        if model is None:
+            model = 'all-MiniLM-L6-v2'
 
     else:
         raise Exception(f"Unknown provider: {provider}")
@@ -201,7 +273,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Test embedding APIs")
     parser.add_argument("--provider", type=str, default="openrouter",
-                        choices=["google", "jina", "openrouter", "litellm", "jlai_tei"],
+                        choices=["google", "jina", "openrouter", "litellm", "huggingface", "sentence-transformers", "jlai_tei"],
                         help="Embedding provider to use")
     parser.add_argument("--model", type=str, default=None,
                         help="Model to use (provider-specific)")

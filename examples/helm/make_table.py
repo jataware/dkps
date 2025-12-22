@@ -30,7 +30,7 @@ df['dataset_split']   = df._path.apply(_parse_path)
 df['dataset']         = df.dataset_split.apply(lambda x: x.split(':')[0] if ':' in x else x)
 df['split']           = df.dataset_split.apply(lambda x: x.split(':')[1] if ':' in x else x)
 
-df['n_dataset_split'] = df.groupby('dataset_split').n_samples.transform(max)
+df['n_dataset_split'] = df.groupby('dataset_split').n_samples.transform('max')
 
 dataset_sizes = df[['dataset', 'dataset_split', 'n_dataset_split']].drop_duplicates()
 dataset_sizes = dataset_sizes.groupby('dataset').n_dataset_split.sum()

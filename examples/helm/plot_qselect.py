@@ -12,7 +12,18 @@ from scipy.stats import rankdata
 from sklearn.utils.fixes import platform
 from PIL import Image
 
-rprint('[yellow] Assumption - all metrics are bounded between 0 and 1[/yellow]')
+# --
+# Plot settings (for 8-inch wide paper figures)
+
+plt.rcParams.update({
+    'font.size': 14,
+    'axes.titlesize': 16,
+    'axes.labelsize': 14,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'legend.fontsize': 12,
+    'figure.titlesize': 16,
+})
 
 # --
 # CLI
@@ -25,8 +36,8 @@ def parse_args():
     parser.add_argument('--n_samples', type=int, default=8)
     args = parser.parse_args()
     
-    args.tsv_path = Path(args.outdir) / f'{args.dataset}-{args.score_col}-res--holdout.tsv'
-    args.plot_dir = Path('plots-v3') / args.dataset.replace(':', '-')
+    args.tsv_path = Path(args.outdir) / f'run-qselect-{args.dataset}-{args.score_col}.tsv'
+    args.plot_dir = Path('plots') / args.dataset.replace(':', '-')
     
     args.plot_dir.mkdir(parents=True, exist_ok=True)
         
@@ -42,19 +53,6 @@ df_res = pd.read_csv(args.tsv_path, sep='\t')
 model_names  = df_res.target_model.unique()
 n_replicates = df_res.seed.nunique()
 
-# <<
-# Hotfix
-
-dkps_cols = [c for c in df_res.columns if 'p_' == c[:2]]
-rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
-for c in dkps_cols:
-    df_res[c] = df_res[c].clip(0, 1)
-
-for c in dkps_cols:
-    df_res['e_' + c] = np.abs(df_res[c] - df_res.y_act)
-
-# >>
-
 # alias the run with all models
 df_res['p_lr_dkps']  = df_res['p_lr_dkps__n_components_cmds=8__n_models=ALL']
 df_res['e_lr_dkps']  = df_res['e_lr_dkps__n_components_cmds=8__n_models=ALL']
@@ -66,18 +64,19 @@ df_res['p_interp']  = (df_res.n_samples * df_res.p_sample + (max_samples - df_re
 df_res['e_interp']  = np.abs(df_res.p_interp - df_res.y_act)
 df_res['r2_interp'] = df_res['r2_lr_dkps']
 
-if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
-    df_res = df_res[df_res.n_samples > 2]
+# if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
+#     df_res = df_res[df_res.n_samples > 2]
 
-# <<<<<<<<<<<<<<<<<
+# --
+# Averages per model
 
 df_avg = df_res.groupby(['seed', 'n_samples']).agg({
-    f'e_lr_dkps__n_components_cmds=8__n_models=20'   : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=20'  : np.nanmean,
-    f'e_lr_dkps__n_components_cmds=8__n_models=50'   : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=50'  : np.nanmean,
-    f'e_lr_dkps__n_components_cmds=8__n_models=ALL'  : np.nanmean,
-    f'r2_lr_dkps__n_components_cmds=8__n_models=ALL' : np.nanmean,
+    f'e_lr_dkps__n_components_cmds=8__n_models=20'   : 'mean',
+    f'r2_lr_dkps__n_components_cmds=8__n_models=20'  : 'mean',
+    # f'e_lr_dkps__n_components_cmds=8__n_models=50'   : 'mean',
+    # f'r2_lr_dkps__n_components_cmds=8__n_models=50'  : 'mean',
+    f'e_lr_dkps__n_components_cmds=8__n_models=ALL'  : 'mean',
+    f'r2_lr_dkps__n_components_cmds=8__n_models=ALL' : 'mean',
 }).reset_index()
 
 n_samples_list = sorted(df_avg.n_samples.unique())
@@ -275,62 +274,61 @@ def make_upper_right_kde(n_components_cmds=8):
     # Define markers and line styles for n_models
     n_models_values = [20, 'ALL']
     linestyles = {n_models: MODELS2LINESTYLE[n_models] for n_models in n_models_values}
-    
+
+    # Collect all data points to determine axis limits
+    all_x_data = []
+    all_y_data = []
+
     for n_samples in n_samples_list:
         sub = df_avg[df_avg.n_samples == n_samples]
         color = SAMPLES2COLOR[n_samples]
-        
+
         for n_models in n_models_values:
             _suffix = f'lr_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
             r2_col = 'r2_' + _suffix
             e_col = 'e_' + _suffix
-            
+
             # Get data points
             x_data = 1 - sub[r2_col].values
             y_data = sub[e_col].values
-            
-            # # <<
-            # # clip outliers
-            # y_lo, y_hi = np.percentile(y_data, [1, 99])
-            # sel = (y_data > y_lo) & (y_data < y_hi)
-            # x_data = x_data[sel]
-            # y_data = y_data[sel]
-            # # >>
-            
+
+            all_x_data.extend(x_data)
+            all_y_data.extend(y_data)
+
             if len(x_data) > 1:
                 # Fit 2D Gaussian to the point cloud
                 from scipy.stats import gaussian_kde
-                
+
                 # Create log-transformed data for better visualization
                 log_x_data = np.log(x_data)
                 log_y_data = np.log(y_data)
-                
+
                 # Fit KDE
                 xy = np.vstack([log_x_data, log_y_data])
                 kde = gaussian_kde(xy)
-                
+
                 # Create grid for contour plot
                 x_min, x_max = log_x_data.min(), log_x_data.max()
                 y_min, y_max = log_y_data.min(), log_y_data.max()
                 x_range = x_max - x_min
                 y_range = y_max - y_min
-                
+
                 xx, yy = np.meshgrid(
                     np.linspace(x_min - 0.1*x_range, x_max + 0.1*x_range, 100),
                     np.linspace(y_min - 0.1*y_range, y_max + 0.1*y_range, 100)
                 )
-                
+
                 # Evaluate KDE on grid
                 positions = np.vstack([xx.ravel(), yy.ravel()])
                 zz = kde(positions).reshape(xx.shape)
-                
+
                 # Transform back to original scale for plotting
                 xx_orig = np.exp(xx)
                 yy_orig = np.exp(yy)
-                
+
                 # Plot contours
                 _ = plt.contour(xx_orig, yy_orig, zz, levels=3, colors=color, linestyles=linestyles[n_models], linewidths=1.5, alpha=0.7)
-                
+
                 # Add line of best fit
                 poly = np.polyfit(log_x_data, log_y_data, 1)
                 x_fit = np.linspace(x_data.min(), x_data.max(), 100)
@@ -339,6 +337,24 @@ def make_upper_right_kde(n_components_cmds=8):
                 y_fit = np.exp(log_y_fit)
                 _ = plt.plot(x_fit, y_fit, color=color, linestyle=linestyles[n_models], linewidth=1, alpha=0.5)
 
+    # Set axis limits based on percentiles to exclude outliers
+    if all_y_data:
+        all_x_data = np.array(all_x_data)
+        all_y_data = np.array(all_y_data)
+
+        # Use 1st and 99th percentiles to exclude outliers
+        x_lo, x_hi = np.percentile(all_x_data, [1, 99])
+        y_lo, y_hi = np.percentile(all_y_data, [1, 99])
+
+        # Add padding in log space
+        log_x_range = np.log(x_hi) - np.log(x_lo)
+        log_y_range = np.log(y_hi) - np.log(y_lo)
+
+        plt.xlim(np.exp(np.log(x_lo) - 0.1*log_x_range),
+                 np.exp(np.log(x_hi) + 0.1*log_x_range))
+        plt.ylim(np.exp(np.log(y_lo) - 0.1*log_y_range),
+                 np.exp(np.log(y_hi) + 0.2*log_y_range))
+
     # Create legends
     from matplotlib.lines import Line2D
     color_handles = [Line2D([0], [0], color=SAMPLES2COLOR[n_samples], linewidth=2, label=f'n_samples={n_samples}') for n_samples in n_samples_list]
@@ -346,14 +362,14 @@ def make_upper_right_kde(n_components_cmds=8):
 
     first_legend = plt.legend(handles=color_handles, title='n_samples', bbox_to_anchor=(1.01, 1), loc='upper left')
     plt.gca().add_artist(first_legend)
-    _ = plt.legend(handles=line_handles, title='n_models', bbox_to_anchor=(1.01, 0.5), loc='upper left')
+    _ = plt.legend(handles=line_handles, title='n_models', bbox_to_anchor=(1.01, 0.25), loc='upper left')
 
     _ = plt.xlabel('1 - R² (log scale)')
     _ = plt.ylabel('Error')
     # _ = plt.title(f'{args.dataset} - R² vs Error by n_models (Gaussian KDE)')
     _ = plt.yscale('log')
     _ = plt.xscale('log')
-    
+
     _ = plt.grid(alpha=0.25)
     _ = plt.tight_layout()
     outpath = args.plot_dir / f'{args.score_col}-upper-right-kde.png'
@@ -420,12 +436,11 @@ def make_lower(n_samples):
     # Plot average errors as points
     _ = plt.hlines(avg_errors, positions - 0.35, positions + 0.35, color='blue', linewidth=2, linestyle='--', zorder=5, label='Mean error')
     
-    # Customize plot with smaller text
-    _ = plt.xticks(positions, models, rotation=45, ha='right', fontsize=8)
-    _ = plt.xlabel('Model', fontsize=10)
-    _ = plt.ylabel('Error', fontsize=10)
-    # _ = plt.title(f'{args.dataset} - Error Distribution by Model (n_samples={n_samples})', fontsize=12)
-    _ = plt.legend(fontsize=9)
+    # Customize plot - hide model names for cleaner look
+    _ = plt.xticks(positions, [''] * len(models))
+    _ = plt.xlabel('Model')
+    _ = plt.ylabel('Error')
+    _ = plt.legend()
     _ = plt.grid(alpha=0.25, axis='y')
     _ = plt.tight_layout()
     outpath = args.plot_dir / f'{args.score_col}-error-by-model-violin-n_samples={n_samples}.png'
@@ -434,51 +449,70 @@ def make_lower(n_samples):
     return outpath
 
 
-def create_mosaic(image_paths, output_path):
+def create_mosaic(image_paths, output_path, title=None):
     """
     Create a mosaic with 3 images on top row and 1 image on bottom row.
-    
+
     Args:
         image_paths: List of 4 Path objects for the images
         output_path: Path object for the output mosaic image
+        title: Optional title to display at the top of the mosaic
     """
+    from PIL import ImageDraw, ImageFont
+
     # Load images
     images = [Image.open(path) for path in image_paths]
-    
+
     # Get dimensions
     top_images = images[:3]
     bottom_image = images[3]
-    
+
     # Calculate dimensions for top row
     top_heights = [img.height for img in top_images]
     top_widths = [img.width for img in top_images]
     max_top_height = max(top_heights)
     total_top_width = sum(top_widths)
-    
+
     # Calculate dimensions for bottom row
     bottom_height = bottom_image.height
     bottom_width = bottom_image.width
-    
+
     # Calculate final mosaic dimensions
     mosaic_width = max(total_top_width, bottom_width)
-    mosaic_height = max_top_height + bottom_height
-    
+    title_height = 60 if title else 0
+    mosaic_height = title_height + max_top_height + bottom_height
+
     # Create blank canvas
     mosaic = Image.new('RGB', (mosaic_width, mosaic_height), color='white')
-    
+    draw = ImageDraw.Draw(mosaic)
+
+    # Add title if provided
+    if title:
+        try:
+            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
+        except:
+            font = ImageFont.load_default()
+
+        # Get text bounding box for centering
+        bbox = draw.textbbox((0, 0), title, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_x = (mosaic_width - text_width) // 2
+        text_y = 15
+        draw.text((text_x, text_y), title, fill='black', font=font)
+
     # Paste top row images
     x_offset = 0
     for img in top_images:
         # Center vertically in the top row
-        y_offset = (max_top_height - img.height) // 2
+        y_offset = title_height + (max_top_height - img.height) // 2
         mosaic.paste(img, (x_offset, y_offset))
         x_offset += img.width
-    
+
     # Paste bottom image (centered horizontally)
     x_offset = (mosaic_width - bottom_width) // 2
-    y_offset = max_top_height
+    y_offset = title_height + max_top_height
     mosaic.paste(bottom_image, (x_offset, y_offset))
-    
+
     # Save mosaic
     mosaic.save(output_path)
     rprint(f'[green]Saved mosaic to {output_path}[/green]')
@@ -495,7 +529,8 @@ outpath_lower = make_lower(n_samples=args.n_samples)
 mosaic_path = args.plot_dir / f'{args.score_col}-mosaic-n_samples={args.n_samples}.png'
 create_mosaic(
     [outpath_upper_left, outpath_upper_center, outpath_upper_right, outpath_lower],
-    mosaic_path
+    mosaic_path,
+    title=args.dataset
 )
 
 # Also generate the KDE plot (not included in mosaic)
