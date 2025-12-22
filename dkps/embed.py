@@ -17,6 +17,16 @@ try:
 except:
     print('dkps.embed: unable to load jlai')
 
+try:
+    from openai import OpenAI
+except:
+    print('dkps.embed: unable to load openai')
+
+try:
+    from litellm import embedding as litellm_embedding
+except:
+    print('dkps.embed: unable to load litellm')
+
 from .cache import disk_cache
 
 # --
@@ -60,6 +70,56 @@ async def _aembed_jina_chunk(chunk_id, client, chunk, model):
     data = await client.embed(chunk, model)
     return chunk_id, np.array([item['embedding'] for item in data['data']])
 
+# OpenRouter
+class OpenRouterClient:
+    def __init__(self, api_key=None):
+        self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=self.api_key,
+        )
+
+    def embed(self, input_data, model):
+        if not self.api_key:
+            raise Exception("OPENROUTER_API_KEY is not set")
+
+        response = self.client.embeddings.create(
+            extra_headers={
+                "HTTP-Referer": "https://github.com/dkps",
+                "X-Title": "dkps",
+            },
+            model=model,
+            input=input_data,
+            encoding_format="float",
+        )
+        return response
+
+@disk_cache(cache_dir="./.cache/embed/openrouter", verbose=False, ignore_fields=['client'])
+async def _aembed_openrouter_chunk(chunk_id, client, chunk, model):
+    # OpenRouter uses sync OpenAI client, run in executor
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(None, lambda: client.embed(chunk, model))
+    return chunk_id, np.array([item.embedding for item in response.data])
+
+# LiteLLM
+class LiteLLMClient:
+    def __init__(self):
+        pass
+
+    def embed(self, input_data, model):
+        response = litellm_embedding(
+            model=model,
+            input=input_data,
+        )
+        return response
+
+@disk_cache(cache_dir="./.cache/embed/litellm", verbose=False, ignore_fields=['client'])
+async def _aembed_litellm_chunk(chunk_id, client, chunk, model):
+    # LiteLLM is sync, run in executor
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(None, lambda: client.embed(chunk, model))
+    return chunk_id, np.array([item['embedding'] for item in response.data])
+
 
 # Generic API embedding functions
 async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, model=None):
@@ -84,10 +144,21 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
         _aembed_chunk = _aembed_jina_chunk
         if model is None:
             model = 'jina-embeddings-v3'
-    
-    
+
+    elif provider == 'openrouter':
+        client = OpenRouterClient()
+        _aembed_chunk = _aembed_openrouter_chunk
+        if model is None:
+            model = 'sentence-transformers/all-minilm-l6-v2'
+
+    elif provider == 'litellm':
+        client = LiteLLMClient()
+        _aembed_chunk = _aembed_litellm_chunk
+        if model is None:
+            model = 'text-embedding-3-small'
+
     else:
-        raise Exception
+        raise Exception(f"Unknown provider: {provider}")
 
 
     sem = asyncio.Semaphore(max_concurrency)
@@ -123,3 +194,39 @@ def embed_api(provider, *args, **kwargs):
         return _embed_jlai_tei(*args, **kwargs)
     else:
         return asyncio.run(_aembed_api(provider, *args, **kwargs))
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Test embedding APIs")
+    parser.add_argument("--provider", type=str, default="openrouter",
+                        choices=["google", "jina", "openrouter", "litellm", "jlai_tei"],
+                        help="Embedding provider to use")
+    parser.add_argument("--model", type=str, default=None,
+                        help="Model to use (provider-specific)")
+    parser.add_argument("--text", type=str, nargs="+",
+                        default=["Hello, world!", "This is a test."],
+                        help="Text(s) to embed")
+    args = parser.parse_args()
+
+    print(f"Provider: {args.provider}")
+    print(f"Model: {args.model or '(default)'}")
+    print(f"Input texts: {args.text}")
+    print()
+
+    kwargs = {}
+    if args.model:
+        kwargs["model"] = args.model
+
+    embeddings = embed_api(args.provider, args.text, **kwargs)
+
+    print(f"Output shape: {embeddings.shape}")
+    print(f"First embedding (first 10 dims): {embeddings[0][:10]}")
+
+    if len(args.text) > 1:
+        # Compute cosine similarity between first two embeddings
+        sim = np.dot(embeddings[0], embeddings[1]) / (
+            np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
+        )
+        print(f"Cosine similarity between first two texts: {sim:.4f}")

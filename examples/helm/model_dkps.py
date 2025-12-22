@@ -171,30 +171,6 @@ def run_one(df_sample, n_samples, mode, seed):
                 _train_models = np.random.choice(train_models, size=n_models, replace=False)
                 
                 # --
-                # dkps w/o target model - for GOF metrics only
-                
-                _embedding_dict = {k:embedding_dict[k] for k in set(_train_models)}
-                P = DKPS(n_components_cmds=n_components_cmds)
-                P = P.fit_transform(_embedding_dict, return_dict=True)
-                
-                _X_train = np.vstack([P[m] for m in _train_models])
-                _y_train = np.array([y_acts[m] for m in _train_models])
-                # _X_test  = np.vstack([P[target_model]]) # [NOT USED IN GOF METRICS]
-
-                # linear regression on DKPS embeddings        
-                lr = LinearRegression().fit(_X_train, _y_train)
-                
-                # goodness of fit metrics
-                lr_pred_train = lr.predict(_X_train)
-                res['er_' + _lr_suffix] = ((lr_pred_train - _y_train) ** 2).mean()
-                res['ss_' + _lr_suffix] = ((_y_train.mean() - _y_train) ** 2).mean()
-                res['r2_' + _lr_suffix] = r2_score(_y_train, lr_pred_train)
-                
-                # res['p_' + _lr_suffix] = float(lr.predict(_X_test)[0]) # [NOT USED IN GOF METRICS]
-                
-                del P, lr, _X_train, _y_train, lr_pred_train
-                
-                # --
                 # dkps w/ target model
                 
                 _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
