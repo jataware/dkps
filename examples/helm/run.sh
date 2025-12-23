@@ -20,51 +20,54 @@ MATH_SUBJECTS=(
     "math:subject=precalculus"
 )
 
-for subject in "${MATH_SUBJECTS[@]}"; do
-    # python eda.py                 --dataset "$subject"
-    # python run_dkps.py            --dataset "$subject" --runner dkps
-    python plot_dkps.py           --dataset "$subject"
-    
-    # python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024
-    # python plot_qselect.py        --dataset "$subject"
+for embed_provider in "jina" "google"; do
+    for subject in "${MATH_SUBJECTS[@]}"; do
+        python eda.py                 --dataset "$subject"
+        python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024
+        python plot_dkps.py           --dataset "$subject"
+        
+        python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024
+        python plot_qselect.py        --dataset "$subject"
+    done
 done
 
+# # <<
 # # [SPECIAL] Embedding comparison for math:subject=counting_and_probability
 
-EMBED_DATASET="math:subject=counting_and_probability"
+# EMBED_DATASET="math:subject=counting_and_probability"
 
-EMBEDDINGS=(
-    # "jina"
-    # "google"
-    # "litellm text-embedding-3-large"
-    # "openrouter sentence-transformers/all-minilm-l6-v2"
-    # "huggingface microsoft/codebert-base"
-    "sentence-transformers nomic-ai/nomic-embed-text-v2-moe"
-)
+# EMBEDDINGS=(
+#     # "jina"
+#     # "google"
+#     # "litellm text-embedding-3-large"
+#     # "openrouter sentence-transformers/all-minilm-l6-v2"
+#     # "huggingface microsoft/codebert-base"
+#     "sentence-transformers nomic-ai/nomic-embed-text-v2-moe"
+# )
 
-for embed_cfg in "${EMBEDDINGS[@]}"; do
-    read -r provider model <<< "$embed_cfg"
+# for embed_cfg in "${EMBEDDINGS[@]}"; do
+#     read -r provider model <<< "$embed_cfg"
 
-    if [ -z "$model" ]; then
-        outdir="results/embed-${provider}"
-        model_args=()
-    else
-        model_safe="${model//\//_}"
-        outdir="results/embed-${provider}-${model_safe}"
-        model_args=(--embed_model "$model")
-    fi
+#     if [ -z "$model" ]; then
+#         outdir="results/embed-${provider}"
+#         model_args=()
+#     else
+#         model_safe="${model//\//_}"
+#         outdir="results/embed-${provider}-${model_safe}"
+#         model_args=(--embed_model "$model")
+#     fi
 
-    echo "=== Embedding: provider=$provider model=${model:-default} ==="
-    python run_dkps.py \
-        --runner dkps \
-        --dataset "$EMBED_DATASET" \
-        --embed_provider "$provider" \
-        "${model_args[@]}" \
-        --outdir "$outdir"
-done
+#     echo "=== Embedding: provider=$provider model=${model:-default} ==="
+#     python run_dkps.py \
+#         --runner dkps \
+#         --dataset "$EMBED_DATASET" \
+#         --embed_provider "$provider" \
+#         "${model_args[@]}" \
+#         --outdir "$outdir"
+# done
 
-python plot_dkps_compare_embeddings.py --dataset "$EMBED_DATASET"
-
+# python plot_dkps_compare_embeddings.py --dataset "$EMBED_DATASET"
+# # >>
 
 # --
 # WMT 14
@@ -81,13 +84,15 @@ WMT_PAIRS=(
     "wmt_14:language_pair=ru-en"
 )
 
-for pair in "${WMT_PAIRS[@]}"; do
-    python eda.py                 --dataset "$pair" --sample 0.2
-    # python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps
-    # python plot_dkps.py           --dataset "$pair" --score_col meteor
-    
-    # python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024
-    # python plot_qselect.py        --dataset "$pair" --score_col meteor
+for embed_provider in "jina" "google"; do
+    for pair in "${WMT_PAIRS[@]}"; do
+        python eda.py                 --dataset "$pair" --sample 0.2
+        python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024
+        python plot_dkps.py           --dataset "$pair" --score_col meteor
+        
+        python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024
+        python plot_qselect.py        --dataset "$pair" --score_col meteor
+    done
 done
 
 # --
@@ -107,11 +112,11 @@ LEGALBENCH_SUBSETS=(
 
 for subset in "${LEGALBENCH_SUBSETS[@]}"; do
     python eda.py                 --dataset "$subset" --embed_model onehot
-    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps
-    # python plot_dkps.py           --dataset "$subset"
+    python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps --n_replicates 1024
+    python plot_dkps.py           --dataset "$subset"
     
-    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
-    # python plot_qselect.py        --dataset "$subset"
+    python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
+    python plot_qselect.py        --dataset "$subset"
 done
 
 # --
@@ -122,8 +127,8 @@ done
 # python extract.py             --dataset med_qa
 
 python eda.py                 --dataset med_qa --embed_model onehot
-# python run_dkps.py            --dataset med_qa --embed_model onehot --runner dkps
-# python plot_dkps.py           --dataset med_qa
+python run_dkps.py            --dataset med_qa --embed_model onehot --runner dkps --n_replicates 1024
+python plot_dkps.py           --dataset med_qa
 
-# python run_dkps.py            --dataset med_qa --embed_model onehot --runner qselect --n_replicates 1024
-# python plot_qselect.py        --dataset med_qa
+python run_dkps.py            --dataset med_qa --embed_model onehot --runner qselect --n_replicates 1024
+python plot_qselect.py        --dataset med_qa
