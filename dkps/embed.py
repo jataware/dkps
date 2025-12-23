@@ -170,7 +170,11 @@ class SentenceTransformersClient:
 
     def embed(self, input_data, model):
         st_model = self._get_model(model)
-        embeddings = st_model.encode(input_data, convert_to_numpy=True)
+        try:
+            embeddings = st_model.encode(input_data, convert_to_numpy=True)
+        except Exception as e:
+            breakpoint()
+        
         return embeddings
 
 @disk_cache(cache_dir="./.cache/embed/sentence_transformers", verbose=False, ignore_fields=['client'])
@@ -197,7 +201,6 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
         _aembed_chunk = _aembed_google_chunk
         if model is None:
             model = 'gemini-embedding-001'
-        
         
     elif provider == 'jina':
         client = JinaClient()

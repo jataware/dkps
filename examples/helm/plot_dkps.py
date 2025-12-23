@@ -8,19 +8,27 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 
+from utils import make_experiment_path
+
 # --
 # CLI
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset',   type=str, default='math:subject=intermediate_algebra')
-    parser.add_argument('--score_col', type=str, default='score')
-    parser.add_argument('--outdir',    type=str, default='results')
+    parser.add_argument('--outdir',         type=str,   default='results')
+    
+    parser.add_argument('--runner',         type=str,   default='dkps', choices=['dkps', 'qselect'])
+    parser.add_argument('--embed_provider', type=str,   default='google')
+    parser.add_argument('--embed_model',    type=str,   default=None)
+    parser.add_argument('--dataset',        type=str,   default='math:subject=algebra')
+    parser.add_argument('--score_col',      type=str,   default='score')
+    
+    parser.add_argument('--n_replicates',   type=int,   default=512)
     args = parser.parse_args()
-    
-    args.tsv_path = Path(args.outdir) / f'run-dkps-{args.dataset}-{args.score_col}.tsv'
-    args.plot_dir = Path('plots') / args.dataset.replace(':', '-')
-    
+
+    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
+    args.tsv_path = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
+    args.plot_dir = Path('plots')     / exp_path / args.runner
     args.plot_dir.mkdir(parents=True, exist_ok=True)
         
     return args
@@ -44,6 +52,7 @@ df_res['e_lr_interp'] = np.abs(df_res.p_lr_interp - df_res.y_act)
 
 if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
     df_res = df_res[df_res.n_samples > 2]
+
 
 # --
 # Plot gain (average per model)
@@ -134,6 +143,10 @@ df_avg = df_res.groupby(['mode', 'n_samples']).agg({
     'y_act' : lambda x: np.mean(x),
     **{c['colname']: lambda x: np.mean(x) for c in _cols},
 }).reset_index()
+
+print('='*100)
+print(args.dataset)
+print(df_avg)
 
 # 0th version
 for c in _cols:

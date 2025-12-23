@@ -1,6 +1,18 @@
 import numpy as np
-from tqdm import tqdm
+from pathlib import Path
 from dkps.dkps import DataKernelPerspectiveSpace
+
+def make_experiment_path(embed_provider, embed_model, dataset, score_col, n_replicates):
+    if embed_model == 'onehot':
+        embed_provider = 'local'
+    
+    _embed_str = embed_provider + ('-' + embed_model if embed_model else '')
+    return (
+        Path(_embed_str)          / 
+        dataset.replace(':', '-') / 
+        score_col                 / 
+        str(n_replicates)
+    )
 
 def make_embedding_dict(df):
     model_names  = df.model.unique()

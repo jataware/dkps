@@ -15,7 +15,7 @@ from tqdm import trange
 from joblib import Parallel, delayed
 
 from dkps.embed import embed_api
-from utils import onehot_embedding
+from utils import onehot_embedding, make_experiment_path
 
 # --
 # Helpers
@@ -40,47 +40,31 @@ def predict_null(df, mode='model'):
     return out
 
 
-def _rel_err(act, pred):
-    return np.abs(pred - act) / act
-
-def _abs_err(act, pred):
-    return np.abs(pred - act)
-
-err_fns = {
-    "abs" : _abs_err,
-    "rel" : _rel_err,
-}
-
 # --
 # IO
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--outdir',         type=str,   default='results')
+    
     parser.add_argument('--runner',         type=str,   default='dkps', choices=['dkps', 'qselect'])
+    parser.add_argument('--embed_provider', type=str,   default='google')
+    parser.add_argument('--embed_model',    type=str,   default=None)
     parser.add_argument('--dataset',        type=str,   default='math:subject=algebra')
     parser.add_argument('--score_col',      type=str,   default='score')
-    parser.add_argument('--embed_provider', type=str,   default='jina')
-    parser.add_argument('--embed_model',    type=str,   default=None)
-    parser.add_argument('--err_fn',         type=str,   default='abs')
-    parser.add_argument('--outdir',         type=str,   default='results')
+    
+    parser.add_argument('--n_replicates',   type=int,   default=512)
+    
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int,   default=123)
-    parser.add_argument('--n_replicates',   type=int,   default=128)
     parser.add_argument('--n_jobs',         type=int,   default=-2)
     args = parser.parse_args()
 
-    if args.embed_model == 'jina':
-        assert os.environ.get('JINA_API_KEY') is not None, 'JINA_API_KEY is not set'
-    elif args.embed_model == 'google':
-        assert os.environ.get('GEMINI_API_KEY') is not None, 'GEMINI_API_KEY is not set'
-    elif args.embed_model == 'jlai_tei':
-        print('... jlai_tei requires some manual setup ... talk to @bkj ...')
-
-    args.inpath = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
-    args.outdir = Path(args.outdir)
-    args.outdir.mkdir(parents=True, exist_ok=True)
-
-    args.outpath = args.outdir / f'run-{args.runner}-{args.dataset}-{args.score_col}.tsv'
+    args.inpath  = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
+    
+    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
+    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
+    args.outpath.parent.mkdir(parents=True, exist_ok=True)
 
     return args
 
@@ -175,12 +159,6 @@ dkps_cols = [c for c in df_res.columns if c.startswith('p_')]
 rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
 for c in dkps_cols:
     df_res[c] = df_res[c].clip(0, 1)
-
-# --
-# Compute errors
-
-for c in dkps_cols:
-    df_res[c.replace('p_', 'e_')] = err_fns[args.err_fn](df_res.y_act, df_res[c])
 
 # --
 # Save

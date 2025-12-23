@@ -12,7 +12,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from rich import print as rprint
 
-from utils import dkps_df, onehot_embedding
+from utils import dkps_df, onehot_embedding, make_experiment_path
 from dkps.embed import embed_api
 
 # --
@@ -22,15 +22,16 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset',        type=str, default='math:subject=algebra')
     parser.add_argument('--score_col',      type=str, default='score')
-    parser.add_argument('--embed_provider', type=str, default='jina', choices=['jina', 'google', 'jlai_tei'])
+    parser.add_argument('--embed_provider', type=str, default='google', choices=['jina', 'google', 'jlai_tei'])
     parser.add_argument('--embed_model',    type=str, default=None)
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int, default=123)
     args = parser.parse_args()
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
-    args.plot_dir = Path('plots') / args.dataset.replace(':', '-')
     
+    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
+    args.plot_dir = Path('plots') / exp_path
     args.plot_dir.mkdir(parents=True, exist_ok=True)
     
     return args
