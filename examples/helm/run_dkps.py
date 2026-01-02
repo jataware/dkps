@@ -57,7 +57,7 @@ def parse_args():
     
     parser.add_argument('--sample',         type=float)
     parser.add_argument('--seed',           type=int,   default=123)
-    parser.add_argument('--n_jobs',         type=int,   default=-2)
+    parser.add_argument('--n_jobs',         type=int,   default=-1)
     args = parser.parse_args()
 
     args.inpath  = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
@@ -66,6 +66,7 @@ def parse_args():
     args.outpath = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
     args.outpath.parent.mkdir(parents=True, exist_ok=True)
 
+    rprint(f'[blue]outpath: {args.outpath}[/blue]')
     return args
 
 args = parse_args()
@@ -138,6 +139,7 @@ for iter in trange(args.n_replicates):
 
         instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
+
         jobs.append(delayed(runner.run_one)(
             df_sample    = df_sample,
             n_samples    = n_samples,
@@ -148,7 +150,8 @@ for iter in trange(args.n_replicates):
             **runner_kwargs
         ))
 
-res    = sum(Parallel(n_jobs=args.n_jobs, verbose=10)(jobs), [])
+jobs   = [jobs[i] for i in np.random.permutation(len(jobs))]
+res    = sum(Parallel(backend='loky', n_jobs=args.n_jobs, verbose=10)(jobs), [])
 df_res = pd.DataFrame(res)
 
 # --

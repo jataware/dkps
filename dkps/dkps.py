@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import pairwise_distances
 from graspologic.embed import ClassicalMDS
 # from graspologic.embed import OmnibusEmbed
 
@@ -6,11 +7,10 @@ from scipy.spatial.distance import pdist, squareform
 
 # from .utils import knn_graph
 
-
 class DataKernelPerspectiveSpace:
     def __init__(
             self,
-            response_distribution_fn=np.mean,
+            response_distribution_fn=None,
             response_distribution_axis=1,
             metric_cmds='euclidean',
             n_components_cmds=None,
@@ -29,7 +29,7 @@ class DataKernelPerspectiveSpace:
         """
         data: dict {model_name: np.array(n_queries, n_replicates, embedding_dim)}
         """
-        
+
         # qc checks
         assert isinstance(data, dict),                                  'data must be a dict'
         assert all([isinstance(x, np.ndarray) for x in data.values()]), 'all values must be numpy arrays'
@@ -37,15 +37,23 @@ class DataKernelPerspectiveSpace:
         assert len(set([x.shape for x in data.values()])) == 1,         'all arrays must have the same shape'
 
         # aggregate over replicates -> (n_models, n_queries, embedding_dim)
-        X = np.stack([self.response_distribution_fn(v, axis=self.response_distribution_axis) for k,v in data.items()])
+        if self.response_distribution_fn is None:
+            X = np.stack([v[:,0] for v in data.values()])
+        else:
+            X = np.stack([self.response_distribution_fn(v, axis=self.response_distribution_axis) for k,v in data.items()])
+
         n_models, n_queries, embedding_dim = X.shape
-        
+
         # flatten -> (n_models, n_queries * embedding_dim)
         X_flat = X.reshape(len(X), -1)
 
-        dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
-        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
+        if self.metric_cmds == 'euclidean':
+            dist_matrix = pairwise_distances(X_flat, metric='euclidean') / np.sqrt(n_queries)
+        else:
+            dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
         
+        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
+
         if return_dict:
             return {key: cmds_embds[i] for i, key in enumerate(data.keys())}
         else:

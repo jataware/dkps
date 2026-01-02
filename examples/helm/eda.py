@@ -30,7 +30,7 @@ def parse_args():
     
     args.tsv_path = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     
-    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
+    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col)
     args.plot_dir = Path('plots') / exp_path
     args.plot_dir.mkdir(parents=True, exist_ok=True)
     
