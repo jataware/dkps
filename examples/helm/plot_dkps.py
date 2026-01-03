@@ -17,13 +17,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--outdir',         type=str,   default='results')
     
-    parser.add_argument('--runner',         type=str,   default='dkps', choices=['dkps', 'qselect'])
+    parser.add_argument('--runner',         type=str,   default='dkps', choices=['dkps'])
     parser.add_argument('--embed_provider', type=str,   default='google')
     parser.add_argument('--embed_model',    type=str,   default=None)
     parser.add_argument('--dataset',        type=str,   default='math:subject=algebra')
     parser.add_argument('--score_col',      type=str,   default='score')
     
-    parser.add_argument('--n_replicates',   type=int,   default=512)
+    parser.add_argument('--n_replicates',   type=int,   default=1024)
     args = parser.parse_args()
 
     exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
@@ -48,11 +48,17 @@ df_res['p_lr_dkps']   = df_res['p_lr_dkps__n_components_cmds=8__n_models=ALL']
 # compute interpolation
 max_samples           = df_res.n_samples.max()
 df_res['p_lr_interp'] = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_lr_dkps) / max_samples
-df_res['e_lr_interp'] = np.abs(df_res.p_lr_interp - df_res.y_act)
 
-if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
-    df_res = df_res[df_res.n_samples > 2]
+# if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
+#     df_res = df_res[df_res.n_samples > 2]
 
+# --
+# Compute errors
+
+pred_cols = [c for c in df_res.columns if c.startswith('p_')]
+for p_col in pred_cols:
+    e_col = f'e_{p_col[2:]}'
+    df_res[e_col] = np.abs(df_res[p_col] - df_res.y_act)
 
 # --
 # Plot gain (average per model)

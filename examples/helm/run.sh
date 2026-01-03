@@ -26,14 +26,14 @@ MATH_SUBJECTS=(
     "math:subject=precalculus"
 )
 
-for embed_provider in "jina" "google"; do
+for embed_provider in "google jina"; do
     for subject in "${MATH_SUBJECTS[@]}"; do
         # python eda.py                 --dataset "$subject"
-        python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_dkps.py           --dataset "$subject"
+        # python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_dkps.py           --dataset "$subject"
         
-        python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_qselect.py        --dataset "$subject"
+        # python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_qselect.py        --dataset "$subject"
     done
 done
 
@@ -83,8 +83,8 @@ done
 # # python extract.py --dataset wmt_14
 
 WMT_PAIRS=(
-    # "wmt_14:language_pair=cs-en"
-    # "wmt_14:language_pair=de-en"
+    "wmt_14:language_pair=cs-en"
+    "wmt_14:language_pair=de-en"
     "wmt_14:language_pair=fr-en"
     "wmt_14:language_pair=hi-en"
     "wmt_14:language_pair=ru-en"
@@ -93,48 +93,48 @@ WMT_PAIRS=(
 for embed_provider in "jina" "google"; do
     for pair in "${WMT_PAIRS[@]}"; do
         # python eda.py                 --dataset "$pair" --sample 0.2
-        OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_dkps.py           --dataset "$pair" --score_col meteor
+        # OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_dkps.py           --dataset "$pair" --score_col meteor
         
-        OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_qselect.py        --dataset "$pair" --score_col meteor
+        # OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_qselect.py        --dataset "$pair" --score_col meteor
     done
 done
 
-# # --
+# --
 # # LegalBench
 
 # # bash download-scripts/download-legalbench.sh
 
 # # python extract.py --dataset legalbench
 
-# LEGALBENCH_SUBSETS=(
-#     "legalbench:subset=abercrombie"
-#     "legalbench:subset=international_citizenship_questions"
-#     "legalbench:subset=corporate_lobbying"
-#     "legalbench:subset=function_of_decision_section"
-#     "legalbench:subset=proa"
-# )
+LEGALBENCH_SUBSETS=(
+    "legalbench:subset=abercrombie"
+    "legalbench:subset=international_citizenship_questions"
+    "legalbench:subset=corporate_lobbying"
+    "legalbench:subset=function_of_decision_section"
+    "legalbench:subset=proa"
+)
 
-# for subset in "${LEGALBENCH_SUBSETS[@]}"; do
-#     # python eda.py                 --dataset "$subset" --embed_model onehot
-#     python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps --n_replicates 1024
-#     # python plot_dkps.py           --dataset "$subset"
+for subset in "${LEGALBENCH_SUBSETS[@]}"; do
+    # python eda.py                 --dataset "$subset" --embed_model onehot
+    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps --n_replicates 1024
+    python plot_dkps.py           --dataset "$subset" --embed_model onehot
     
-#     python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
-#     # python plot_qselect.py        --dataset "$subset"
-# done
+    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
+    python plot_qselect.py        --dataset "$subset" --embed_model onehot
+done
 
-# # --
-# # MEDQA
+# --
+# MEDQA
 
-# # bash download-scripts/download-med_qa.sh
+# bash download-scripts/download-med_qa.sh
 
-# # python extract.py             --dataset med_qa
+# python extract.py             --dataset med_qa
 
-# # python eda.py                 --dataset med_qa --embed_model onehot
+# python eda.py                 --dataset med_qa --embed_model onehot
 # python run_dkps.py            --dataset med_qa --embed_model onehot --runner dkps --n_replicates 1024
-# # python plot_dkps.py           --dataset med_qa
+python plot_dkps.py           --dataset med_qa --embed_model onehot
 
 # python run_dkps.py            --dataset med_qa --embed_model onehot --runner qselect --n_replicates 1024
-# # python plot_qselect.py        --dataset med_qa
+python plot_qselect.py        --dataset med_qa --embed_model onehot

@@ -12,6 +12,8 @@ from scipy.stats import rankdata
 from sklearn.utils.fixes import platform
 from PIL import Image
 
+from utils import make_experiment_path
+
 # --
 # Plot settings (for 8-inch wide paper figures)
 
@@ -30,15 +32,24 @@ plt.rcParams.update({
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset',   type=str, default='legalbench:subset=abercrombie')
-    parser.add_argument('--score_col', type=str, default='score')
-    parser.add_argument('--outdir',    type=str, default='results')
+    parser.add_argument('--outdir',         type=str,   default='results')
+    
+    parser.add_argument('--runner',         type=str,   default='qselect', choices=['qselect'])
+    parser.add_argument('--embed_provider', type=str,   default='google')
+    parser.add_argument('--embed_model',    type=str,   default=None)
+    parser.add_argument('--dataset',        type=str,   default='math:subject=algebra')
+    parser.add_argument('--score_col',      type=str,   default='score')
+    
+    parser.add_argument('--n_replicates',   type=int,   default=1024)
+    
+    # make plots for different n_samples
     parser.add_argument('--n_samples', type=int, default=8)
+
     args = parser.parse_args()
-    
-    args.tsv_path = Path(args.outdir) / f'run-qselect-{args.dataset}-{args.score_col}.tsv'
-    args.plot_dir = Path('plots') / args.dataset.replace(':', '-')
-    
+
+    exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
+    args.tsv_path = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
+    args.plot_dir = Path('plots')     / exp_path / args.runner
     args.plot_dir.mkdir(parents=True, exist_ok=True)
         
     return args
@@ -55,17 +66,23 @@ n_replicates = df_res.seed.nunique()
 
 # alias the run with all models
 df_res['p_lr_dkps']  = df_res['p_lr_dkps__n_components_cmds=8__n_models=ALL']
-df_res['e_lr_dkps']  = df_res['e_lr_dkps__n_components_cmds=8__n_models=ALL']
 df_res['r2_lr_dkps'] = df_res['r2_lr_dkps__n_components_cmds=8__n_models=ALL']
 
 # compute interpolation
 max_samples         = df_res.n_samples.max()
 df_res['p_interp']  = (df_res.n_samples * df_res.p_sample + (max_samples - df_res.n_samples) * df_res.p_lr_dkps) / max_samples
-df_res['e_interp']  = np.abs(df_res.p_interp - df_res.y_act)
 df_res['r2_interp'] = df_res['r2_lr_dkps']
 
 # if any([xx in args.dataset for xx in ['med_qa', 'legalbench']]):
 #     df_res = df_res[df_res.n_samples > 2]
+
+# --
+# Compute errors
+
+pred_cols = [c for c in df_res.columns if c.startswith('p_')]
+for p_col in pred_cols:
+    e_col = f'e_{p_col[2:]}'
+    df_res[e_col] = np.abs(df_res[p_col] - df_res.y_act)
 
 # --
 # Averages per model

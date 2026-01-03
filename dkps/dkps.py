@@ -49,10 +49,11 @@ class DataKernelPerspectiveSpace:
 
         if self.metric_cmds == 'euclidean':
             dist_matrix = pairwise_distances(X_flat, metric='euclidean') / np.sqrt(n_queries)
+            dist_matrix = (dist_matrix + dist_matrix.T) / 2
         else:
             dist_matrix = squareform(pdist(X_flat, metric=self.metric_cmds)) / np.sqrt(n_queries)
         
-        cmds_embds  = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
+        cmds_embds = ClassicalMDS(n_components=self.n_components_cmds, n_elbows=self.n_elbows_cmds, dissimilarity=self.dissimilarity).fit_transform(dist_matrix)
 
         if return_dict:
             return {key: cmds_embds[i] for i, key in enumerate(data.keys())}
