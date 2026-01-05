@@ -26,14 +26,14 @@ MATH_SUBJECTS=(
     "math:subject=precalculus"
 )
 
-for embed_provider in "jina google"; do
+for embed_provider in "jina" "google"; do
     for subject in "${MATH_SUBJECTS[@]}"; do
-        # python eda.py                 --dataset "$subject"
-        # python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        python plot_dkps.py           --dataset "$subject"
+        # # python eda.py                 --dataset "$subject"
+        # # python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_dkps.py           --dataset "$subject" --embed_provider "$embed_provider"
         
-        # python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        python plot_qselect.py        --dataset "$subject"
+        # # python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_qselect.py        --dataset "$subject" --embed_provider "$embed_provider"
     done
 done
 
@@ -41,7 +41,7 @@ done
 # # # [SPECIAL] Embedding comparison for math:subject=counting_and_probability
 
 # # EMBED_DATASET="math:subject=counting_and_probability"
-
+zx
 # # EMBEDDINGS=(
 # #     # "jina"
 # #     # "google"
@@ -94,10 +94,10 @@ for embed_provider in "jina" "google"; do
     for pair in "${WMT_PAIRS[@]}"; do
         # python eda.py                 --dataset "$pair" --sample 0.2
         # OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        python plot_dkps.py           --dataset "$pair" --score_col meteor
+        python plot_dkps.py           --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
         
         # OMP_NUM_THREADS=1 python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        python plot_qselect.py        --dataset "$pair" --score_col meteor
+        python plot_qselect.py        --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
     done
 done
 
@@ -108,33 +108,33 @@ done
 
 # # python extract.py --dataset legalbench
 
-LEGALBENCH_SUBSETS=(
-    "legalbench:subset=abercrombie"
-    "legalbench:subset=international_citizenship_questions"
-    "legalbench:subset=corporate_lobbying"
-    "legalbench:subset=function_of_decision_section"
-    "legalbench:subset=proa"
-)
+# LEGALBENCH_SUBSETS=(
+#     "legalbench:subset=abercrombie"
+#     "legalbench:subset=international_citizenship_questions"
+#     "legalbench:subset=corporate_lobbying"
+#     "legalbench:subset=function_of_decision_section"
+#     "legalbench:subset=proa"
+# )
 
-for subset in "${LEGALBENCH_SUBSETS[@]}"; do
-    # python eda.py                 --dataset "$subset" --embed_model onehot
-    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps --n_replicates 1024
-    python plot_dkps.py           --dataset "$subset" --embed_model onehot
+# for subset in "${LEGALBENCH_SUBSETS[@]}"; do
+#     # python eda.py                 --dataset "$subset" --embed_model onehot
+#     # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner dkps --n_replicates 1024
+#     python plot_dkps.py           --dataset "$subset" --embed_model onehot
     
-    # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
-    python plot_qselect.py        --dataset "$subset" --embed_model onehot
-done
+#     # python run_dkps.py            --dataset "$subset" --embed_model onehot --runner qselect --n_replicates 1024
+#     python plot_qselect.py        --dataset "$subset" --embed_model onehot
+# done
 
-# --
-# MEDQA
+# # --
+# # MEDQA
 
-# bash download-scripts/download-med_qa.sh
+# # bash download-scripts/download-med_qa.sh
 
-# python extract.py             --dataset med_qa
+# # python extract.py             --dataset med_qa
 
-# python eda.py                 --dataset med_qa --embed_model onehot
-# python run_dkps.py            --dataset med_qa --embed_model onehot --runner dkps --n_replicates 1024
-python plot_dkps.py           --dataset med_qa --embed_model onehot
+# # python eda.py                 --dataset med_qa --embed_model onehot
+# # python run_dkps.py            --dataset med_qa --embed_model onehot --runner dkps --n_replicates 1024
+# python plot_dkps.py           --dataset med_qa --embed_model onehot
 
-# python run_dkps.py            --dataset med_qa --embed_model onehot --runner qselect --n_replicates 1024
-python plot_qselect.py        --dataset med_qa --embed_model onehot
+# # python run_dkps.py            --dataset med_qa --embed_model onehot --runner qselect --n_replicates 1024
+# python plot_qselect.py        --dataset med_qa --embed_model onehot
