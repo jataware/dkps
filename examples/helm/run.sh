@@ -26,7 +26,7 @@ MATH_SUBJECTS=(
     "math:subject=precalculus"
 )
 
-for embed_provider in "google jina"; do
+for embed_provider in "jina google"; do
     for subject in "${MATH_SUBJECTS[@]}"; do
         # python eda.py                 --dataset "$subject"
         # python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
