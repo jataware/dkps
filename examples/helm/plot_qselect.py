@@ -48,7 +48,7 @@ def parse_args():
     args = parser.parse_args()
 
     exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
-    args.tsv_path = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
+    args.tsv_path = Path(args.outdir) / exp_path / args.runner / 'results-v2.tsv'
     args.plot_dir = Path('plots')     / exp_path / args.runner
     args.plot_dir.mkdir(parents=True, exist_ok=True)
         

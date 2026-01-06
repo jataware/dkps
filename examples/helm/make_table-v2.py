@@ -49,7 +49,7 @@ EMBED_DIR = _exp_path.parts[0]  # e.g., 'embed-google' or 'embed-local-onehot'
 # --
 # Load results
 
-tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results.tsv'))
+tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-v2.tsv'))
 rprint(f'[green]Found {len(tsv_paths)} result files for {EMBED_DIR}[/green]')
 
 
