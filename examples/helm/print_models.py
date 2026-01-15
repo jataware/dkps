@@ -14,8 +14,9 @@ RESULTS_DIR = Path('results')
 tsv_paths = list(RESULTS_DIR.glob('**/dkps/results.tsv'))
 console.print(f'Found {len(tsv_paths)} result files', style='green')
 
-# Collect models per dataset_split
+# Collect models and n_samples per dataset_split
 models_by_split = defaultdict(set)
+n_queries_by_split = {}
 all_models = set()
 
 for tsv_path in tsv_paths:
@@ -24,11 +25,18 @@ for tsv_path in tsv_paths:
     runner_idx = parts.index('dkps')
     dataset_split = parts[runner_idx - 3]
 
-    df = pd.read_csv(tsv_path, sep='\t', usecols=['target_model'])
+    df = pd.read_csv(tsv_path, sep='\t', usecols=['target_model', 'n_samples'])
     models = set(df['target_model'].unique())
+    max_n_samples = df['n_samples'].max()
 
     models_by_split[dataset_split].update(models)
     all_models.update(models)
+
+    # Track max n_samples (number of queries) per split
+    if dataset_split not in n_queries_by_split:
+        n_queries_by_split[dataset_split] = max_n_samples
+    else:
+        n_queries_by_split[dataset_split] = max(n_queries_by_split[dataset_split], max_n_samples)
 
 console.print(f'\nTotal unique models: {len(all_models)}', style='bold')
 
@@ -86,3 +94,13 @@ for dataset_split in sorted(models_by_split.keys()):
     )
 
 console.print(table2)
+
+# Table 3: Number of queries per dataset_split
+table3 = Table(title='Number of Queries per Dataset Split', show_lines=True)
+table3.add_column('Dataset Split', style='cyan', no_wrap=True)
+table3.add_column('N Queries', style='magenta', justify='right')
+
+for dataset_split in sorted(n_queries_by_split.keys()):
+    table3.add_row(dataset_split, str(n_queries_by_split[dataset_split]))
+
+console.print(table3)

@@ -1,193 +1,208 @@
+"""
+Generate summary tables from DKPS results.
 
+Shows performance at both dataset split level and full dataset level.
+Uses DataFrame concatenation for computing dataset-level metrics.
+"""
+
+import argparse
 import numpy as np
 import pandas as pd
-from glob import glob
+from pathlib import Path
 from tqdm import tqdm
 from rich import print as rprint
 
-rprint('[yellow] Assumption - all metrics are bounded between 0 and 1[/yellow]')
-rprint('[yellow] Assumption - metrics are averages of per-sample metrics[/yellow]')
+from utils import make_experiment_path
+
+# --
+# CLI
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Generate summary tables from DKPS results')
+    parser.add_argument('--results_dir',    type=str, default='results')
+    parser.add_argument('--tables_dir',     type=str, default='tables', help='Output directory for tables')
+    parser.add_argument('--embed_provider', type=str, default='google', help='Embedding provider (e.g., google, jina, local)')
+    parser.add_argument('--embed_model',    type=str, default=None, help='Embedding model (e.g., onehot)')
+    parser.add_argument('--n_models',       type=str, default='ALL', choices=['20', '50', 'ALL'], help='Number of models used in DKPS')
+    parser.add_argument('--n_samples',      type=int, nargs='+', default=[1, 2, 4, 8, 16, 32, 64], help='Sample sizes to include in table')
+    return parser.parse_args()
+
+args = parse_args()
+
+rprint('[yellow]Assumption - all metrics are bounded between 0 and 1[/yellow]')
+rprint('[yellow]Assumption - metrics are averages of per-sample metrics[/yellow]')
 
 pd.set_option('display.float_format', lambda x: f'{x:.3f}')
 
+# --
+# Configuration
 
-tsv_paths = glob('results/*-res.tsv')
+RESULTS_DIR = Path(args.results_dir)
+TABLES_DIR = Path(args.tables_dir)
+TABLES_DIR.mkdir(parents=True, exist_ok=True)
+RUNNER = 'dkps'
+N_SAMPLES_TO_SHOW = args.n_samples
+DKPS_COL = f'p_lr_dkps__n_components_cmds=8__n_models={args.n_models}'
+
+# Use make_experiment_path to get the embed directory prefix
+# (passing dummy values for dataset/score_col since we just need the embed part)
+_exp_path = make_experiment_path(args.embed_provider, args.embed_model, 'dummy', 'dummy')
+EMBED_DIR = _exp_path.parts[0]  # e.g., 'embed-google' or 'embed-local-onehot'
 
 # --
-# IO
+# Load results
 
-df = []
-for tsv_path in tqdm(tsv_paths):
-    df_tmp          = pd.read_csv(tsv_path, sep='\t')
-    df_tmp['_path'] = tsv_path
-    df.append(df_tmp)
+tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-v2.tsv'))
+rprint(f'[green]Found {len(tsv_paths)} result files for {EMBED_DIR}[/green]')
 
-df = pd.concat(df)
 
-def _parse_path(path):
-    return '-'.join(path.split('/')[-1].split('-')[:-2])
+def parse_path(path: Path) -> dict:
+    """Parse result path to extract experiment metadata.
 
-df['dataset_split']   = df._path.apply(_parse_path)
-df['dataset']         = df.dataset_split.apply(lambda x: x.split(':')[0] if ':' in x else x)
-df['split']           = df.dataset_split.apply(lambda x: x.split(':')[1] if ':' in x else x)
+    Path format: results/{embed_provider}/{dataset}/{score_col}/{n_replicates}/{runner}/results.tsv
+    """
+    parts = path.parts
+    runner_idx = parts.index(RUNNER)
 
+    return {
+        'embed_provider': parts[runner_idx - 4],
+        'dataset_split': parts[runner_idx - 3],
+        'score_col': parts[runner_idx - 2],
+        'n_replicates': int(parts[runner_idx - 1]),
+    }
+
+
+dfs = []
+for tsv_path in tqdm(tsv_paths, desc='Loading results'):
+    df_tmp = pd.read_csv(tsv_path, sep='\t')
+    meta   = parse_path(tsv_path)
+    for k, v in meta.items():
+        df_tmp[k] = v
+    
+    dfs.append(df_tmp)
+
+df = pd.concat(dfs, ignore_index=True)
+
+# Compute max samples per dataset split (used for interpolation)
 df['n_dataset_split'] = df.groupby('dataset_split').n_samples.transform('max')
 
-dataset_sizes = df[['dataset', 'dataset_split', 'n_dataset_split']].drop_duplicates()
-dataset_sizes = dataset_sizes.groupby('dataset').n_dataset_split.sum()
-dataset_sizes = dataset_sizes.to_dict()
-df['n_dataset'] = df.dataset.apply(lambda x: dataset_sizes[x])
+# Parse dataset and split from dataset_split
+df['dataset'] = df.dataset_split.apply(lambda x: x.split('-')[0])
+df['split']   = df.dataset_split.apply(lambda x: '-'.join(x.split('-')[1:]) if '-' in x else '')
 
-df['weight'] = df.n_dataset_split / df.n_dataset
-
-# --
-
-# <<
-# Hotfix
-dkps_cols = [c for c in df.columns if 'p_' in c]
-rprint(f'[yellow]clipping DKPS columns to (0, 1) - {dkps_cols}[/yellow]')
-for c in dkps_cols:
-    df[c] = df[c].clip(0, 1)
-
-for c in dkps_cols:
-    df[c.replace('p_', 'e_')] = np.abs(df[c] - df.y_act)
-
-# >>
-
-p_lr_dkps = df['p_lr_dkps__n_components_cmds=8__n_models=ALL']
-
-df['p_interp']        = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * p_lr_dkps) / df.n_dataset_split
-df['e_interp']        = np.abs(df.p_interp - df.y_act)
-
-df['r2_interp']       = df['r2_lr_dkps__n_components_cmds=8__n_models=ALL']
-
-# <<
-r2_col              = 'r2_lr_dkps__n_components_cmds=8__n_models=ALL'
-_df_r2_mean         = df.groupby(['dataset_split', 'n_samples', 'seed'])[r2_col].mean().reset_index()
-_df_r2_best         = _df_r2_mean[_df_r2_mean.groupby(['dataset_split', 'n_samples'])[r2_col].transform(lambda x: x == x.max())]
-_df_r2_best.columns = ['dataset_split', 'n_samples', 'seed', '_r2_best']
-df_best             = pd.merge(df, _df_r2_best, on=['dataset_split', 'n_samples', 'seed'], how='left')
-
-for c in [
-    'e_interp', 
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL',
-    
-    'p_interp',
-    'p_lr_dkps__n_components_cmds=8__n_models=ALL',
-]:
-    df_best[c + '_best'] = df_best[c]
-    df_best.loc[df_best['_r2_best'].isna(), c + '_best'] = np.nan
-
-del df
-# >>
+print(df[['dataset_split', 'n_dataset_split']].drop_duplicates().sort_values('dataset_split'))
+# Some of the math datasets only have ~ 32 samples
 
 # --
-# per split
+# Compute errors
 
-tab = df_best[df_best.n_samples.isin([1, 4, 16, 64])].groupby(['dataset', 'split', 'n_samples']).agg({
-    'e_null'                                            : 'mean',
-    'e_sample'                                          : 'mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL'      : 'mean',
-    'e_interp'                                          : 'mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best' : 'mean',
-    'e_interp_best'                                     : 'mean',
-})
-tab[tab > 9999] = np.nan
-
-tab['e_interp_best_vs_avg'] = tab['e_interp_best'] - tab['e_interp']
-tab['e_lr_dkps__n_components_cmds=8__n_models=ALL_best_vs_avg'] = tab['e_lr_dkps__n_components_cmds=8__n_models=ALL_best'] - tab['e_lr_dkps__n_components_cmds=8__n_models=ALL']
-
-tab.rename(columns={
-    'e_null'                                                   : 'Population Mean',
-    'e_sample'                                                 : 'Sample Mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL'             : 'DKPS(d=8, n_models=ALL)',
-    'e_interp'                                                 : 'Interp(DKPS(d=8, n_models=ALL), Sample Mean)',
-    
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best'        : 'DKPS(d=8, n_models=ALL, best=True)',
-    'e_interp_best'                                            : 'Interp(DKPS(d=8, n_models=ALL, best=True), Sample Mean)',
-    'e_interp_best_vs_avg'                                     : 'Interp(DKPS(d=8, n_models=ALL, best=True), Sample Mean) - Interp(DKPS(d=8, n_models=ALL), Sample Mean)',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best_vs_avg' : 'DKPS(d=8, n_models=ALL, best=True) - DKPS(d=8, n_models=ALL)',
-}, inplace=True)
-
-tab = tab.reset_index()
-print(tab)
-
-tab.to_csv('table-by_dataset_split.tsv', sep='\t')
+pred_cols = [c for c in df.columns if c.startswith('p_')]
+for p_col in pred_cols:
+    e_col = f'e_{p_col[2:]}'
+    df[e_col] = np.abs(df[p_col] - df.y_act)
 
 # --
-# per dataset
+# Compute interpolation prediction
 
-split_sizes = df_best[['dataset_split', 'n_dataset_split']].drop_duplicates()
-split_sizes = dict(zip(split_sizes.dataset_split.values, split_sizes.n_dataset_split.values))
+p_lr_dkps = df[DKPS_COL]
+df['p_interp'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * p_lr_dkps) / df.n_dataset_split
+df['e_interp'] = np.abs(df.p_interp - df.y_act)
 
-def _compute_pred(sub, split_sizes):
-    split_sizes = np.array([split_sizes[dataset_split] for dataset_split in sub.dataset_split.values])
-    
-    methods = [
-        'y_act', 
-        'p_null', 
-        'p_sample', 
-        'p_lr_dkps__n_components_cmds=8__n_models=ALL', 
-        'p_interp',
-        
-        'p_lr_dkps__n_components_cmds=8__n_models=ALL_best',
-        'p_interp_best',
-    ]
-    
-    preds = {method:sub[method].values @ split_sizes / split_sizes.sum() for method in methods}
-    # replace '^p_' with '^e_'
-    errs  = {('e_' + method[2:]):np.abs(preds[method] - preds['y_act']) for method in methods}
-    return pd.Series(errs)
-
-# takes a while ...
-# [BUG] for small datasets, the max number may be less than these
-#       so when we average across datasets, we may drop subsets
-df_sub = df_best[df_best.n_samples.isin([1, 4, 16, 64])]
-
-df_dataset = df_sub.groupby(['dataset', 'n_samples', 'seed', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
-df_dataset.reset_index(inplace=True)
-
-tab_dataset = df_dataset.groupby(['dataset', 'n_samples']).agg({
-    'e_null'                                            : np.nanmean,
-    'e_sample'                                          : np.nanmean,
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL'      : np.nanmean,
-    'e_interp'                                          : np.nanmean,
-})
+# Alias for convenience
+df['p_lr_dkps'] = df[DKPS_COL]
+df['e_lr_dkps'] = np.abs(df['p_lr_dkps'] - df.y_act)
 
 
-df_sub_best = df_best[df_best._r2_best.notna()]
-df_sub_best = df_sub_best[df_sub_best.n_samples.isin([1, 4, 16, 64])]
-df_sub_best = df_sub_best.groupby(['dataset', 'n_samples', 'target_model']).apply(lambda x: _compute_pred(x, split_sizes))
-df_sub_best.reset_index(inplace=True)
+# ==============================================================================
+# Table 1: Per dataset split
+# ==============================================================================
 
-tab_dataset_best = df_sub_best.groupby(['dataset', 'n_samples']).agg({
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best' : np.nanmean,
-    'e_interp_best'                                     : np.nanmean,
-})
+rprint('\n[bold cyan]Table 1: Performance by dataset split[/bold cyan]')
 
-assert (tab_dataset.index == tab_dataset_best.index).all()
-tab_dataset = pd.concat([tab_dataset, tab_dataset_best], axis=1)
+df_sub = df[df.n_samples.isin(N_SAMPLES_TO_SHOW)]
 
-tab_dataset[tab_dataset > 9999] = np.nan
+tab_split = df_sub.groupby(['dataset', 'split', 'n_samples']).agg({
+    'e_null': 'mean',
+    'e_sample': 'mean',
+    'e_lr_dkps': 'mean',
+    'e_interp': 'mean',
+}).rename(columns={
+    'e_null': 'Population Mean',
+    'e_sample': 'Sample Mean',
+    'e_lr_dkps': 'DKPS',
+    'e_interp': 'Interp',
+}).reset_index()
 
-tab_dataset['e_interp_best_vs_avg'] = tab_dataset['e_interp_best'] - tab_dataset['e_interp']
-tab_dataset['e_lr_dkps__n_components_cmds=8__n_models=ALL_best_vs_avg'] = tab_dataset['e_lr_dkps__n_components_cmds=8__n_models=ALL_best'] - tab_dataset['e_lr_dkps__n_components_cmds=8__n_models=ALL']
-
-tab_dataset.rename(columns={
-    'e_null'                                                   : 'Population Mean',
-    'e_sample'                                                 : 'Sample Mean',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL'             : 'DKPS(d=8, n_models=ALL)',
-    'e_interp'                                                 : 'Interp(DKPS(d=8, n_models=ALL), Sample Mean)',
-    
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best'        : 'DKPS(d=8, n_models=ALL, best=True)',
-    'e_interp_best'                                            : 'Interp(DKPS(d=8, n_models=ALL, best=True), Sample Mean)',
-    'e_interp_best_vs_avg'                                     : 'Interp(DKPS(d=8, n_models=ALL, best=True), Sample Mean) - Interp(DKPS(d=8, n_models=ALL), Sample Mean)',
-    'e_lr_dkps__n_components_cmds=8__n_models=ALL_best_vs_avg' : 'DKPS(d=8, n_models=ALL, best=True) - DKPS(d=8, n_models=ALL)',
-}, inplace=True)
+print(tab_split)
+outpath_split = TABLES_DIR / f'table-v2-{EMBED_DIR}-n_models={args.n_models}-by_dataset_split.tsv'
+tab_split.to_csv(outpath_split, sep='\t', index=False)
+rprint(f'[green]Saved to {outpath_split}[/green]')
 
 
-tab_dataset = tab_dataset.reset_index()
-print(tab_dataset.T)
-# print(tab_dataset.T.to_latex())
+# ==============================================================================
+# Table 2: Per dataset (aggregated across splits)
+# ==============================================================================
 
-tab_dataset.T.to_csv('table-by_dataset.tsv', sep='\t')
+rprint('\n[bold cyan]Table 2: Performance by dataset[/bold cyan]')
+
+# Vectorized approach: compute weighted sums, then aggregate
+df_sub = df[df.n_samples.isin(N_SAMPLES_TO_SHOW)].copy()
+
+# Weight is the split size (n_dataset_split)
+weight_col = 'n_dataset_split'
+pred_cols = ['y_act', 'p_null', 'p_sample', 'p_lr_dkps', 'p_interp']
+
+# Compute weighted values
+for col in pred_cols:
+    df_sub[f'{col}_w'] = df_sub[col] * df_sub[weight_col]
+
+# Aggregate: sum of weighted values and sum of weights per (dataset, n_samples, seed, target_model)
+group_cols = ['dataset', 'n_samples', 'seed', 'target_model']
+agg_dict = {f'{col}_w': 'sum' for col in pred_cols}
+agg_dict[weight_col] = 'sum'
+
+df_agg = df_sub.groupby(group_cols).agg(agg_dict).reset_index()
+
+# Compute weighted averages
+for col in pred_cols:
+    df_agg[col] = df_agg[f'{col}_w'] / df_agg[weight_col]
+
+# Compute interp2: interpolation of the weighted averages (not weighted average of interpolations)
+# n_dataset = total instances across all splits (sum of weights)
+# n_dataset = df_agg[weight_col]
+# df_agg['p_interp2'] = (df_agg['n_samples'] * df_agg['p_sample'] + (n_dataset - df_agg['n_samples']) * df_agg['p_lr_dkps']) / n_dataset
+
+# Compute errors at dataset level
+df_agg['e_null']    = np.abs(df_agg['p_null'] - df_agg['y_act'])
+df_agg['e_sample']  = np.abs(df_agg['p_sample'] - df_agg['y_act'])
+df_agg['e_lr_dkps'] = np.abs(df_agg['p_lr_dkps'] - df_agg['y_act'])
+df_agg['e_interp']  = np.abs(df_agg['p_interp'] - df_agg['y_act'])
+# df_agg['e_interp2'] = np.abs(df_agg['p_interp2'] - df_agg['y_act'])
+
+# df_agg['dkps_gain']    = df_agg['e_sample'] - df_agg['e_lr_dkps']
+# df_agg['interp_gain']  = df_agg['e_sample'] - df_agg['e_interp']
+# df_agg['interp2_gain'] = df_agg['e_sample'] - df_agg['e_interp2']
+
+# Final aggregation: mean across seeds and models
+tab_dataset = df_agg.groupby(['dataset', 'n_samples']).agg({
+    'y_act': 'mean',
+    'e_null': 'mean',
+    'e_sample': 'mean',
+    'e_lr_dkps': 'mean',
+    'e_interp': 'mean',
+    # 'e_interp2': 'mean',
+    # 'dkps_gain': 'mean',
+    # 'interp_gain': 'mean',
+    # 'interp2_gain': 'mean',
+}).reset_index()
+
+# Exclude n_samples=64 for math (not enough samples in some splits)
+tab_dataset = tab_dataset[~((tab_dataset.dataset == 'math') & (tab_dataset.n_samples == 64))]
+
+print(tab_dataset)
+outpath_dataset = TABLES_DIR / f'table-v2-{EMBED_DIR}-n_models={args.n_models}-by_dataset.tsv'
+tab_dataset.to_csv(outpath_dataset, sep='\t', index=False)
+rprint(f'[green]Saved to {outpath_dataset}[/green]')
+
+print('\n[Transposed view]')
+print(tab_dataset.set_index(['dataset', 'n_samples']).T)

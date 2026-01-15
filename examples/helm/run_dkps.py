@@ -81,39 +81,48 @@ runner = importlib.import_module(f'runners.{args.runner}')
 
 rprint('[blue]loading data ...[/blue]')
 
-df = pd.read_csv(args.inpath, sep='\t')
-df = df[df.dataset == args.dataset]
+def load_data(inpath, dataset):
+    df = pd.read_csv(inpath, sep='\t')
 
-if args.sample:
-    rng           = np.random.default_rng(args.seed)
-    uinstance_ids = df.instance_id.unique()
-    keep          = rng.choice(uinstance_ids, int(len(uinstance_ids) * args.sample), replace=False)
-    df            = df[df.instance_id.isin(keep)]
+    df = df[df.dataset == dataset]
 
-df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
+    if args.sample:
+        rng           = np.random.default_rng(args.seed)
+        uinstance_ids = df.instance_id.unique()
+        keep          = rng.choice(uinstance_ids, int(len(uinstance_ids) * args.sample), replace=False)
+        df            = df[df.instance_id.isin(keep)]
 
-if args.score_col != 'score':
-    print(f'{args.score_col} -> score')
-    df['score'] = df[args.score_col]
+    df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
 
-# --
-# QC
+    if args.score_col != 'score':
+        print(f'{args.score_col} -> score')
+        df['score'] = df[args.score_col]
 
-print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
-_instance_ids = df.groupby('model').instance_id.apply(list)
-assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
+    # --
+    # QC
 
-# --
-# Get embeddings
+    print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
+    _instance_ids = df.groupby('model').instance_id.apply(list)
+    assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
 
-if args.embed_model == 'onehot':
-    df = onehot_embedding(df, dataset=args.dataset)
+    # --
+    # Get embeddings
+
+    if args.embed_model == 'onehot':
+        df = onehot_embedding(df, dataset=args.dataset)
+    else:
+        df['embedding'] = list(embed_api(
+            provider   = args.embed_provider,
+            input_strs = [str(xx) for xx in df.response.values],
+            model      = args.embed_model
+        ))
+    
+    return df
+
+if '=ALL' not in args.dataset:
+    df = load_data(args.inpath, args.dataset)
 else:
-    df['embedding'] = list(embed_api(
-        provider   = args.embed_provider,
-        input_strs = [str(xx) for xx in df.response.values],
-        model      = args.embed_model
-    ))
+    breakpoint()
 
 # --
 # Run

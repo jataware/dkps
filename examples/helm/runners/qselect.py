@@ -85,13 +85,15 @@ def run_one(df_sample, n_samples, mode, seed, y_acts, pred_null, TRAIN_FAMILIES=
         res = {}
         for n_components_cmds in [8]:
             for n_models in [20, 50, len(train_models)]:
-                if n_models > len(train_models):
-                    continue
-
                 if n_models != len(train_models):
                     _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
                 else:
                     _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
+                
+                if n_models > len(train_models):
+                    res[f'p_lr' + _suffix]  = None
+                    res[f'r2_lr' + _suffix] = None
+                    continue
 
                 _train_models = np.random.choice(train_models, size=n_models, replace=False)
 
