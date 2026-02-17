@@ -1,5 +1,5 @@
 from pathlib import Path
-from dkps.helm import onehot_embedding, make_embedding_dict, dkps_df
+from dkps.helm import onehot_embedding, compute_embeddings, make_embedding_dict, dkps_df, uses_onehot, DEFAULT_EMBED_PROVIDER, DEFAULT_EMBED_MODEL
 
 def make_experiment_path(embed_provider, embed_model, dataset, score_col, n_replicates=None):
     if embed_model == 'onehot':

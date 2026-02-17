@@ -43,6 +43,33 @@ def make_embedding_dict(df):
     return embedding_dict
 
 
+ONEHOT_DATASETS = ('med_qa', 'legalbench')
+
+DEFAULT_EMBED_PROVIDER = 'google'
+DEFAULT_EMBED_MODEL    = 'gemini-embedding-001'
+
+
+def uses_onehot(dataset):
+    return any(dataset.startswith(d) for d in ONEHOT_DATASETS)
+
+
+def compute_embeddings(df, dataset, embed_provider=None, embed_model=None):
+    if uses_onehot(dataset):
+        return onehot_embedding(df, dataset)
+    else:
+        from dkps.embed import embed_api
+        if embed_provider is None:
+            embed_provider = DEFAULT_EMBED_PROVIDER
+        if embed_model is None:
+            embed_model = DEFAULT_EMBED_MODEL
+        df['embedding'] = list(embed_api(
+            provider=embed_provider,
+            input_strs=[str(xx) for xx in df.response.values],
+            model=embed_model
+        ))
+        return df
+
+
 def dkps_df(df, **kwargs):
     embedding_dict = make_embedding_dict(df)
     return DataKernelPerspectiveSpace(**kwargs).fit_transform(embedding_dict, return_dict=True)
