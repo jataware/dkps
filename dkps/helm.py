@@ -8,6 +8,7 @@ def onehot_embedding(df, dataset):
 
         embeddings = np.zeros((len(df), 4))
         for i, xx in enumerate(df.response.values):
+            xx = xx.strip().upper()
             if xx in lookup:
                 embeddings[i, lookup[xx]] = 1
 
