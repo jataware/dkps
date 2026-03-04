@@ -3,7 +3,7 @@ authors = [{name = "bkj", email = "bkj.322@gmail.com"}]
 name = "dkps"
 requires-python = ">= 3.11"
 version = "0.1.0"
-dependencies = [ "graspologic @ git+https://github.com/jataware/graspologic", "jlai @ git+https://github.com/jataware/jlai", "nltk>=3.9.1,<4"]
+dependencies = [ "graspologic @ git+https://github.com/jataware/graspologic", "jlai @ git+https://github.com/jataware/jlai", "nltk>=3.9.1,<4", "POT>=0.9"]
 
 [build-system]
 build-backend = "hatchling.build"
@@ -37,6 +37,8 @@ litellm = ">=1.73.6,<2"
 openai = ">=2.14.0,<3"
 huggingface_hub = ">=1.2.3,<2"
 numba = ">=0.63.1,<0.64"
+pot = ">=0.9"
+pytest = ">=8.0"
 
 [tool.hatch.metadata]
 allow-direct-references = true
