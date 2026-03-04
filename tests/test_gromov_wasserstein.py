@@ -1,10 +1,20 @@
 """Tests for GromovWassersteinDistance (Method D)."""
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from dkps.data import ModelResponseData
 from dkps.distances.gromov_wasserstein import GromovWassersteinDistance
+
+
+def _make_unpaired_df(embeddings_dict):
+    """Build unpaired DataFrame from {model: (n, d)} arrays."""
+    rows = []
+    for model, embs in embeddings_dict.items():
+        for i in range(len(embs)):
+            rows.append({'model': model, 'response_embedding': embs[i]})
+    return pd.DataFrame(rows)
 
 
 @pytest.fixture
@@ -24,12 +34,12 @@ class TestGromovWassersteinDistance:
         assert np.all(D >= -1e-6)
 
     def test_distance_matrix_properties(self, rng):
-        data = {
+        df = _make_unpaired_df({
             'a': rng.randn(30, 8),
             'b': rng.randn(30, 8) + 3,
             'c': rng.randn(30, 8) + 6,
-        }
-        mrd = ModelResponseData.from_dict(data)
+        })
+        mrd = ModelResponseData.from_dataframe(df)
         dist_fn = GromovWassersteinDistance(reg=0.1)
         D = dist_fn(mrd)
         assert np.all(np.isfinite(D))
@@ -43,11 +53,11 @@ class TestGromovWassersteinDistance:
         # Random orthogonal matrix
         Q, _ = np.linalg.qr(rng.randn(5, 5))
 
-        data1 = {'a': X, 'b': Y}
-        data2 = {'a': X @ Q, 'b': Y @ Q}
+        df1 = _make_unpaired_df({'a': X, 'b': Y})
+        df2 = _make_unpaired_df({'a': X @ Q, 'b': Y @ Q})
 
-        mrd1 = ModelResponseData.from_dict(data1)
-        mrd2 = ModelResponseData.from_dict(data2)
+        mrd1 = ModelResponseData.from_dataframe(df1)
+        mrd2 = ModelResponseData.from_dataframe(df2)
 
         dist_fn = GromovWassersteinDistance(reg=0.1)
         D1 = dist_fn(mrd1)
@@ -56,12 +66,12 @@ class TestGromovWassersteinDistance:
         np.testing.assert_allclose(D1, D2, atol=0.1)
 
     def test_variable_sample_sizes(self, rng):
-        data = {
+        df = _make_unpaired_df({
             'a': rng.randn(20, 5),
             'b': rng.randn(40, 5) + 3,
             'c': rng.randn(60, 5) + 6,
-        }
-        mrd = ModelResponseData.from_dict(data)
+        })
+        mrd = ModelResponseData.from_dataframe(df)
         dist_fn = GromovWassersteinDistance(reg=0.1)
         D = dist_fn(mrd)
         assert D.shape == (3, 3)

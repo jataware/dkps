@@ -1,10 +1,20 @@
 """Tests for WassersteinDistance (Method B)."""
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from dkps.data import ModelResponseData
 from dkps.distances.wasserstein import WassersteinDistance
+
+
+def _make_unpaired_df(embeddings_dict):
+    """Build unpaired DataFrame from {model: (n, d)} arrays."""
+    rows = []
+    for model, embs in embeddings_dict.items():
+        for i in range(len(embs)):
+            rows.append({'model': model, 'response_embedding': embs[i]})
+    return pd.DataFrame(rows)
 
 
 @pytest.fixture
@@ -55,8 +65,8 @@ class TestWassersteinDistance:
 
     def test_identical_distributions_zero(self, rng):
         X = rng.randn(50, 5)
-        data = {'a': X.copy(), 'b': X.copy()}
-        mrd = ModelResponseData.from_dict(data)
+        df = _make_unpaired_df({'a': X.copy(), 'b': X.copy()})
+        mrd = ModelResponseData.from_dataframe(df)
         dist_fn = WassersteinDistance(variant='exact')
         D = dist_fn(mrd)
         assert D[0, 1] < 1e-8

@@ -130,7 +130,11 @@ class DKPS:
     def _prepare_data(self, data):
         """Convert DataFrame to ModelResponseData."""
         embed_fn = self._make_embed_fn()
-        return ModelResponseData.from_dataframe(data, embed_fn=embed_fn)
+        # Force paired=True when the distance method requires it
+        paired = None
+        if self._distance_name == 'paired':
+            paired = True
+        return ModelResponseData.from_dataframe(data, embed_fn=embed_fn, paired=paired)
 
     def _make_embed_fn(self):
         """Create an embedding function from configured provider."""
