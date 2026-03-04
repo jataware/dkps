@@ -2,6 +2,9 @@
     test_synthetic.py — End-to-end: all methods on same synthetic data.
 
     Validates that distance methods recover known structure (clusters, orderings).
+
+    Run with -s to see metric values:
+        pixi run pytest tests/test_synthetic.py -v -s
 """
 
 import numpy as np
@@ -30,6 +33,18 @@ def cluster_ari(result_dict, cluster_labels, n_clusters):
     return adjusted_rand_score(true, pred)
 
 
+def cluster_silhouette(result_dict, cluster_labels):
+    """Compute silhouette score on DKPS embeddings."""
+    model_names = list(result_dict.keys())
+    X = np.vstack([result_dict[m] for m in model_names])
+    true = [cluster_labels[m] for m in model_names]
+
+    if len(set(true)) < 2 or X.shape[0] < 3:
+        return 0.0
+
+    return silhouette_score(X, true)
+
+
 def ordering_kendall_tau(result_dict, theta_dict):
     """Compute Kendall tau between 1st MDS component ordering and true theta."""
     model_names = list(result_dict.keys())
@@ -38,8 +53,18 @@ def ordering_kendall_tau(result_dict, theta_dict):
 
     # Use first component
     comp1 = X[:, 0]
-    tau, _ = kendalltau(comp1, true_theta)
-    return abs(tau)  # sign can flip
+    tau, pvalue = kendalltau(comp1, true_theta)
+    return abs(tau), pvalue  # sign can flip
+
+
+def _report(metric_name, method, value, threshold=None, extra=None):
+    """Print a metric value for visibility with -s flag."""
+    parts = [f"  {method:15s}  {metric_name} = {value:.4f}"]
+    if threshold is not None:
+        parts.append(f" (threshold: {threshold})")
+    if extra:
+        parts.append(f"  {extra}")
+    print("\n" + "".join(parts))
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -68,7 +93,10 @@ class TestClusterRecovery:
         result = dkps.fit_transform(cluster_models_df)
 
         ari = cluster_ari(result, labels, n_clusters)
-        assert ari > 0.8, f"Method '{method}' ARI = {ari:.3f}, expected > 0.8"
+        sil = cluster_silhouette(result, labels)
+        _report("ARI", method, ari, threshold=0.8)
+        _report("Silhouette", method, sil)
+        assert ari > 0.8, f"Method '{method}' ARI = {ari:.4f}, expected > 0.8"
 
     @pytest.mark.parametrize("method", UNPAIRED_METHODS)
     def test_unpaired_cluster_recovery(self, cluster_models_df, method):
@@ -82,7 +110,10 @@ class TestClusterRecovery:
         result = dkps.fit_transform(df)
 
         ari = cluster_ari(result, labels, n_clusters)
-        assert ari > 0.8, f"Method '{method}' ARI = {ari:.3f}, expected > 0.8"
+        sil = cluster_silhouette(result, labels)
+        _report("ARI", method, ari, threshold=0.8)
+        _report("Silhouette", method, sil)
+        assert ari > 0.8, f"Method '{method}' ARI = {ari:.4f}, expected > 0.8"
 
     @pytest.mark.parametrize("method", UNPAIRED_METHODS)
     def test_unpaired_variable_sizes(self, unpaired_models_df, method):
@@ -93,7 +124,10 @@ class TestClusterRecovery:
         result = dkps.fit_transform(unpaired_models_df)
 
         ari = cluster_ari(result, labels, n_clusters)
-        assert ari > 0.7, f"Method '{method}' ARI = {ari:.3f}, expected > 0.7"
+        sil = cluster_silhouette(result, labels)
+        _report("ARI", method, ari, threshold=0.7, extra="(variable sizes)")
+        _report("Silhouette", method, sil, extra="(variable sizes)")
+        assert ari > 0.7, f"Method '{method}' ARI = {ari:.4f}, expected > 0.7"
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -108,8 +142,9 @@ class TestOrderingRecovery:
         dkps = DKPS(distance=method, n_components=5)
         result = dkps.fit_transform(manifold_models_df)
 
-        tau = ordering_kendall_tau(result, thetas)
-        assert tau > 0.7, f"Method '{method}' Kendall tau = {tau:.3f}, expected > 0.7"
+        tau, pvalue = ordering_kendall_tau(result, thetas)
+        _report("Kendall τ", method, tau, threshold=0.7, extra=f"p={pvalue:.2e}")
+        assert tau > 0.7, f"Method '{method}' Kendall τ = {tau:.4f}, expected > 0.7"
 
     @pytest.mark.parametrize("method", UNPAIRED_METHODS)
     def test_unpaired_ordering(self, manifold_models_df, method):
@@ -119,8 +154,9 @@ class TestOrderingRecovery:
         dkps = DKPS(distance=method, n_components=5)
         result = dkps.fit_transform(df)
 
-        tau = ordering_kendall_tau(result, thetas)
-        assert tau > 0.7, f"Method '{method}' Kendall tau = {tau:.3f}, expected > 0.7"
+        tau, pvalue = ordering_kendall_tau(result, thetas)
+        _report("Kendall τ", method, tau, threshold=0.7, extra=f"p={pvalue:.2e}")
+        assert tau > 0.7, f"Method '{method}' Kendall τ = {tau:.4f}, expected > 0.7"
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -137,6 +173,13 @@ class TestDistanceMatrixProperties:
 
         dkps = DKPS(distance=method)
         D = dkps.distance_matrix(df)
+
+        max_asymmetry = np.max(np.abs(D - D.T))
+        max_diag = np.max(np.abs(np.diag(D)))
+        min_offdiag = D[np.triu_indices_from(D, k=1)].min()
+        _report("max asymmetry", method, max_asymmetry)
+        _report("max |diag|", method, max_diag)
+        _report("min off-diag", method, min_offdiag)
 
         assert D.shape[0] == D.shape[1]
         np.testing.assert_allclose(D, D.T, atol=1e-10)
@@ -161,5 +204,21 @@ class TestCrossMethodAgreement:
 
         # Extract upper triangle
         idx = np.triu_indices_from(D_paired, k=1)
-        rho, _ = spearmanr(D_paired[idx], D_energy[idx])
-        assert rho > 0.7, f"Spearman rho = {rho:.3f}, expected > 0.7"
+        rho, pvalue = spearmanr(D_paired[idx], D_energy[idx])
+        _report("Spearman ρ", "paired↔energy", rho, threshold=0.7, extra=f"p={pvalue:.2e}")
+        assert rho > 0.7, f"Spearman ρ = {rho:.4f}, expected > 0.7"
+
+    @pytest.mark.parametrize("method", UNPAIRED_METHODS)
+    def test_unpaired_vs_paired_ranking(self, cluster_models_df, method):
+        """Each unpaired method should rank-correlate with paired."""
+        dkps_paired = DKPS(distance='paired')
+        D_paired = dkps_paired.distance_matrix(cluster_models_df)
+
+        df_unpaired = cluster_models_df.drop(columns=['query_id'])
+        dkps_other = DKPS(distance=method)
+        D_other = dkps_other.distance_matrix(df_unpaired)
+
+        idx = np.triu_indices_from(D_paired, k=1)
+        rho, pvalue = spearmanr(D_paired[idx], D_other[idx])
+        _report("Spearman ρ", f"paired↔{method}", rho, threshold=0.7, extra=f"p={pvalue:.2e}")
+        assert rho > 0.7, f"Spearman ρ(paired, {method}) = {rho:.4f}, expected > 0.7"
