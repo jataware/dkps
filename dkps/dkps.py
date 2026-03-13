@@ -5,7 +5,11 @@ from graspologic.embed import ClassicalMDS
 
 from scipy.spatial.distance import pdist, squareform
 
-from .coverage import estimate_coverage_weights
+
+def _normalize_to_unit_median(D):
+    """Scale a distance matrix so its off-diagonal median equals 1."""
+    med = np.median(D[np.triu_indices_from(D, k=1)])
+    return D / med if med > 0 else D
 
 
 class DataKernelPerspectiveSpace:
@@ -17,10 +21,6 @@ class DataKernelPerspectiveSpace:
             n_components_cmds=None,
             n_elbows_cmds=2,
             dissimilarity="precomputed",
-            alpha=None,
-            coverage_correction=True,
-            d_pca=None,
-            kde_bandwidth=None,
         ):
 
         self.response_distribution_fn   = response_distribution_fn
@@ -29,29 +29,6 @@ class DataKernelPerspectiveSpace:
         self.n_components_cmds          = n_components_cmds
         self.n_elbows_cmds              = n_elbows_cmds
         self.dissimilarity              = dissimilarity
-        self.alpha                      = alpha
-        self.coverage_correction        = coverage_correction
-        self.d_pca                      = d_pca
-        self.kde_bandwidth              = kde_bandwidth
-
-    @staticmethod
-    def _convert_legacy_input(data):
-        """Convert dict of 3D arrays to DataFrame with (model_id, query_id, embedding)."""
-        assert isinstance(data, dict),                                  'data must be a dict'
-        assert all([isinstance(x, np.ndarray) for x in data.values()]), 'all values must be numpy arrays'
-        assert all([x.ndim == 3 for x in data.values()]),               'all arrays must be 3D - np.array(n_queries, n_replicates, embedding_dim)'
-        assert len(set([x.shape for x in data.values()])) == 1,         'all arrays must have the same shape'
-
-        rows = []
-        for model_id, arr in data.items():
-            n_queries = arr.shape[0]
-            for q in range(n_queries):
-                rows.append({
-                    'model_id': model_id,
-                    'query_id': f'q_{q}',
-                    'embedding': arr[q],  # (n_replicates, embedding_dim)
-                })
-        return pd.DataFrame(rows)
 
     @staticmethod
     def _partition_queries(df):
@@ -61,29 +38,18 @@ class DataKernelPerspectiveSpace:
         Returns
         -------
         model_names : list
-        query_sets : dict {model_id: set of query_ids}
-        shared_queries_dict : dict {(model_i, model_k): set of shared query_ids}
-        alpha_matrix : np.ndarray (n_models, n_models)
-            Fraction of queries shared between each pair.
+        shared_queries : set of query_ids shared by all models
+        alpha : float
+            Fraction of total queries that are shared.
         """
         model_names = sorted(df['model_id'].unique())
-        n = len(model_names)
 
-        query_sets = {}
-        for m in model_names:
-            query_sets[m] = set(df.loc[df['model_id'] == m, 'query_id'].unique())
+        query_sets = [set(df.loc[df['model_id'] == m, 'query_id'].unique()) for m in model_names]
+        shared_queries = set.intersection(*query_sets) if query_sets else set()
+        all_queries = set.union(*query_sets) if query_sets else set()
+        alpha = len(shared_queries) / len(all_queries) if all_queries else 1.0
 
-        shared_queries_dict = {}
-        alpha_matrix = np.zeros((n, n))
-        for i in range(n):
-            for k in range(n):
-                mi, mk = model_names[i], model_names[k]
-                shared = query_sets[mi] & query_sets[mk]
-                shared_queries_dict[(mi, mk)] = shared
-                total = len(query_sets[mi] | query_sets[mk])
-                alpha_matrix[i, k] = len(shared) / total if total > 0 else 1.0
-
-        return model_names, query_sets, shared_queries_dict, alpha_matrix
+        return model_names, shared_queries, alpha
 
     def _aggregate_embedding(self, emb_array):
         """Aggregate replicate embeddings to a single vector."""
@@ -93,33 +59,30 @@ class DataKernelPerspectiveSpace:
             return emb_array[0]
         return self.response_distribution_fn(emb_array, axis=self.response_distribution_axis)
 
-    def _compute_paired_distances(self, df, model_names, shared_queries_dict):
+    def _compute_paired_distances(self, df, model_names, shared_queries):
         """
         Compute paired distance matrix using shared queries.
+
+        Assumes all models answered all shared queries.
 
         For each pair (i, k), distance = ||emb_i - emb_k||_F / sqrt(n_shared).
         """
         n = len(model_names)
-        dist = np.zeros((n, n))
+        shared = sorted(shared_queries)
+        assert len(shared) > 0, 'no shared queries'
 
-        for i in range(n):
-            for k in range(i + 1, n):
-                mi, mk = model_names[i], model_names[k]
-                shared = sorted(shared_queries_dict[(mi, mk)])
-                if len(shared) == 0:
-                    dist[i, k] = dist[k, i] = np.nan
-                    continue
+        # Build (n_models, n_shared, emb_dim) matrix
+        vecs = {}
+        for m in model_names:
+            df_m = df[df['model_id'] == m].set_index('query_id')
+            assert shared_queries <= set(df_m.index), f'model {m} missing shared queries'
+            vecs[m] = np.stack([self._aggregate_embedding(df_m.loc[q, 'embedding']) for q in shared])
 
-                df_i = df[df['model_id'] == mi].set_index('query_id')
-                df_k = df[df['model_id'] == mk].set_index('query_id')
-
-                vecs_i = np.stack([self._aggregate_embedding(df_i.loc[q, 'embedding']) for q in shared])
-                vecs_k = np.stack([self._aggregate_embedding(df_k.loc[q, 'embedding']) for q in shared])
-
-                diff = vecs_i - vecs_k  # (n_shared, emb_dim)
-                d = np.linalg.norm(diff) / np.sqrt(len(shared))
-                dist[i, k] = dist[k, i] = d
-
+        # Pairwise distances: ||flat_i - flat_k|| / sqrt(n_shared)
+        X_flat = np.stack([vecs[m].ravel() for m in model_names])
+        dist = pairwise_distances(X_flat, metric='euclidean') / np.sqrt(len(shared))
+        dist = (dist + dist.T) / 2
+        np.fill_diagonal(dist, 0.0)
         return dist
 
     def _compute_unpaired_distances(self, df, model_names):
@@ -144,17 +107,6 @@ class DataKernelPerspectiveSpace:
                 dist[i, k] = dist[k, i] = d
 
         return dist
-
-    @staticmethod
-    def _normalize_to_unit_median(D):
-        """Scale distance matrix so off-diagonal median = 1."""
-        off_diag = D[np.triu_indices_from(D, k=1)]
-        if len(off_diag) == 0:
-            return D.copy()
-        med = np.median(off_diag)
-        if med == 0:
-            return D.copy()
-        return D / med
 
     def _fit_transform_legacy(self, data, return_dict=True):
         """Original fit_transform path for fully-paired dict-of-arrays input."""
@@ -215,73 +167,29 @@ class DataKernelPerspectiveSpace:
             assert col in data.columns, f'DataFrame must have column: {col}'
 
         df = data.copy()
-        model_names, query_sets, shared_queries_dict, alpha_matrix = self._partition_queries(df)
-        n = len(model_names)
-
-        # Check if fully paired (all alpha == 1)
-        fully_paired = np.all(alpha_matrix[np.triu_indices(n, k=1)] == 1.0)
+        model_names, shared_queries, alpha = self._partition_queries(df)
+        has_shared = len(shared_queries) > 0
+        has_unshared = alpha < 1.0
 
         # Compute distance components
-        has_shared = np.any(alpha_matrix[np.triu_indices(n, k=1)] > 0)
-        has_unshared = np.any(alpha_matrix[np.triu_indices(n, k=1)] < 1.0)
-
-        paired_dist = None
-        unpaired_dist = None
-
         if has_shared:
-            paired_dist = self._compute_paired_distances(df, model_names, shared_queries_dict)
+            paired_dist = self._compute_paired_distances(df, model_names, shared_queries)
         if has_unshared or not has_shared:
             unpaired_dist = self._compute_unpaired_distances(df, model_names)
 
-        # Coverage correction for unpaired component
-        if self.coverage_correction and unpaired_dist is not None and has_unshared:
-            embs_by_model = {}
-            for m in model_names:
-                embs = df[df['model_id'] == m]['embedding'].values
-                embs_by_model[m] = np.stack([self._aggregate_embedding(e) for e in embs])
-
-            cov_weights = estimate_coverage_weights(
-                embs_by_model, d_pca=self.d_pca, kde_bandwidth=self.kde_bandwidth
-            )
-
-            # Adjust unpaired distances: w * d + (1 - w) * median(d)
-            med_unpaired = np.median(unpaired_dist[np.triu_indices(n, k=1)]) if n > 1 else 1.0
-            for i in range(n):
-                for k in range(i + 1, n):
-                    mi, mk = model_names[i], model_names[k]
-                    w = cov_weights.get((mi, mk), 1.0)
-                    adjusted = w * unpaired_dist[i, k] + (1 - w) * med_unpaired
-                    unpaired_dist[i, k] = unpaired_dist[k, i] = adjusted
-
-        # Determine effective alpha per pair
-        if self.alpha is not None:
-            eff_alpha = np.full((n, n), self.alpha)
+        # Combine (normalize each to unit median before interpolating)
+        if has_shared and has_unshared:
+            paired_dist = _normalize_to_unit_median(paired_dist)
+            unpaired_dist = _normalize_to_unit_median(unpaired_dist)
+            dist_matrix = alpha * paired_dist + (1.0 - alpha) * unpaired_dist
+        elif has_shared:
+            dist_matrix = paired_dist
         else:
-            eff_alpha = alpha_matrix.copy()
+            dist_matrix = unpaired_dist
 
-        # Normalize each component to unit median
-        if paired_dist is not None:
-            paired_norm = self._normalize_to_unit_median(paired_dist)
-        if unpaired_dist is not None:
-            unpaired_norm = self._normalize_to_unit_median(unpaired_dist)
-
-        # Combine
-        dist_matrix = np.zeros((n, n))
-        for i in range(n):
-            for k in range(i + 1, n):
-                a = eff_alpha[i, k]
-                d = 0.0
-                if paired_dist is not None and not np.isnan(paired_norm[i, k]):
-                    d += a * paired_norm[i, k]
-                else:
-                    a = 0.0  # no shared queries for this pair
-                if unpaired_dist is not None:
-                    d += (1.0 - a) * unpaired_norm[i, k]
-                dist_matrix[i, k] = dist_matrix[k, i] = d
-
-        # Symmetrize and zero diagonal
-        dist_matrix = (dist_matrix + dist_matrix.T) / 2
-        np.fill_diagonal(dist_matrix, 0.0)
+        # Store fitted attributes
+        self.dist_matrix_ = dist_matrix
+        self.model_names_ = model_names
 
         # CMDS embedding
         cmds_embds = ClassicalMDS(

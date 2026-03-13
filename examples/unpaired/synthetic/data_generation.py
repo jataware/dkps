@@ -112,7 +112,7 @@ def sample_responses(mus, m_total, alpha, seed, noise_scale=0.1):
     # Generate responses
     rows = []
     for i in range(n_models):
-        model_id = f'model_{i}'
+        model_id = f'model_{i:03d}'
         for j, P in enumerate(shared_projections):
             response = P @ mus[i] + rng.normal(0, noise_scale, p)
             rows.append({'model_id': model_id, 'query_id': f'shared_{j:03d}', 'embedding': response})
