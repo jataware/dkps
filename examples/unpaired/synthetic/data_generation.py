@@ -40,11 +40,20 @@ def generate_query_projections(n_queries, p, seed=None):
 
     Each query selects a random subspace of R^p via an orthogonal projection.
 
+    Parameters
+    ----------
+    n_queries : int
+    p : int
+    seed : int, None, or np.random.Generator
+
     Returns
     -------
     projections : list of np.ndarray, each (p, p)
     """
-    rng = np.random.default_rng(seed)
+    if isinstance(seed, np.random.Generator):
+        rng = seed
+    else:
+        rng = np.random.default_rng(seed)
     projections = []
     for _ in range(n_queries):
         # Random subspace dimension between p//4 and 3p//4
@@ -61,24 +70,21 @@ def generate_query_projections(n_queries, p, seed=None):
     return projections
 
 
-def sample_responses(mus, projections, m_total, alpha, seed,
-                     query_distribution_kl=0.0, noise_scale=0.1):
+def sample_responses(mus, m_total, alpha, seed, noise_scale=0.1):
     """
     Sample model responses for a mix of shared and private queries.
+
+    Shared projections are the same for all models. Private projections are
+    generated independently per model.
 
     Parameters
     ----------
     mus : np.ndarray (n_models, p)
-    projections : list of projection matrices
     m_total : int
         Total queries per model.
     alpha : float
         Fraction of shared queries.
     seed : int or None
-    query_distribution_kl : float
-        Controls query distribution mismatch. 0 = all models draw private
-        queries from same pool. Higher values shift the private query pool
-        per model.
     noise_scale : float
         Std dev of response noise.
 
@@ -88,62 +94,31 @@ def sample_responses(mus, projections, m_total, alpha, seed,
     """
     rng = np.random.default_rng(seed)
     n_models, p = mus.shape
-    n_total_projections = len(projections)
 
     m_shared = int(round(alpha * m_total))
     m_private = m_total - m_shared
 
-    # Select shared query indices
-    shared_indices = rng.choice(n_total_projections, size=min(m_shared, n_total_projections), replace=False)
+    # Shared projections (same for all models)
+    shared_projections = generate_query_projections(m_shared, p, seed=rng)
 
+    # Private projections (fresh per model)
+    private_projections = [[] for _ in range(n_models)]
+    if m_private > 0:
+        private_projections = [
+            generate_query_projections(m_private, p, seed=rng)
+            for _ in range(n_models)
+        ]
+
+    # Generate responses
     rows = []
     for i in range(n_models):
-        # Shared queries
-        for idx in shared_indices:
-            P = projections[idx]
+        model_id = f'model_{i}'
+        for j, P in enumerate(shared_projections):
             response = P @ mus[i] + rng.normal(0, noise_scale, p)
-            rows.append({
-                'model_id': f'model_{i}',
-                'query_id': f'shared_{idx}',
-                'embedding': response,
-            })
-
-        # Private queries
-        if m_private > 0:
-            if query_distribution_kl == 0.0:
-                # All models draw from the remaining pool
-                remaining = [j for j in range(n_total_projections) if j not in shared_indices]
-                if len(remaining) == 0:
-                    remaining = list(range(n_total_projections))
-                priv_indices = rng.choice(remaining, size=m_private, replace=True)
-            elif np.isinf(query_distribution_kl):
-                # Maximum mismatch: each model gets entirely different queries
-                # Shift base index by model, wrapping around
-                base = (i * m_private) % n_total_projections
-                priv_indices = [(base + j) % n_total_projections for j in range(m_private)]
-            else:
-                # Intermediate mismatch: shift the distribution per model
-                # Higher KL = more shift between models
-                remaining = [j for j in range(n_total_projections) if j not in shared_indices]
-                if len(remaining) == 0:
-                    remaining = list(range(n_total_projections))
-                n_rem = len(remaining)
-                # Create per-model weights over remaining queries
-                shift = query_distribution_kl * i / n_models
-                weights = np.array([
-                    np.exp(-query_distribution_kl * ((j / n_rem - shift) % 1.0))
-                    for j in range(n_rem)
-                ])
-                weights /= weights.sum()
-                priv_indices = rng.choice(remaining, size=m_private, replace=True, p=weights)
-
-            for j, idx in enumerate(priv_indices):
-                P = projections[idx]
-                response = P @ mus[i] + rng.normal(0, noise_scale, p)
-                rows.append({
-                    'model_id': f'model_{i}',
-                    'query_id': f'private_{i}_{j}',
-                    'embedding': response,
-                })
+            rows.append({'model_id': model_id, 'query_id': f'shared_{j:03d}', 'embedding': response})
+        
+        for j, P in enumerate(private_projections[i]):
+            response = P @ mus[i] + rng.normal(0, noise_scale, p)
+            rows.append({'model_id': model_id, 'query_id': f'private_{i:03d}_{j:03d}', 'embedding': response})
 
     return pd.DataFrame(rows)

@@ -16,8 +16,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from data_generation import generate_synthetic_models, generate_query_projections, sample_responses
+from data_generation import generate_synthetic_models, sample_responses
 from dkps import DataKernelPerspectiveSpace
 
 
@@ -36,61 +37,70 @@ def distance_mse(D_est, D_gt):
     return float(np.mean((est_vals - gt_vals) ** 2))
 
 
-def run_s1(n_models=20, p=50, m_total=1000, n_seeds=5, alphas=None):
-    if alphas is None:
-        alphas = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+def _run_seed(seed, n_models, p, m_total, alphas):
+    """Run all alphas for a single seed. Returns list of result dicts."""
+    mus, gt_dist = generate_synthetic_models(n_models=n_models, p=p, seed=seed)
 
-    n_projections = m_total * 3  # large pool of projections
+    dkps_obj = DataKernelPerspectiveSpace(coverage_correction=False)
     results = []
 
-    for seed in tqdm(range(n_seeds), desc='S1 seeds'):
-        mus, gt_dist = generate_synthetic_models(n_models=n_models, p=p, seed=seed)
-        projections = generate_query_projections(n_projections, p, seed=seed + 10000)
+    for alpha in alphas:
+        df = sample_responses(mus, m_total, alpha, seed=seed + 20000)
 
-        for alpha in alphas:
-            df = sample_responses(mus, projections, m_total, alpha, seed=seed + 20000)
+        model_names, _, shared_queries_dict, alpha_matrix = dkps_obj._partition_queries(df)
+        n = len(model_names)
 
-            # Combined estimator
-            dkps_combined = DataKernelPerspectiveSpace(coverage_correction=False)
-            emb_combined = dkps_combined.fit_transform(df, return_dict=False)
-            D_combined = dkps_combined._last_dist_matrix if hasattr(dkps_combined, '_last_dist_matrix') else None
+        # Paired distances
+        if alpha > 0:
+            D_paired = dkps_obj._compute_paired_distances(df, model_names, shared_queries_dict)
+            D_paired_norm = dkps_obj._normalize_to_unit_median(D_paired)
+            mse_paired = distance_mse(D_paired, gt_dist)
+        else:
+            D_paired_norm = None
+            mse_paired = np.nan
 
-            # We need the raw distance matrices, so compute them directly
-            model_names, query_sets, shared_queries_dict, alpha_matrix = dkps_combined._partition_queries(df)
-            n = len(model_names)
+        # Unpaired distances
+        D_unpaired = dkps_obj._compute_unpaired_distances(df, model_names)
+        D_unpaired_norm = dkps_obj._normalize_to_unit_median(D_unpaired)
+        mse_unpaired = distance_mse(D_unpaired, gt_dist)
 
-            # Paired distances
-            if alpha > 0:
-                D_paired = dkps_combined._compute_paired_distances(df, model_names, shared_queries_dict)
-                D_paired_norm = dkps_combined._normalize_to_unit_median(D_paired)
-                mse_paired = distance_mse(D_paired, gt_dist)
-            else:
-                D_paired_norm = None
-                mse_paired = np.nan
+        # Combined distances
+        eff_alpha = alpha_matrix.copy()
+        D_comb = np.zeros((n, n))
+        for i in range(n):
+            for k in range(i + 1, n):
+                a = eff_alpha[i, k]
+                d = 0.0
+                if D_paired_norm is not None and not np.isnan(D_paired_norm[i, k]):
+                    d += a * D_paired_norm[i, k]
+                else:
+                    a = 0.0
+                d += (1.0 - a) * D_unpaired_norm[i, k]
+                D_comb[i, k] = D_comb[k, i] = d
+        mse_combined = distance_mse(D_comb, gt_dist)
 
-            # Unpaired distances
-            D_unpaired = dkps_combined._compute_unpaired_distances(df, model_names)
-            D_unpaired_norm = dkps_combined._normalize_to_unit_median(D_unpaired)
-            mse_unpaired = distance_mse(D_unpaired, gt_dist)
+        results.append({'alpha': alpha, 'seed': seed, 'method': 'paired', 'mse': mse_paired})
+        results.append({'alpha': alpha, 'seed': seed, 'method': 'unpaired', 'mse': mse_unpaired})
+        results.append({'alpha': alpha, 'seed': seed, 'method': 'combined', 'mse': mse_combined})
 
-            # Combined distances
-            eff_alpha = alpha_matrix.copy()
-            D_comb = np.zeros((n, n))
-            for i in range(n):
-                for k in range(i + 1, n):
-                    a = eff_alpha[i, k]
-                    d = 0.0
-                    if D_paired_norm is not None and not np.isnan(D_paired_norm[i, k]):
-                        d += a * D_paired_norm[i, k]
-                    else:
-                        a = 0.0
-                    d += (1.0 - a) * D_unpaired_norm[i, k]
-                    D_comb[i, k] = D_comb[k, i] = d
-            mse_combined = distance_mse(D_comb, gt_dist)
+    return results
 
-            results.append({'alpha': alpha, 'seed': seed, 'method': 'paired', 'mse': mse_paired})
-            results.append({'alpha': alpha, 'seed': seed, 'method': 'unpaired', 'mse': mse_unpaired})
-            results.append({'alpha': alpha, 'seed': seed, 'method': 'combined', 'mse': mse_combined})
+
+def run_s1(n_models=20, p=50, m_total=1000, n_seeds=50, alphas=None, n_workers=None):
+    if alphas is None:
+        alphas = [0.0, 0.05, 0.1, 0.2, 0.5, 1.0]
+
+    if n_workers is None:
+        n_workers = min(n_seeds, os.cpu_count() or 1)
+
+    results = []
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        futures = {
+            executor.submit(_run_seed, seed, n_models, p, m_total, alphas): seed
+            for seed in range(n_seeds)
+        }
+        for future in tqdm(as_completed(futures), total=n_seeds, desc='S1 seeds'):
+            results.extend(future.result())
 
     results_df = pd.DataFrame(results)
     os.makedirs('results', exist_ok=True)
