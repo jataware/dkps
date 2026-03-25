@@ -9,6 +9,7 @@ import importlib
 import argparse
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pathlib import Path
 from rich import print as rprint
 from tqdm import trange
@@ -63,7 +64,7 @@ def parse_args():
     args.inpath  = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     
     exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
-    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results-1.tsv'
+    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
     args.outpath.parent.mkdir(parents=True, exist_ok=True)
 
     rprint(f'[blue]outpath: {args.outpath}[/blue]')
@@ -81,48 +82,57 @@ runner = importlib.import_module(f'runners.{args.runner}')
 
 rprint('[blue]loading data ...[/blue]')
 
-def load_data(inpath, dataset):
-    df = pd.read_csv(inpath, sep='\t')
+def load_data(inpath, dataset, use_all=False):
+    df_all = pd.read_csv(inpath, sep='\t')
 
-    df = df[df.dataset == dataset]
-
-    if args.sample:
-        rng           = np.random.default_rng(args.seed)
-        uinstance_ids = df.instance_id.unique()
-        keep          = rng.choice(uinstance_ids, int(len(uinstance_ids) * args.sample), replace=False)
-        df            = df[df.instance_id.isin(keep)]
-
-    df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
-
-    if args.score_col != 'score':
-        print(f'{args.score_col} -> score')
-        df['score'] = df[args.score_col]
-
-    # --
-    # QC
-
-    print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
-    _instance_ids = df.groupby('model').instance_id.apply(list)
-    assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
-
-    # --
-    # Get embeddings
-
-    if args.embed_model == 'onehot':
-        df = onehot_embedding(df, dataset=args.dataset)
+    if use_all:
+        datasets = list(df_all.dataset.unique())
+        print(datasets)
     else:
-        df['embedding'] = list(embed_api(
-            provider   = args.embed_provider,
-            input_strs = [str(xx) for xx in df.response.values],
-            model      = args.embed_model
-        ))
+        datasets = [dataset]
     
-    return df
+    out = []
+    for dataset in tqdm(datasets, desc='Loading data'):
+        df = df_all[df_all.dataset == dataset]
+        print(dataset, df.shape[0])
 
-if '=ALL' not in args.dataset:
-    df = load_data(args.inpath, args.dataset)
-else:
-    breakpoint()
+        if args.sample:
+            rng           = np.random.default_rng(args.seed)
+            uinstance_ids = df.instance_id.unique()
+            keep          = rng.choice(uinstance_ids, int(len(uinstance_ids) * args.sample), replace=False)
+            df            = df[df.instance_id.isin(keep)]
+
+        df = df.sort_values(['model', 'instance_id']).reset_index(drop=True)
+
+        if args.score_col != 'score':
+            print(f'{args.score_col} -> score')
+            df['score'] = df[args.score_col]
+
+        # --
+        # QC
+
+        print(f'{len(df.response.unique())} / {df.shape[0]} responses are unique')
+        _instance_ids = df.groupby('model').instance_id.apply(list)
+        assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
+
+        # --
+        # Get embeddings
+
+        if args.embed_model == 'onehot':
+            df = onehot_embedding(df, dataset=dataset)
+        else:
+            df['embedding'] = list(embed_api(
+                provider   = args.embed_provider,
+                input_strs = [str(xx) for xx in df.response.values],
+                model      = args.embed_model
+            ))
+        
+        out.append(df)
+    
+    return pd.concat(out).reset_index(drop=True)
+
+use_all = '=ALL' in args.dataset
+df = load_data(args.inpath, args.dataset, use_all=use_all)
 
 # --
 # Run
@@ -130,6 +140,17 @@ else:
 model_names  = df.model.unique()
 instance_ids = df.instance_id.unique()
 y_acts       = df.groupby('model').score.mean().to_dict()
+
+# <<
+if 'wmt_14' in args.dataset:
+    df = df[df.model != 'ai21_jamba-instruct'] # missing values
+
+
+_instance_ids = df.groupby('model').instance_id.apply(list)
+assert all([_instance_ids.iloc[0] == _instance_ids.iloc[i] for i in range(len(_instance_ids))]), 'instance_ids are not the same for each model'
+
+assert (df.model.value_counts() == len(instance_ids)).all()
+# >>
 
 modes     = ['model', 'family']
 pred_null = {mode: predict_null(df, mode=mode) for mode in modes}
@@ -142,14 +163,17 @@ runner_kwargs = runner.setup(df, model_names, args)
 jobs = []
 for iter in trange(args.n_replicates):
     rng = np.random.default_rng(iter)
-    # for n_samples in [2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
-    for n_samples in [1]:
+    # >>
+    # for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
+    # --
+    for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
+    # <<
         if n_samples > len(instance_ids):
             continue
-
+            
         instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-
+        
         jobs.append(delayed(runner.run_one)(
             df_sample    = df_sample,
             n_samples    = n_samples,

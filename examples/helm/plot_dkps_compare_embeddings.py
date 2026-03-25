@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset',   type=str, default='math:subject=algebra')
     parser.add_argument('--score_col', type=str, default='score')
-    parser.add_argument('--results_root', type=str, default='results')
+    parser.add_argument('--results_root', type=str, default='multi-embed')
     parser.add_argument('--outdir',    type=str, default='plots')
     args = parser.parse_args()
 

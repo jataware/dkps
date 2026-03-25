@@ -29,18 +29,27 @@ MATH_SUBJECTS=(
 for embed_provider in "google"; do
     for subject in "${MATH_SUBJECTS[@]}"; do
         # # python eda.py                 --dataset "$subject"
-        # python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_dkps.py           --dataset "$subject" --embed_provider "$embed_provider"
-        
+        python run_dkps.py            --dataset "$subject" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_dkps.py           --dataset "$subject" --embed_provider "$embed_provider"        
         python run_dkps.py            --dataset "$subject" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_qselect.py        --dataset "$subject" --embed_provider "$embed_provider"
+        python plot_qselect.py        --dataset "$subject" --embed_provider "$embed_provider"
     done
 done
+
+# <<
+# Whole dataset
+# TODO
+python run_dkps.py            --outdir results-all --dataset "math:subject=ALL" --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+# python plot_dkps.py           --outdir results-all --dataset "math:subject=ALL" --embed_provider "$embed_provider"        
+python run_dkps.py            --outdir results-all --dataset "math:subject=ALL" --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
+# python plot_qselect.py        --outdir results-all --dataset "math:subject=ALL" --embed_provider "$embed_provider"
+# ... make tables ...
+# >>
 
 # # # <<
 # # # [SPECIAL] Embedding comparison for math:subject=counting_and_probability
 
-# # EMBED_DATASET="math:subject=counting_and_probability"
+EMBED_DATASET="math:subject=counting_and_probability"
 
 # # EMBEDDINGS=(
 # #     # "jina"
@@ -72,7 +81,8 @@ done
 # #         --outdir "$outdir"
 # # done
 
-# # python plot_dkps_compare_embeddings.py --dataset "$EMBED_DATASET"
+EMBED_DATASET="math:subject=counting_and_probability"
+python plot_dkps_compare_embeddings.py --dataset "$EMBED_DATASET"
 # # # >>
 
 # # --
@@ -95,13 +105,21 @@ WMT_PAIRS=(
 for embed_provider in "jina"; do
     for pair in "${WMT_PAIRS[@]}"; do
         # python eda.py                 --dataset "$pair" --sample 0.2
-        # python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_dkps.py           --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
-        
+        python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+        python plot_dkps.py           --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
         python run_dkps.py            --dataset "$pair" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
-        # python plot_qselect.py        --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
+        python plot_qselect.py        --dataset "$pair" --score_col meteor --embed_provider "$embed_provider"
     done
 done
+
+# <<
+# Whole dataset
+# TODO
+python run_dkps.py            --outdir results-all --dataset "wmt_14:language_pair=ALL" --score_col meteor --sample 0.2 --runner dkps --n_replicates 1024 --embed_provider "$embed_provider"
+# python plot_dkps.py           --outdir results-all --dataset "wmt_14:language_pair=ALL" --score_col meteor --embed_provider "$embed_provider"
+python run_dkps.py            --outdir results-all --dataset "wmt_14:language_pair=ALL" --score_col meteor --sample 0.2 --runner qselect --n_replicates 1024 --embed_provider "$embed_provider"
+# python plot_qselect.py        --outdir results-all --dataset "wmt_14:language_pair=ALL" --score_col meteor --embed_provider "$embed_provider"
+# >>
 
 # --
 # LegalBench
@@ -128,11 +146,11 @@ for subset in "${LEGALBENCH_SUBSETS[@]}"; do
 done
 
 # <<
+# Whole dataset
 python run_dkps.py            --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot --runner dkps --n_replicates 1024
-python plot_dkps.py           --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot
-
+# python plot_dkps.py           --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot
 python run_dkps.py            --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot --runner qselect --n_replicates 1024
-python plot_qselect.py        --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot
+# python plot_qselect.py        --outdir results-all --dataset "legalbench:subset=ALL" --embed_model onehot
 # >>
 
 # --

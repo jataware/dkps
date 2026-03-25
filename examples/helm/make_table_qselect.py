@@ -56,7 +56,7 @@ EMBED_DIR = _exp_path.parts[0]  # e.g., 'embed-google' or 'embed-local-onehot'
 # --
 # Load results
 
-tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-v2.tsv'))
+tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results.tsv'))
 rprint(f'[green]Found {len(tsv_paths)} result files for {EMBED_DIR}[/green]')
 
 
@@ -184,6 +184,8 @@ rprint(f'[green]Saved to {outpath_split}[/green]')
 # ==============================================================================
 # Table 2: Per dataset (aggregated across splits using concatenation)
 # ==============================================================================
+
+raise Exception('Skipping table 2 for all datasets')
 
 rprint('\n[bold cyan]Table 2: Performance by dataset (QSelect, concatenated across splits)[/bold cyan]')
 

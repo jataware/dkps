@@ -26,8 +26,18 @@ def make_embedding_dict(df):
     for model_name in model_names:
         sub = df[df.model == model_name]
         assert (sub.instance_id.values == instance_ids).all(), f'instance_ids are not the same for model {model_name}'
-        embedding_dict[model_name] = np.vstack(sub.embedding.values)
-    
+        
+        # <<
+        # Pad to dimension of longest one
+        _embeddings = sub.embedding.values
+        emb_dims = [len(x) for x in _embeddings]
+        if len(set(emb_dims)) != 1:
+            max_emb_dim = max(emb_dims)
+            _embeddings = [x + [0] * (max_emb_dim - len(x)) for x in _embeddings]
+        # >>
+        
+        embedding_dict[model_name] = np.vstack(_embeddings)
+        
     embedding_dict = {k:v[:,None] for k,v in embedding_dict.items()}
     
     return embedding_dict
