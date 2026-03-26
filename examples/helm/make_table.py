@@ -52,7 +52,7 @@ EMBED_DIR = _exp_path.parts[0]  # e.g., 'embed-google' or 'embed-local-onehot'
 # --
 # Load results
 
-tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results.tsv'))
+tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-202603.tsv'))
 rprint(f'[green]Found {len(tsv_paths)} result files for {EMBED_DIR}[/green]')
 
 
@@ -104,9 +104,27 @@ for p_col in pred_cols:
 # --
 # Compute interpolation prediction
 
+print(df.columns)
+
 p_lr_dkps = df[DKPS_COL]
 df['p_interp'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * p_lr_dkps) / df.n_dataset_split
 df['e_interp'] = np.abs(df.p_interp - df.y_act)
+
+for alpha in np.linspace(0, 1, 11):
+    df[f'p_interp_alpha={alpha:.1f}'] = (alpha * df.p_sample + (1 - alpha) * p_lr_dkps)
+    df[f'e_interp_alpha={alpha:.1f}'] = np.abs(df[f'p_interp_alpha={alpha:.1f}'] - df.y_act)
+
+for _n_cmp in [1, 2, 4, 8, 16, 32]:
+    c = f'p_lr_dkps__n_components_cmds={_n_cmp}__n_models={args.n_models}'
+    df[f'p_interp_n_components_cmds={_n_cmp}'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df[c]) / df.n_dataset_split
+    df[f'e_interp_n_components_cmds={_n_cmp}'] = np.abs(df[c] - df.y_act)
+
+df['p_interp_knn1'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn1_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
+df['e_interp_knn1'] = np.abs(df['p_interp_knn1'] - df.y_act)
+
+df['p_interp_knn9'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn9_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
+df['e_interp_knn9'] = np.abs(df['p_interp_knn9'] - df.y_act)
+
 
 # Alias for convenience
 df['p_lr_dkps'] = df[DKPS_COL]
@@ -126,18 +144,79 @@ tab_split = df_sub.groupby(['dataset', 'split', 'n_samples']).agg({
     'e_sample': 'mean',
     'e_lr_dkps': 'mean',
     'e_interp': 'mean',
+    # "e_interp_alpha=0.0": "mean",
+    # "e_interp_alpha=0.1": "mean",
+    # "e_interp_alpha=0.2": "mean",
+    # "e_interp_alpha=0.3": "mean",
+    # "e_interp_alpha=0.4": "mean",
+    # "e_interp_alpha=0.5": "mean",
+    # "e_interp_alpha=0.6": "mean",
+    # "e_interp_alpha=0.7": "mean",
+    # "e_interp_alpha=0.8": "mean",
+    # "e_interp_alpha=0.9": "mean",
+    # "e_interp_alpha=1.0": "mean",
+    
+    'e_lr_dkps__n_components_cmds=1__n_models=ALL': 'mean',
+    'e_lr_dkps__n_components_cmds=2__n_models=ALL': 'mean',
+    'e_lr_dkps__n_components_cmds=4__n_models=ALL': 'mean',
+    'e_lr_dkps__n_components_cmds=8__n_models=ALL': 'mean',
+    'e_lr_dkps__n_components_cmds=16__n_models=ALL': 'mean',
+    'e_lr_dkps__n_components_cmds=32__n_models=ALL': 'mean',
+    'e_interp_n_components_cmds=1': 'mean',
+    'e_interp_n_components_cmds=2': 'mean',
+    'e_interp_n_components_cmds=4': 'mean',
+    'e_interp_n_components_cmds=8': 'mean',
+    'e_interp_n_components_cmds=16': 'mean',
+    'e_interp_n_components_cmds=32': 'mean',
+    
+    # 'e_knn1_dkps__n_components_cmds=8__n_models=ALL' : 'mean',
+    # 'e_knn9_dkps__n_components_cmds=8__n_models=ALL' : 'mean',
+    
+    # 'e_interp_knn1': 'mean',
+    # 'e_interp_knn9': 'mean',
 }).rename(columns={
     'e_null': 'Population Mean',
     'e_sample': 'Sample Mean',
-    'e_lr_dkps': 'DKPS',
-    'e_interp': 'Interp',
+    'e_lr_dkps': 'DKPS (LR ; n_comp=8 - default)',
+    'e_interp': 'Interp (LR ; m/M ; n_comp=8 - default)',
+    # "e_interp_alpha=0.0": "Interp (alpha=0.0)",
+    # "e_interp_alpha=0.1": "Interp (alpha=0.1)",
+    # "e_interp_alpha=0.2": "Interp (alpha=0.2)",
+    # "e_interp_alpha=0.3": "Interp (alpha=0.3)",
+    # "e_interp_alpha=0.4": "Interp (alpha=0.4)",
+    # "e_interp_alpha=0.5": "Interp (alpha=0.5)",
+    # "e_interp_alpha=0.6": "Interp (alpha=0.6)",
+    # "e_interp_alpha=0.7": "Interp (alpha=0.7)",
+    # "e_interp_alpha=0.8": "Interp (alpha=0.8)",
+    # "e_interp_alpha=0.9": "Interp (alpha=0.9)",
+    # "e_interp_alpha=1.0": "Interp (alpha=1.0)",
+    
+    'e_lr_dkps__n_components_cmds=1__n_models=ALL': 'DKPS (n_comp=1)',
+    'e_lr_dkps__n_components_cmds=2__n_models=ALL': 'DKPS (n_comp=2)',
+    'e_lr_dkps__n_components_cmds=4__n_models=ALL': 'DKPS (n_comp=4)',
+    'e_lr_dkps__n_components_cmds=8__n_models=ALL': 'DKPS (n_comp=8)',
+    'e_lr_dkps__n_components_cmds=16__n_models=ALL': 'DKPS (n_comp=16)',
+    'e_lr_dkps__n_components_cmds=32__n_models=ALL': 'DKPS (n_comp=32)',
+    'e_interp_n_components_cmds=1': 'Interp (m/M ; n_comp=1)',
+    'e_interp_n_components_cmds=2': 'Interp (m/M ; n_comp=2)',
+    'e_interp_n_components_cmds=4': 'Interp (m/M ; n_comp=4)',
+    'e_interp_n_components_cmds=8': 'Interp (m/M ; n_comp=8)',
+    'e_interp_n_components_cmds=16': 'Interp (m/M ; n_comp=16)',
+    'e_interp_n_components_cmds=32': 'Interp (m/M ; n_comp=32)',
+    
+    # 'e_knn1_dkps__n_components_cmds=8__n_models=ALL' : "DKPS (KNN-1)",
+    # 'e_knn9_dkps__n_components_cmds=8__n_models=ALL' : "DKPS (KNN-sqrt(n_models))",
+    
+    # 'e_interp_knn1': "Interp (m/M ; KNN-1)",
+    # 'e_interp_knn9': "Interp (m/M ; KNN-sqrt(n_models))",
 }).reset_index()
 
 print(tab_split)
-outpath_split = TABLES_DIR / f'table-v2-{EMBED_DIR}-n_models={args.n_models}-by_dataset_split.tsv'
+outpath_split = TABLES_DIR / f'table-v3-{EMBED_DIR}-n_models={args.n_models}-by_dataset_split.tsv'
 tab_split.to_csv(outpath_split, sep='\t', index=False)
 rprint(f'[green]Saved to {outpath_split}[/green]')
 
+raise Exception('Stop here')
 
 # ==============================================================================
 # Table 2: Per dataset (aggregated across splits)

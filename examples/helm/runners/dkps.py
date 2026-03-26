@@ -4,6 +4,7 @@
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
 
 from utils import make_embedding_dict
 from dkps.dkps import DataKernelPerspectiveSpace as DKPS
@@ -41,13 +42,10 @@ def run_one(df_sample, n_samples, mode, seed, y_acts, pred_null, **kwargs):
 
         # lr on DKPS embeddings of varying dimension
         res = {}
-        for n_components_cmds in [8]:
-            for n_models in [20, 50, len(train_models)]:
-                if n_models != len(train_models):
-                    _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models={n_models}'
-                else:
-                    _suffix  = f'_dkps__n_components_cmds={n_components_cmds}__n_models=ALL'
-
+        for n_components_cmds in [32]:
+        # for n_components_cmds in [8]:
+            # for n_models in [20, 50, len(train_models)]:
+            for n_models in [len(train_models)]:
                 _train_models = np.random.choice(train_models, size=n_models, replace=False)
 
                 # --
@@ -56,18 +54,28 @@ def run_one(df_sample, n_samples, mode, seed, y_acts, pred_null, **kwargs):
                 _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
                 P = DKPS(n_components_cmds=n_components_cmds)
                 P = P.fit_transform(_embedding_dict, return_dict=True)
+                
+                for _n_cmp in [1, 2, 4, 8, 16, 32]:
+                    if n_models != len(train_models):
+                        _suffix  = f'_dkps__n_components_cmds={_n_cmp}__n_models={n_models}'
+                    else:
+                        _suffix  = f'_dkps__n_components_cmds={_n_cmp}__n_models=ALL'
 
-                _X_train = np.vstack([P[m] for m in _train_models])
-                _y_train = np.array([y_acts[m] for m in _train_models])
-                _X_test  = np.vstack([P[target_model]])
+                    _X_train = np.vstack([P[m][:_n_cmp] for m in _train_models])
+                    _y_train = np.array([y_acts[m] for m in _train_models])
+                    _X_test  = np.vstack([P[target_model][:_n_cmp]])
 
-                # linear regression on DKPS embeddings
-                lr = LinearRegression().fit(_X_train, _y_train)
-                res['p_lr' + _suffix] = float(lr.predict(_X_test)[0])
+                    # linear regression on DKPS embeddings
+                    lr = LinearRegression().fit(_X_train, _y_train)
+                    res['p_lr' + _suffix] = float(lr.predict(_X_test)[0])
 
-                # # knn regression on DKPS embeddings
-                # knn = KNeighborsRegressor(n_neighbors=5).fit(_X_train, _y_train)
-                # res['p_knn5' + _suffix] = float(knn.predict(_X_test)[0])
+                    # knn regression on DKPS embeddings
+                    if _n_cmp == 8:
+                        knn = KNeighborsRegressor(n_neighbors=1).fit(_X_train, _y_train)
+                        res['p_knn1' + _suffix] = float(knn.predict(_X_test)[0])
+
+                        knn = KNeighborsRegressor(n_neighbors=9).fit(_X_train, _y_train)
+                        res['p_knn9' + _suffix] = float(knn.predict(_X_test)[0])
 
         out.append({
             "seed"         : seed,

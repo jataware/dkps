@@ -64,7 +64,7 @@ def parse_args():
     args.inpath  = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     
     exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
-    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results.tsv'
+    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results-202603.tsv'
     args.outpath.parent.mkdir(parents=True, exist_ok=True)
 
     rprint(f'[blue]outpath: {args.outpath}[/blue]')
