@@ -20,12 +20,89 @@ def generate_synthetic_data(
     """
     Generate the synthetic data described in Block I of `unpaired_dkps_iclr_plan.md`.
 
+    The synthetic construction has three layers:
+
+    1. Each model `i` gets a latent offset vector `v_i` in `R^{d_act}`.
+    2. Each query draws a latent query vector `q` from one of two Gaussian
+       components separated by `d_sep`.
+    3. The observed response embedding is built as
+
+           x_ij = [response_ij, observation_noise_ij]
+
+       where the active response dimensions are centered at `q + v_i` up to the
+       `s` and `t` noise scales, and any extra observed dimensions
+       `d_obs - d_act` are pure noise.
+
+    Under this setup, the ground-truth model distance matrix is the pairwise
+    Euclidean distance between the latent model offsets `v_i`.
+
+    Parameters
+    ----------
+    d_act : int
+        Number of active dimensions in the latent model/query interaction.
+        Query vectors and model offsets both live in this space.
+    d_obs : int
+        Observed embedding dimension. Must satisfy `d_obs >= d_act`.
+        When `d_obs > d_act`, the remaining dimensions are independent noise
+        dimensions that do not carry model signal.
+    n_models : int
+        Number of models to simulate.
+    n_queries : int
+        Total number of queries observed per model, counting both paired and
+        unpaired queries.
+    alpha : float
+        Requested paired-query fraction in `[0, 1]`. The generator creates
+        `round(alpha * n_queries)` globally shared query ids and uses model-
+        specific query ids for the rest.
+    s : float
+        Latent-response noise scale. The intermediate latent mean is drawn as
+
+            latent_mean ~ N(query_vec + model_offset, (1 / s)^2 I).
+
+        Larger `s` means less latent noise; `s = np.inf` recovers the noiseless
+        latent mean `query_vec + model_offset`.
+    t : float
+        Observation noise scale on the active response dimensions:
+
+            active_response ~ N(latent_mean, (1 / t)^2 I).
+
+        Larger `t` means less observation noise; `t = np.inf` makes the active
+        response equal to the latent mean.
+    d_sep : float, default=2.0
+        Separation between the two query-distribution components along the first
+        active dimension. Larger values make paired and unpaired query regimes
+        more distributionally distinct when `pi_paired` and `pi_unpaired` differ.
+    pi_paired : array-like of shape (2,), optional
+        Mixture weights over the two query components for globally shared
+        queries. Defaults to `[1.0, 0.0]`, meaning paired queries come entirely
+        from the first component.
+    pi_unpaired : array-like of shape (2,), optional
+        Mixture weights over the two query components for model-specific
+        unpaired queries. Defaults to `[0.0, 1.0]`, meaning unpaired queries
+        come entirely from the second component.
+    random_state : int or numpy.random.Generator-compatible seed, optional
+        Seed used for reproducible synthetic draws.
+    return_metadata : bool, default=False
+        If `True`, also return a metadata dictionary containing realized paired
+        counts, model offsets, query-component means, and other generator state
+        useful for analysis.
+
     Returns
     -------
     data : pd.DataFrame
-        Columns include `model_id`, `query_id`, `is_paired`, `query_vec`, and `embedding`.
+        Long-form response table with one row per observed `(model, query)`
+        pair. Columns include:
+
+        - `model_id`: model name
+        - `query_id`: query identifier; shared across models only for paired queries
+        - `is_paired`: whether the row comes from the shared-query subset
+        - `query_component`: which of the two query-mixture components was used
+        - `query_vec`: latent query vector in `R^{d_act}`
+        - `latent_mean_vec`: latent mean before observation noise
+        - `active_response_vec`: noisy active response in `R^{d_act}`
+        - `embedding`: final observed response in `R^{d_obs}`
     dist_gt : np.ndarray
-        Ground-truth pairwise distance matrix between model offsets.
+        Ground-truth pairwise distance matrix between latent model offsets.
     metadata : dict, optional
         Returned only when `return_metadata=True`.
     """

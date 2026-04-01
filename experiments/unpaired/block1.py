@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+from scipy.stats import spearmanr
 
-from .synthetic import generate_synthetic_data
-from .unpaired_dkps import UnpairedDKPS
+from dkps.synthetic import generate_synthetic_data
+from dkps.unpaired_dkps import UnpairedDKPS
 
 
 def offdiag_mse(dist_est, dist_gt):
@@ -15,6 +17,18 @@ def offdiag_mse(dist_est, dist_gt):
     if not np.any(mask):
         return np.nan
     return float(np.mean((dist_est[mask] - dist_gt[mask]) ** 2))
+
+
+def offdiag_spearman(dist_est, dist_gt):
+    dist_est = np.asarray(dist_est, dtype=float)
+    dist_gt = np.asarray(dist_gt, dtype=float)
+    assert dist_est.shape == dist_gt.shape, 'dist_est and dist_gt must have the same shape'
+
+    mask = ~np.eye(dist_gt.shape[0], dtype=bool)
+    mask &= np.isfinite(dist_est)
+    if np.sum(mask) < 3:
+        return np.nan
+    return float(spearmanr(dist_est[mask], dist_gt[mask]).statistic)
 
 
 def _make_theory_rbf_bandwidth(dist_matrix, model_names, s, t, floor=1e-8):
@@ -32,58 +46,72 @@ def _make_theory_rbf_bandwidth(dist_matrix, model_names, s, t, floor=1e-8):
 def run_s0_synthetic(
         n_models=20,
         d_act=10,
-        d_obs=50,
-        m_totals=(200, 500, 1000),
-        alphas=(0.0, 0.05, 0.1, 0.2, 0.5, 1.0),
-        s=2.0,
-        t=2.0,
+        d_obs=10,
+        m_totals=(100,), # (200, 500, 1000),
+        alphas=[i / 10.0 for i in range(11)],
+        s=1,
+        t=1,
         d_sep=2.0,
-        coverage_modes=('oracle', 'pca'),
-        n_seeds=50,
+        coverage_modes=('pca',), # , 'pca'),
+        n_seeds=10,
     ):
-    rows = []
-    for coverage_mode in coverage_modes:
-        for m_total in m_totals:
-            for alpha in alphas:
-                for seed in range(n_seeds):
-                    data, dist_gt, metadata = generate_synthetic_data(
-                        d_act=d_act,
-                        d_obs=d_obs,
-                        n_models=n_models,
-                        n_queries=m_total,
-                        alpha=alpha,
-                        s=s,
-                        t=t,
-                        d_sep=d_sep,
-                        random_state=seed,
-                        return_metadata=True,
-                    )
+    
+    def _run_single_s0(coverage_mode, m_total, alpha, seed):
+        data, dist_gt, metadata = generate_synthetic_data(
+            d_act=d_act,
+            d_obs=d_obs,
+            n_models=n_models,
+            n_queries=m_total,
+            alpha=alpha,
+            s=s,
+            t=t,
+            d_sep=d_sep,
+            random_state=seed,
+            return_metadata=True,
+        )
 
-                    estimator_specs = {
-                        'paired_only': dict(mode='paired', query_kernel='constant', use_coverage=False),
-                        'unpaired_only': dict(mode='unpaired', query_kernel='constant', use_coverage=True),
-                        'combined': dict(mode='combined', query_kernel='constant', use_coverage=True),
-                    }
+        estimator_specs = {
+            'paired_only': dict(mode='paired', query_kernel='constant', use_coverage=False),
+            'unpaired_only': dict(mode='unpaired', query_kernel='constant', use_coverage=True),
+            'combined': dict(mode='combined', query_kernel='constant', use_coverage=True),
+        }
 
-                    for estimator_name, kwargs in estimator_specs.items():
-                        estimator = UnpairedDKPS(
-                            coverage_mode=coverage_mode,
-                            n_components_cmds=2,
-                            **kwargs,
-                        )
-                        estimator.fit(data)
-                        rows.append({
-                            'experiment': 's0',
-                            'coverage_mode': coverage_mode,
-                            'estimator': estimator_name,
-                            'seed': seed,
-                            'm_total': m_total,
-                            'alpha_requested': alpha,
-                            'alpha_actual': metadata['alpha_actual'],
-                            'n_paired': metadata['n_paired'],
-                            'n_unpaired': metadata['n_unpaired'],
-                            'mse': offdiag_mse(estimator.dist_matrix_, dist_gt),
-                        })
+        results = []
+        for estimator_name, kwargs in estimator_specs.items():
+            estimator = UnpairedDKPS(
+                coverage_mode=coverage_mode,
+                n_components_cmds=2,
+                **kwargs,
+            )
+            estimator.fit(data)
+            results.append({
+                'experiment': 's0',
+                'coverage_mode': coverage_mode,
+                'estimator': estimator_name,
+                'seed': seed,
+                'm_total': m_total,
+                'alpha_requested': alpha,
+                'alpha_actual': metadata['alpha_actual'],
+                'n_paired': metadata['n_paired'],
+                'n_unpaired': metadata['n_unpaired'],
+                'mse': offdiag_mse(estimator.dist_matrix_, dist_gt),
+                'spearman': offdiag_spearman(estimator.dist_matrix_, dist_gt),
+            })
+        return results
+
+    
+    params = [
+        (coverage_mode, m_total, alpha, seed)
+        for coverage_mode in coverage_modes
+        for m_total in m_totals
+        for alpha in alphas
+        for seed in range(n_seeds)
+    ]
+    nested_rows = Parallel(n_jobs=-1, verbose=10)(
+        delayed(_run_single_s0)(coverage_mode, m_total, alpha, seed)
+        for coverage_mode, m_total, alpha, seed in params
+    )
+    rows = [row for sublist in nested_rows for row in sublist]
 
     return pd.DataFrame(rows)
 
