@@ -37,6 +37,7 @@ litellm = ">=1.73.6,<1.82"
 openai = ">=2.14.0,<3"
 huggingface_hub = ">=1.2.3,<2"
 numba = ">=0.63.1,<0.64"
+pytest = ">=9.0.2,<10"
 
 [tool.hatch.metadata]
 allow-direct-references = true
