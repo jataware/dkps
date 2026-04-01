@@ -1074,7 +1074,7 @@ packages:
 - pypi: ./
   name: dkps
   version: 0.1.0
-  sha256: 0c81fe8ce8ed9fe573aa450c8cc24d22cff3526dcae90e1669ba621a9b38bca1
+  sha256: 8102e0061c7b8a305529a84539c857e75b230a2ed11f33e4ce8c362ae9fc2471
   requires_dist:
   - graspologic @ git+https://github.com/jataware/graspologic
   - jlai @ git+https://github.com/jataware/jlai
