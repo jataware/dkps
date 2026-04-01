@@ -54,6 +54,7 @@ def generate_query_projections(n_queries, p, seed=None):
         rng = seed
     else:
         rng = np.random.default_rng(seed)
+    
     projections = []
     for _ in range(n_queries):
         # Random subspace dimension between p//4 and 3p//4
@@ -105,7 +106,7 @@ def sample_responses(mus, m_total, alpha, seed, noise_scale=0.1):
     private_projections = [[] for _ in range(n_models)]
     if m_private > 0:
         private_projections = [
-            generate_query_projections(m_private, p, seed=rng)
+            generate_query_projections(m_private, p, seed=123)
             for _ in range(n_models)
         ]
 
