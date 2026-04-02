@@ -126,22 +126,17 @@ def generate_synthetic_data(
     rng = np.random.default_rng(random_state)
     model_names = [f'model_{i:02d}' for i in range(n_models)]
 
-    if pi_paired is None:
-        pi_paired = np.array([1.0, 0.0], dtype=float)
-    else:
+    if pi_paired is not None:
         pi_paired = np.asarray(pi_paired, dtype=float)
+        assert pi_paired.shape == (2,), 'pi_paired must have shape (2,)'
+        assert np.isclose(pi_paired.sum(), 1.0), 'pi_paired must sum to 1'
+        assert np.all(pi_paired >= 0), 'pi_paired must be non-negative'
 
-    if pi_unpaired is None:
-        pi_unpaired = np.array([0.0, 1.0], dtype=float)
-    else:
+    if pi_unpaired is not None:
         pi_unpaired = np.asarray(pi_unpaired, dtype=float)
-
-    assert pi_paired.shape == (2,), 'pi_paired must have shape (2,)'
-    assert pi_unpaired.shape == (2,), 'pi_unpaired must have shape (2,)'
-    assert np.isclose(pi_paired.sum(), 1.0), 'pi_paired must sum to 1'
-    assert np.isclose(pi_unpaired.sum(), 1.0), 'pi_unpaired must sum to 1'
-    assert np.all(pi_paired >= 0), 'pi_paired must be non-negative'
-    assert np.all(pi_unpaired >= 0), 'pi_unpaired must be non-negative'
+        assert pi_unpaired.shape == (2,), 'pi_unpaired must have shape (2,)'
+        assert np.isclose(pi_unpaired.sum(), 1.0), 'pi_unpaired must sum to 1'
+        assert np.all(pi_unpaired >= 0), 'pi_unpaired must be non-negative'
 
     mu_components = np.array([
         [d_sep / 2.0] + [0.0] * (d_act - 1),
@@ -154,10 +149,26 @@ def generate_synthetic_data(
     n_paired = min(max(n_paired, 0), n_queries)
     n_unpaired = n_queries - n_paired
 
+    def _sample_components(rng, n, pi=None):
+        """Sample component assignments for n queries.
+        If pi is None, draw a random mixture proportion p ~ U(0,1)
+        and assign floor(p*n) to component 0, rest to component 1."""
+        if pi is not None:
+            return rng.choice(2, size=n, p=pi)
+        p = rng.uniform(0.0, 1.0)
+        n0 = int(round(p * n))
+        n0 = min(max(n0, 0), n)
+        components = np.zeros(n, dtype=int)
+        components[n0:] = 1
+        rng.shuffle(components)
+        return components
+
     rows = []
 
+    # Paired queries: random mixture proportion for the shared set
+    paired_components = _sample_components(rng, n_paired, pi_paired)
     for paired_idx in range(n_paired):
-        component = rng.choice(2, p=pi_paired)
+        component = paired_components[paired_idx]
         query_vec = rng.multivariate_normal(mu_components[component], np.eye(d_act))
         query_id = f'paired_{paired_idx:05d}'
 
@@ -184,9 +195,11 @@ def generate_synthetic_data(
                     row['replicate_id'] = rep
                 rows.append(row)
 
+    # Unpaired queries: each model draws its own random mixture proportion
     for model_idx, model_name in enumerate(model_names):
+        model_components = _sample_components(rng, n_unpaired, pi_unpaired)
         for unpaired_idx in range(n_unpaired):
-            component = rng.choice(2, p=pi_unpaired)
+            component = model_components[unpaired_idx]
             query_vec = rng.multivariate_normal(mu_components[component], np.eye(d_act))
             query_id = f'{model_name}_unpaired_{unpaired_idx:05d}'
 
@@ -215,18 +228,11 @@ def generate_synthetic_data(
     data = pd.DataFrame(rows)
     data = data.sort_values(['model_id', 'query_id']).reset_index(drop=True)
 
-    # Ground truth: ||mu_i - mu_k|| where mu_i = E_q[f_i(q)].
-    # With the interaction model f_i(q) = q + v_i + gamma * v_i * q,
-    # mu_i = E[q] + v_i + gamma * v_i * E[q] = E[q](1 + gamma*v_i) + v_i.
-    # The mixture mean is E[q] = pi_paired * ... but for GT we use the
-    # reference distribution; with balanced pi=[0.5,0.5] or d_sep=0,
-    # E[q]=0 and mu_i = v_i. In general we compute it from the components.
-    eq = pi_paired[0] * mu_components[0] + pi_paired[1] * mu_components[1]
-    # Use the average of paired and unpaired mixture weights as reference
-    # (when they differ, the "population" query distribution is ambiguous;
-    # using the overall mixture is a reasonable default).
-    eq_ref = 0.5 * (pi_paired[0] + pi_unpaired[0]) * mu_components[0] + \
-             0.5 * (pi_paired[1] + pi_unpaired[1]) * mu_components[1]
+    # Ground truth: ||mu_i - mu_k|| where mu_i = E_q[f_i(q)] under the
+    # uniform reference distribution over both components (p=0.5).
+    # With interaction: mu_i = E[q](1 + gamma*v_i) + v_i.
+    # E[q] under uniform mixture = 0.5*mu_1 + 0.5*mu_2 = 0 (symmetric).
+    eq_ref = 0.5 * mu_components[0] + 0.5 * mu_components[1]
     mean_responses = np.array([
         eq_ref + v + interaction_strength * v * eq_ref
         for v in model_offsets
