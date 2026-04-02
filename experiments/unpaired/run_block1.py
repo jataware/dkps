@@ -1,15 +1,27 @@
 import argparse
 from pathlib import Path
 
-from .block1 import run_s0_synthetic, run_s1_exchange_rate, run_s2_query_kernel
+from .block1 import run_s0_synthetic, run_s1_exchange_rate, run_s2_query_kernel, run_s3_inverter_robustness
 from .plots import save_block1_plots
 
 
 PRESETS = {
     'paper': {
-        's0': {},
+        's0': dict(
+            n_models=20,
+            d_act=10,
+            d_obs=50,
+            m_totals=(200, 500, 1000),
+            alphas=(0.0, 0.05, 0.1, 0.2, 0.5, 1.0),
+            s=2,
+            t=2,
+            d_sep=2.0,
+            coverage_modes=('oracle', 'pca'),
+            n_seeds=50,
+        ),
         's1': {},
         's2': {},
+        's3': {},
     },
     'quick': {
         's0': dict(
@@ -41,6 +53,15 @@ PRESETS = {
             coverage_modes=('oracle', 'pca'),
             n_seeds=2,
         ),
+        's3': dict(
+            n_models=4,
+            d_act=2,
+            d_obs=4,
+            n_queries=24,
+            noise_levels=(0.0, 0.5, 2.0),
+            coverage_modes=('oracle', 'pca'),
+            n_seeds=2,
+        ),
     },
 }
 
@@ -65,6 +86,9 @@ def run_block1_experiments(experiment, preset):
     if experiment in {'s2', 'all'}:
         results['s2'] = run_s2_query_kernel(**config['s2'])
 
+    if experiment in {'s3', 'all'}:
+        results['s3'] = run_s3_inverter_robustness(**config['s3'])
+
     return results
 
 
@@ -80,6 +104,8 @@ def save_block1_results(results, output_dir):
         _save_csv(results['s1_search'], output_dir / 's1_search.csv')
     if 's2' in results:
         _save_csv(results['s2'], output_dir / 's2_results.csv')
+    if 's3' in results:
+        _save_csv(results['s3'], output_dir / 's3_results.csv')
 
     plot_dir = output_dir / 'plots'
     save_block1_plots(
@@ -87,13 +113,14 @@ def save_block1_results(results, output_dir):
         s0_df=results.get('s0'),
         s1_summary_df=results.get('s1_summary'),
         s2_df=results.get('s2'),
+        s3_df=results.get('s3'),
     )
     return output_dir
 
 
 def main():
     parser = argparse.ArgumentParser(description='Run Block I unpaired DKPS synthetic experiments.')
-    parser.add_argument('--experiment', choices=['s0', 's1', 's2', 'all'], default='all')
+    parser.add_argument('--experiment', choices=['s0', 's1', 's2', 's3', 'all'], default='all')
     parser.add_argument('--preset', choices=sorted(PRESETS), default='paper')
     parser.add_argument('--output-dir', default=None)
     args = parser.parse_args()

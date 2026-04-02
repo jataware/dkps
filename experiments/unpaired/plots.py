@@ -18,6 +18,9 @@ ESTIMATOR_COLORS = {
     'linear_mmd': '#6b21a8',
     'coverage_adjusted_linear': '#0f766e',
     'coverage_adjusted_rbf': '#b91c1c',
+    'oracle_queries': '#0f766e',
+    'noisy_queries': '#c2410c',
+    'embedding_pca': '#1d4ed8',
 }
 
 BLOCK0_STUDIES = [
@@ -184,7 +187,51 @@ def plot_s2_results(df):
     return _finalize_figure(fig)
 
 
-def save_block1_plots(output_dir, s0_df=None, s1_summary_df=None, s2_df=None):
+def plot_s3_results(df):
+    has_spearman = 'spearman' in df.columns
+    metrics = [('mse', 'off-diagonal MSE')]
+    if has_spearman:
+        metrics.append(('spearman', 'Spearman correlation'))
+
+    coverage_modes = list(df['coverage_mode'].drop_duplicates())
+
+    n_rows = len(metrics)
+    n_cols = len(coverage_modes)
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(5.0 * n_cols, 3.8 * n_rows),
+        sharex=True,
+        squeeze=False,
+    )
+
+    for metric_idx, (metric, ylabel) in enumerate(metrics):
+        summary = _aggregate(df, ['coverage_mode', 'noise_level', 'estimator'], metric)
+        for cov_idx, coverage_mode in enumerate(coverage_modes):
+            ax = axes[metric_idx][cov_idx]
+            subset = summary[summary['coverage_mode'] == coverage_mode]
+            for estimator in subset['estimator'].drop_duplicates():
+                curve = subset[subset['estimator'] == estimator].sort_values('noise_level')
+                color = ESTIMATOR_COLORS.get(estimator, None)
+                ax.plot(curve['noise_level'], curve['mean'], marker='o', linewidth=1.5, color=color, label=estimator)
+                ax.fill_between(
+                    curve['noise_level'],
+                    curve['mean'] - curve['sem'],
+                    curve['mean'] + curve['sem'],
+                    color=color,
+                    alpha=0.18,
+                )
+            ax.set_title(f'{coverage_mode}')
+            ax.set_xlabel('inversion noise level')
+            if cov_idx == 0:
+                ax.set_ylabel(ylabel)
+            ax.legend(fontsize=8, frameon=False)
+            ax.grid(alpha=0.25, linewidth=0.6)
+
+    return _finalize_figure(fig)
+
+
+def save_block1_plots(output_dir, s0_df=None, s1_summary_df=None, s2_df=None, s3_df=None):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     saved = []
@@ -206,6 +253,13 @@ def save_block1_plots(output_dir, s0_df=None, s1_summary_df=None, s2_df=None):
     if s2_df is not None and len(s2_df):
         fig = plot_s2_results(s2_df)
         path = output_dir / 's2_mse_vs_d_sep.png'
+        fig.savefig(path, dpi=160, bbox_inches='tight')
+        plt.close(fig)
+        saved.append(path)
+
+    if s3_df is not None and len(s3_df):
+        fig = plot_s3_results(s3_df)
+        path = output_dir / 's3_mse_vs_noise.png'
         fig.savefig(path, dpi=160, bbox_inches='tight')
         plt.close(fig)
         saved.append(path)

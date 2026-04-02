@@ -12,6 +12,8 @@ def generate_synthetic_data(
         s,
         t,
         d_sep=2.0,
+        interaction_strength=0.0,
+        n_replicates=1,
         pi_paired=None,
         pi_unpaired=None,
         random_state=None,
@@ -72,6 +74,11 @@ def generate_synthetic_data(
         Separation between the two query-distribution components along the first
         active dimension. Larger values make paired and unpaired query regimes
         more distributionally distinct when `pi_paired` and `pi_unpaired` differ.
+    n_replicates : int, default=1
+        Number of independent response replicates per (model, query) pair.
+        Each replicate shares the same query vector and model offset but draws
+        independent latent-mean and observation noise.  When > 1, each row in
+        the returned DataFrame carries a `replicate_id` column.
     pi_paired : array-like of shape (2,), optional
         Mixture weights over the two query components for globally shared
         queries. Defaults to `[1.0, 0.0]`, meaning paired queries come entirely
@@ -113,6 +120,8 @@ def generate_synthetic_data(
     assert 0.0 <= alpha <= 1.0, 'alpha must be in [0, 1]'
     assert s > 0, 's must be positive'
     assert t > 0, 't must be positive'
+    assert n_replicates >= 1, 'n_replicates must be at least 1'
+    assert interaction_strength >= 0, 'interaction_strength must be non-negative'
 
     rng = np.random.default_rng(random_state)
     model_names = [f'model_{i:02d}' for i in range(n_models)]
@@ -153,22 +162,27 @@ def generate_synthetic_data(
         query_id = f'paired_{paired_idx:05d}'
 
         for model_idx, model_name in enumerate(model_names):
-            latent_mean = rng.normal(query_vec + model_offsets[model_idx], 1.0 / s, size=d_act)
-            active_response = rng.normal(latent_mean, 1.0 / t, size=d_act)
-            observation_noise = rng.normal(0.0, 1.0, size=d_obs - d_act)
-            embedding = np.hstack([active_response, observation_noise])
+            for rep in range(n_replicates):
+                signal = query_vec + model_offsets[model_idx] + interaction_strength * model_offsets[model_idx] * query_vec
+                latent_mean = rng.normal(signal, 1.0 / s, size=d_act)
+                active_response = rng.normal(latent_mean, 1.0 / t, size=d_act)
+                observation_noise = rng.normal(0.0, 1.0, size=d_obs - d_act)
+                embedding = np.hstack([active_response, observation_noise])
 
-            rows.append({
-                'model_id': model_name,
-                'model_idx': model_idx,
-                'query_id': query_id,
-                'is_paired': True,
-                'query_component': int(component),
-                'query_vec': query_vec,
-                'latent_mean_vec': latent_mean,
-                'active_response_vec': active_response,
-                'embedding': embedding,
-            })
+                row = {
+                    'model_id': model_name,
+                    'model_idx': model_idx,
+                    'query_id': query_id,
+                    'is_paired': True,
+                    'query_component': int(component),
+                    'query_vec': query_vec,
+                    'latent_mean_vec': latent_mean,
+                    'active_response_vec': active_response,
+                    'embedding': embedding,
+                }
+                if n_replicates > 1:
+                    row['replicate_id'] = rep
+                rows.append(row)
 
     for model_idx, model_name in enumerate(model_names):
         for unpaired_idx in range(n_unpaired):
@@ -176,36 +190,60 @@ def generate_synthetic_data(
             query_vec = rng.multivariate_normal(mu_components[component], np.eye(d_act))
             query_id = f'{model_name}_unpaired_{unpaired_idx:05d}'
 
-            latent_mean = rng.normal(query_vec + model_offsets[model_idx], 1.0 / s, size=d_act)
-            active_response = rng.normal(latent_mean, 1.0 / t, size=d_act)
-            observation_noise = rng.normal(0.0, 1.0, size=d_obs - d_act)
-            embedding = np.hstack([active_response, observation_noise])
+            for rep in range(n_replicates):
+                signal = query_vec + model_offsets[model_idx] + interaction_strength * model_offsets[model_idx] * query_vec
+                latent_mean = rng.normal(signal, 1.0 / s, size=d_act)
+                active_response = rng.normal(latent_mean, 1.0 / t, size=d_act)
+                observation_noise = rng.normal(0.0, 1.0, size=d_obs - d_act)
+                embedding = np.hstack([active_response, observation_noise])
 
-            rows.append({
-                'model_id': model_name,
-                'model_idx': model_idx,
-                'query_id': query_id,
-                'is_paired': False,
-                'query_component': int(component),
-                'query_vec': query_vec,
-                'latent_mean_vec': latent_mean,
-                'active_response_vec': active_response,
-                'embedding': embedding,
-            })
+                row = {
+                    'model_id': model_name,
+                    'model_idx': model_idx,
+                    'query_id': query_id,
+                    'is_paired': False,
+                    'query_component': int(component),
+                    'query_vec': query_vec,
+                    'latent_mean_vec': latent_mean,
+                    'active_response_vec': active_response,
+                    'embedding': embedding,
+                }
+                if n_replicates > 1:
+                    row['replicate_id'] = rep
+                rows.append(row)
 
     data = pd.DataFrame(rows)
     data = data.sort_values(['model_id', 'query_id']).reset_index(drop=True)
-    dist_gt = squareform(pdist(model_offsets))
+
+    # Ground truth: ||mu_i - mu_k|| where mu_i = E_q[f_i(q)].
+    # With the interaction model f_i(q) = q + v_i + gamma * v_i * q,
+    # mu_i = E[q] + v_i + gamma * v_i * E[q] = E[q](1 + gamma*v_i) + v_i.
+    # The mixture mean is E[q] = pi_paired * ... but for GT we use the
+    # reference distribution; with balanced pi=[0.5,0.5] or d_sep=0,
+    # E[q]=0 and mu_i = v_i. In general we compute it from the components.
+    eq = pi_paired[0] * mu_components[0] + pi_paired[1] * mu_components[1]
+    # Use the average of paired and unpaired mixture weights as reference
+    # (when they differ, the "population" query distribution is ambiguous;
+    # using the overall mixture is a reasonable default).
+    eq_ref = 0.5 * (pi_paired[0] + pi_unpaired[0]) * mu_components[0] + \
+             0.5 * (pi_paired[1] + pi_unpaired[1]) * mu_components[1]
+    mean_responses = np.array([
+        eq_ref + v + interaction_strength * v * eq_ref
+        for v in model_offsets
+    ])
+    dist_gt = squareform(pdist(mean_responses))
 
     metadata = {
         'd_act': d_act,
         'd_obs': d_obs,
         'n_models': n_models,
         'n_queries': n_queries,
+        'n_replicates': n_replicates,
         'alpha_requested': alpha,
         'alpha_actual': n_paired / n_queries,
         'n_paired': n_paired,
         'n_unpaired': n_unpaired,
+        'interaction_strength': interaction_strength,
         's': s,
         't': t,
         'd_sep': d_sep,

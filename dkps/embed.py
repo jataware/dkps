@@ -144,7 +144,6 @@ class HuggingFaceClient:
             raise Exception("HF_TOKEN is not set")
 
         result     = self.client.feature_extraction(input_data[0], model=model)
-        print(result.shape)
         embeddings = [np.array(x) for x in result]
         return np.array(embeddings)
 
@@ -170,11 +169,7 @@ class SentenceTransformersClient:
 
     def embed(self, input_data, model):
         st_model = self._get_model(model)
-        try:
-            embeddings = st_model.encode(input_data, convert_to_numpy=True)
-        except Exception as e:
-            breakpoint()
-        
+        embeddings = st_model.encode(input_data, convert_to_numpy=True)
         return embeddings
 
 @disk_cache(cache_dir="./.cache/embed/sentence_transformers", verbose=False, ignore_fields=['client'])
