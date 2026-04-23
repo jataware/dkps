@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PRESET="quick"
+PRESET="paper"
 OUTDIR="./results/${PRESET}"
 
 python -m experiments.unpaired.run_block1 --experiment s0 --preset "${PRESET}" --output-dir "${OUTDIR}/s0"
