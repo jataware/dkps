@@ -15,11 +15,17 @@ def onehot_embedding(df, dataset):
         df['embedding'] = embeddings.tolist()
 
     elif 'legalbench' in dataset:
-        # slightly different - bad values get mapped to 0
-        n_levels   = len(df.response.unique())
+        # Map response strings to integer indices; unrecognized values get index 0
+        unique_responses = sorted(set(
+            r.strip().lower() for r in df.response.values if isinstance(r, str)
+        ))
+        lookup = {r: i + 1 for i, r in enumerate(unique_responses)}
+        n_levels = len(lookup) + 1  # +1 for the 0 (unrecognized) bucket
+
         embeddings = np.zeros((len(df), n_levels))
         for i, xx in enumerate(df.response.values):
-            embeddings[i, xx] = 1
+            idx = lookup.get(xx.strip().lower(), 0) if isinstance(xx, str) else xx
+            embeddings[i, idx] = 1
 
         df['embedding'] = embeddings.tolist()
     else:
