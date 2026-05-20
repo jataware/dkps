@@ -56,10 +56,14 @@ EMBED_DIR = _exp_path.parts[0]  # e.g., 'embed-google' or 'embed-local-onehot'
 # --
 # Load results
 
-# tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-202603-modelvar.tsv'))
-tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-202603.tsv'))
+# <<
+# for multiple seeds
+tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-202603-modelvar.tsv'))
+# --
+# for other results
+# tsv_paths = list(RESULTS_DIR.glob(f'{EMBED_DIR}/**/{RUNNER}/results-202603.tsv'))
 rprint(f'[green]Found {len(tsv_paths)} result files for {EMBED_DIR}[/green]')
-
+# >>
 
 def parse_path(path: Path) -> dict:
     """Parse result path to extract experiment metadata.
@@ -111,47 +115,50 @@ for p_col in pred_cols:
 
 print(df.columns)
 
+# <<
 p_lr_dkps = df[DKPS_COL]
 df['p_interp'] = (df.n_samples * df.p_sample + (128 - df.n_samples) * p_lr_dkps) / 128
 df['e_interp'] = np.abs(df.p_interp - df.y_act)
 
-for alpha in np.linspace(0, 1, 11):
-    df[f'p_interp_alpha={alpha:.1f}'] = (alpha * df.p_sample + (1 - alpha) * p_lr_dkps)
-    df[f'e_interp_alpha={alpha:.1f}'] = np.abs(df[f'p_interp_alpha={alpha:.1f}'] - df.y_act)
+# for alpha in np.linspace(0, 1, 11):
+#     df[f'p_interp_alpha={alpha:.1f}'] = (alpha * df.p_sample + (1 - alpha) * p_lr_dkps)
+#     df[f'e_interp_alpha={alpha:.1f}'] = np.abs(df[f'p_interp_alpha={alpha:.1f}'] - df.y_act)
 
-for _n_cmp in [32]:
-    c = f'p_lr_dkps__n_components_cmds={_n_cmp}__n_models={args.n_models}'
-    df[f'p_interp_n_components_cmds={_n_cmp}'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df[c]) / df.n_dataset_split
-    df[f'e_interp_n_components_cmds={_n_cmp}'] = np.abs(df[f'p_interp_n_components_cmds={_n_cmp}'] - df.y_act)
+# for _n_cmp in [32]:
+#     c = f'p_lr_dkps__n_components_cmds={_n_cmp}__n_models={args.n_models}'
+#     df[f'p_interp_n_components_cmds={_n_cmp}'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df[c]) / df.n_dataset_split
+#     df[f'e_interp_n_components_cmds={_n_cmp}'] = np.abs(df[f'p_interp_n_components_cmds={_n_cmp}'] - df.y_act)
 
-df['p_interp_knn1'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn1_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
-df['e_interp_knn1'] = np.abs(df['p_interp_knn1'] - df.y_act)
+# df['p_interp_knn1'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn1_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
+# df['e_interp_knn1'] = np.abs(df['p_interp_knn1'] - df.y_act)
 
-df['p_interp_knn9'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn9_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
-df['e_interp_knn9'] = np.abs(df['p_interp_knn9'] - df.y_act)
+# df['p_interp_knn9'] = (df.n_samples * df.p_sample + (df.n_dataset_split - df.n_samples) * df['p_knn9_dkps__n_components_cmds=8__n_models=ALL']) / df.n_dataset_split
+# df['e_interp_knn9'] = np.abs(df['p_interp_knn9'] - df.y_act)
 
+# --
 
 # Alias for convenience
 df['p_lr_dkps'] = df[DKPS_COL]
 df['e_lr_dkps'] = np.abs(df['p_lr_dkps'] - df.y_act)
 
-# per_model = df.groupby(['dataset', 'split', 'target_model', 'seed']).agg({
-#     'e_sample': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
-#     'e_lr_dkps': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
-#     'e_interp': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
-# })
+per_model = df.groupby(['dataset', 'split', 'target_model', 'seed']).agg({
+    'e_sample': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
+    'e_lr_dkps': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
+    'e_interp': ['min', lambda x: x.quantile(0.25), 'median', lambda x: x.quantile(0.75), 'max'],
+})
 
-# # Fix column names (flatten multi-index and rename lambda columns)
-# per_model.columns = [f'{col[0]}_{col[1]}' if col[1] != '<lambda_0>' else f'{col[0]}_q25'  for col in per_model.columns]
-# per_model.columns = [c.replace('<lambda_1>', 'q75') for c in per_model.columns]
+# Fix column names (flatten multi-index and rename lambda columns)
+per_model.columns = [f'{col[0]}_{col[1]}' if col[1] != '<lambda_0>' else f'{col[0]}_q25'  for col in per_model.columns]
+per_model.columns = [c.replace('<lambda_1>', 'q75') for c in per_model.columns]
 
-# # Average over models
-# model_avg = per_model.groupby(['dataset', 'split', 'seed']).mean()
-# model_avg = model_avg.sort_values(['dataset', 'split', 'e_sample_median'])
-# model_avg = model_avg.reset_index()
+# Average over models
+model_avg = per_model.groupby(['dataset', 'split', 'seed']).mean()
+model_avg = model_avg.sort_values(['dataset', 'split', 'e_sample_median'])
+model_avg = model_avg.reset_index()
 
-# print(model_avg)
-# raise Exception('Stop here')
+print(model_avg)
+raise Exception('Stop here')
+# >>
 
 
 
