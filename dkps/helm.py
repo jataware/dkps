@@ -59,6 +59,47 @@ def uses_onehot(dataset):
     return any(dataset.startswith(d) for d in ONEHOT_DATASETS)
 
 
+LEGALBENCH_UNRECOGNIZED = '__unrecognized__'
+
+
+def clean_legalbench_answer(text):
+    """Normalize a free-text legalbench answer: lowercase, strip whitespace and a
+    trailing period, and drop a leading 'function:'/'answer:'/'label:' prefix."""
+    text = str(text).lower().strip().rstrip('.')
+    for prefix in ('function: ', 'answer: ', 'label: '):
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
+def prepare_responses(df, dataset, references=None):
+    """Dataset-specific normalization of the `response` column prior to embedding.
+
+    legalbench: collapse free-text model answers onto the gold label class space.
+    `references` is a sequence of HELM instance `references` entries; the gold
+    labels are their distinct correct-answer strings. A response that does not
+    clean to a gold label collapses to a single 'unrecognized' class. Without
+    this, onehot_embedding builds a class space from every distinct raw response.
+
+    Other datasets: returned unchanged.
+    """
+    if not dataset.startswith('legalbench'):
+        return df
+
+    if references is None:
+        raise ValueError("legalbench response prep requires `references`")
+
+    gold = {str(refs[0]['output']['text']).strip().lower() for refs in references}
+
+    def to_class(response):
+        cleaned = clean_legalbench_answer(response)
+        return cleaned if cleaned in gold else LEGALBENCH_UNRECOGNIZED
+
+    df = df.copy()
+    df['response'] = df['response'].map(to_class)
+    return df
+
+
 def compute_embeddings(df, dataset, embed_provider=None, embed_model=None):
     if uses_onehot(dataset):
         return onehot_embedding(df, dataset)

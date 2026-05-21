@@ -5,20 +5,7 @@
 import pandas as pd
 from tqdm import tqdm
 
-def _clean_answer(x):
-    x = x.lower().strip().rstrip('.')
-    
-    prefixes = [
-        "function: ",
-        "answer: ",
-        "label: ",
-    ]
-    for p in prefixes:
-        if x.startswith(p):
-            x = x[len(p):]
-            break
-    
-    return x
+from dkps.helm import clean_legalbench_answer
 
 class LegalBenchParser:
     @staticmethod
@@ -32,7 +19,7 @@ class LegalBenchParser:
             **_params,
             "instance_id" : _params['dataset'] + '--' + x['instance']['id'],
             "query"       : x['request']['prompt'],
-            "response"    : choices2idx.get(_clean_answer(x['result']['completions'][0]['text'].strip()), 0),
+            "response"    : choices2idx.get(clean_legalbench_answer(x['result']['completions'][0]['text']), 0),
             "target"      : x['instance']['references'][0]['output']['text'],
             "score"       : id2score[x['instance']['id']],
         } for x in run['request_states']])
