@@ -157,6 +157,16 @@ async def _aembed_huggingface_chunk(chunk_id, client, chunk, model):
 
 # Sentence Transformers (local)
 class SentenceTransformersClient:
+    """Local embedding via sentence-transformers.
+
+    Asymmetric models (e.g. nomic-embed-text-v2-moe) define named prompts and
+    require one to be applied at encode time. DKPS embeds model responses as
+    documents, so we encode with the 'passage' prompt whenever the model
+    defines it; symmetric models (e.g. all-MiniLM-L6-v2) define no prompts and
+    are encoded plain.
+    """
+    PASSAGE_PROMPT = 'passage'
+
     def __init__(self, model=None):
         self.model_name = model
         self._model = None
@@ -170,12 +180,10 @@ class SentenceTransformersClient:
 
     def embed(self, input_data, model):
         st_model = self._get_model(model)
-        try:
-            embeddings = st_model.encode(input_data, convert_to_numpy=True)
-        except Exception as e:
-            breakpoint()
-        
-        return embeddings
+        encode_kwargs = {'convert_to_numpy': True}
+        if self.PASSAGE_PROMPT in (getattr(st_model, 'prompts', None) or {}):
+            encode_kwargs['prompt_name'] = self.PASSAGE_PROMPT
+        return st_model.encode(input_data, **encode_kwargs)
 
 @disk_cache(cache_dir="./.cache/embed/sentence_transformers", verbose=False, ignore_fields=['client'])
 async def _aembed_sentence_transformers_chunk(chunk_id, client, chunk, model):
