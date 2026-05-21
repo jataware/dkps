@@ -239,6 +239,11 @@ async def _aembed_api(provider, input_strs, chunk_size=50, max_concurrency=5, mo
         _aembed_chunk = _aembed_sentence_transformers_chunk
         if model is None:
             model = 'all-MiniLM-L6-v2'
+        # Local model: one shared SentenceTransformer instance. Encode chunks
+        # serially -- concurrent encodes multiply peak memory (OOM on MoE
+        # models like nomic-embed-text-v2-moe) and don't speed up a
+        # compute-bound local model, which already batches within encode().
+        max_concurrency = 1
 
     else:
         raise Exception(f"Unknown provider: {provider}")
