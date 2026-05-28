@@ -29,4 +29,4 @@ python run_baselines.py --dataset "wmt_14:language_pair=fr-en" --score_col meteo
 python run_baselines.py --dataset "wmt_14:language_pair=hi-en" --score_col meteor --sample 0.2
                                                                                                                                     
 # MedQA
-python run_baselines.py --dataset "med_qa"
+python run_baselines.py --dataset "med_qa" --n_lofo 10

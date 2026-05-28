@@ -27,6 +27,45 @@ def parse_parent_dataset(dataset):
     return dataset
 
 
+# Number of instances per split (used to weight cross-split aggregation).
+SPLIT_WEIGHTS = {
+    'legalbench-subset=international_citizenship_questions': 1000,
+    'legalbench-subset=corporate_lobbying':                   490,
+    'legalbench-subset=function_of_decision_section':         367,
+    'legalbench-subset=abercrombie':                           95,
+    'legalbench-subset=proa':                                  95,
+    'math-subject=algebra':                                   135,
+    'math-subject=prealgebra':                                 86,
+    'math-subject=precalculus':                                57,
+    'math-subject=intermediate_algebra':                       52,
+    'math-subject=counting_and_probability':                   39,
+    'math-subject=geometry':                                   38,
+    'math-subject=number_theory':                              30,
+    'wmt_14-language_pair=cs-en':                             873,
+    'wmt_14-language_pair=de-en':                             776,
+    'wmt_14-language_pair=fr-en':                             754,
+    'wmt_14-language_pair=ru-en':                             613,
+    'wmt_14-language_pair=hi-en':                             387,
+    'med_qa':                                                1000,
+}
+
+
+def weighted_mean_by(df, group_cols, value_cols, weight_col):
+    """Group `df` by `group_cols` and take weight_col-weighted mean of value_cols."""
+    out = []
+    for keys, g in df.groupby(group_cols):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        w = g[weight_col].to_numpy(dtype=float)
+        wsum = w.sum()
+        row = dict(zip(group_cols, keys))
+        for c in value_cols:
+            v = g[c].to_numpy(dtype=float)
+            row[c] = (v * w).sum() / wsum if wsum > 0 else float('nan')
+        out.append(row)
+    return pd.DataFrame(out)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Generate tables from baseline + combined results')
     parser.add_argument('--baselines_dir', type=str, default='results-baselines')
@@ -229,18 +268,8 @@ if len(df_base) and len(df_comb):
     tab_all.to_csv(outpath, sep='\t', index=False)
     rprint(f'[green]Saved to {outpath}[/green]')
 
-    # --
-    # Grand average across datasets (for each n_samples)
-
-    rprint('\n[bold cyan]Grand average across datasets:[/bold cyan]')
-    method_cols = ['Pop. Mean', 'Sample', 'IRT', 'APW', 'APW->DKPS', 'DKPS', 'DKPS+IRT', 'Ens(DKPS)', 'Ens(DKPS+IRT)']
-    existing_cols = [c for c in method_cols if c in tab_all.columns]
-    grand_avg = tab_all.groupby('n_samples')[existing_cols].mean().reset_index()
-    print(grand_avg)
-
-    outpath = TABLES_DIR / 'table-all-methods-grand_avg.tsv'
-    grand_avg.to_csv(outpath, sep='\t', index=False)
-    rprint(f'[green]Saved to {outpath}[/green]')
+    # Grand average is computed after Table 4 below, so it can be derived from
+    # the (weighted) parent-level table.
 
 # ==============================================================================
 # Table 4: Aggregated by parent dataset (math, legalbench, wmt_14, med_qa)
@@ -258,15 +287,32 @@ if len(df_comb):
         tab_src = tab_comb.copy()
 
     tab_src['parent_dataset'] = tab_src['dataset'].apply(parse_parent_dataset)
+    tab_src['_weight'] = tab_src['dataset'].map(SPLIT_WEIGHTS)
+
+    missing_w = tab_src[tab_src['_weight'].isna()].dataset.unique()
+    if len(missing_w):
+        rprint(f'[yellow]WARN: no SPLIT_WEIGHTS entry for: {list(missing_w)} — falling back to weight=1[/yellow]')
+        tab_src['_weight'] = tab_src['_weight'].fillna(1.0)
 
     existing_cols = [c for c in METHOD_COLS if c in tab_src.columns]
-    tab_parent = tab_src.groupby(['parent_dataset', 'n_samples'])[existing_cols].mean().reset_index()
+    tab_parent = weighted_mean_by(tab_src, ['parent_dataset', 'n_samples'], existing_cols, '_weight')
     tab_parent = tab_parent.sort_values(['parent_dataset', 'n_samples'])
 
     print(tab_parent)
 
     outpath = TABLES_DIR / 'table-all-methods-by_parent_dataset.tsv'
     tab_parent.to_csv(outpath, sep='\t', index=False)
+    rprint(f'[green]Saved to {outpath}[/green]')
+
+    # --
+    # Grand average across parent datasets (equal-weight per dataset).
+    # Splits within a parent are already weighted by sample count above.
+    rprint('\n[bold cyan]Grand average across datasets (parent-level mean):[/bold cyan]')
+    grand_avg = tab_parent.groupby('n_samples')[existing_cols].mean().reset_index()
+    print(grand_avg)
+
+    outpath = TABLES_DIR / 'table-all-methods-grand_avg.tsv'
+    grand_avg.to_csv(outpath, sep='\t', index=False)
     rprint(f'[green]Saved to {outpath}[/green]')
 
 # ==============================================================================

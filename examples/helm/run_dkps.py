@@ -64,7 +64,7 @@ def parse_args():
     args.inpath  = Path('data') / f'{args.dataset.split(":")[0]}.tsv'
     
     exp_path = make_experiment_path(args.embed_provider, args.embed_model, args.dataset, args.score_col, args.n_replicates)
-    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results-202603-modelvar.tsv'
+    args.outpath = Path(args.outdir) / exp_path / args.runner / 'results-202605.tsv'
     args.outpath.parent.mkdir(parents=True, exist_ok=True)
 
     rprint(f'[blue]outpath: {args.outpath}[/blue]')
@@ -160,51 +160,51 @@ pred_null = {mode: predict_null(df, mode=mode) for mode in modes}
 
 runner_kwargs = runner.setup(df, model_names, args)
 
-# jobs = []
-# for iter in trange(args.n_replicates):
-#     rng = np.random.default_rng(iter)
-#     # >>
-#     # for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
-#     # --
-#     for n_samples in [1, 2, 4, 8, 16, 32, 64, 128]:
-#     # <<
-#         if n_samples > len(instance_ids):
-#             continue
-            
-#         instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
-#         df_sample           = df[df.instance_id.isin(instance_ids_sample)]
-        
-#         jobs.append(delayed(runner.run_one)(
-#             df_sample    = df_sample,
-#             n_samples    = n_samples,
-#             mode         = 'family',
-#             seed         = iter,
-#             y_acts       = y_acts,
-#             pred_null    = pred_null,
-#             **runner_kwargs
-#         ))
-
-n_data_seeds  = 10
-n_model_seeds = 100
-n_samples = 5
-
 jobs = []
-for data_seed in trange(n_data_seeds):
-    rng = np.random.default_rng(data_seed)
-    instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
-    
-    for model_seed in trange(n_model_seeds):
-        df_sample = df[df.instance_id.isin(instance_ids_sample)]
+for iter in trange(args.n_replicates):
+    rng = np.random.default_rng(iter)
+    # >>
+    # for n_samples in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, len(instance_ids)]:
+    # --
+    for n_samples in [1]:#, 2, 4, 8, 16, 32, 64, 128]:
+    # <<
+        if n_samples > len(instance_ids):
+            continue
+            
+        instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+        df_sample           = df[df.instance_id.isin(instance_ids_sample)]
         
         jobs.append(delayed(runner.run_one)(
             df_sample    = df_sample,
             n_samples    = n_samples,
             mode         = 'family',
-            seed         = data_seed,
+            seed         = iter,
             y_acts       = y_acts,
             pred_null    = pred_null,
             **runner_kwargs
         ))
+
+# n_data_seeds  = 10
+# n_model_seeds = 100
+# n_samples = 5
+
+# jobs = []
+# for data_seed in trange(n_data_seeds):
+#     rng = np.random.default_rng(data_seed)
+#     instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+    
+#     for model_seed in trange(n_model_seeds):
+#         df_sample = df[df.instance_id.isin(instance_ids_sample)]
+        
+#         jobs.append(delayed(runner.run_one)(
+#             df_sample    = df_sample,
+#             n_samples    = n_samples,
+#             mode         = 'family',
+#             seed         = data_seed,
+#             y_acts       = y_acts,
+#             pred_null    = pred_null,
+#             **runner_kwargs
+#         ))
 
 jobs   = [jobs[i] for i in np.random.permutation(len(jobs))]
 res    = sum(Parallel(backend='loky', n_jobs=args.n_jobs, verbose=10)(jobs), [])
@@ -225,14 +225,14 @@ for c in dkps_cols:
 df_res.to_csv(args.outpath, sep='\t', index=False)
 
 
-data_seed = 0
-rng = np.random.default_rng(data_seed)
-instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
-df_sample = df[df.instance_id.isin(instance_ids_sample)]
-for replicate in range(100):
-    for target_model in model_names:
-        train_models = sample(model_names, 20)
-        # ... do DKPS and compute error...
+# data_seed = 0
+# rng = np.random.default_rng(data_seed)
+# instance_ids_sample = rng.choice(instance_ids, size=n_samples, replace=False)
+# df_sample = df[df.instance_id.isin(instance_ids_sample)]
+# for replicate in range(100):
+#     for target_model in model_names:
+#         train_models = sample(model_names, 20)
+#         # ... do DKPS and compute error...
 
-# groupby target model and compute [0, 25, 50, 75, 100] percentile error across replicates
-# then average across models
+# # groupby target model and compute [0, 25, 50, 75, 100] percentile error across replicates
+# # then average across models

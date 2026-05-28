@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--embed_provider', type=str, default='google')
     parser.add_argument('--embed_model',    type=str, default=None)
     parser.add_argument('--sample',         type=float, default=None)
-    parser.add_argument('--n_lofo',         type=int, default=256)
+    parser.add_argument('--n_lofo',         type=int, default=20)
     parser.add_argument('--n_samples',      type=int, nargs='+', default=[1, 4, 16, 64])
     parser.add_argument('--n_components',   type=int, default=8)
     parser.add_argument('--outdir',         type=str, default='results-combined')
@@ -82,15 +82,13 @@ def build_embedding_dict(df, model_names, instance_ids, query_mask):
     return emb_dict
 
 
-def run_one_lofo(lofo_seed, S, S_bin, df, model_names, instance_ids,
-                 families, family_list, n_samples_list, n_components,
+def run_one_lofo(lofo_seed, heldout_family, S, S_bin, df, model_names,
+                 instance_ids, families, n_samples_list, n_components,
                  is_wmt):
     rng = np.random.default_rng(lofo_seed)
     n_models, M = S.shape
 
-    # sample held-out family
-    heldout_family = rng.choice(family_list)
-    heldout_mask   = np.array([f == heldout_family for f in families])
+    heldout_mask = np.array([f == heldout_family for f in families])
     ref_mask       = ~heldout_mask
     ref_idx        = np.where(ref_mask)[0]
     heldout_idx    = np.where(heldout_mask)[0]
@@ -139,8 +137,9 @@ def run_one_lofo(lofo_seed, S, S_bin, df, model_names, instance_ids,
                 p_null = float(y_true[ref_idx].mean())
                 p_sample = float(S[hi, qidx].mean())
 
-                # DKPS: embed reference + target
-                models_for_dkps = ref_model_names + [target_model]
+                # DKPS: embed reference + target (shuffle to avoid CMDS ordering artifacts)
+                models_for_dkps = list(ref_model_names) + [target_model]
+                np.random.default_rng(lofo_seed).shuffle(models_for_dkps)
                 emb_dict = build_embedding_dict(df, models_for_dkps,
                                                 instance_ids, qmask)
 
@@ -256,17 +255,17 @@ def main():
     else:
         S_bin = S.copy()
 
-    # -- Run LOFO --
-    jobs = [
-        delayed(run_one_lofo)(
-            seed, S, S_bin, df, model_names, instance_ids,
-            families, family_list, args.n_samples, args.n_components,
-            is_wmt,
-        )
-        for seed in range(args.n_lofo)
-    ]
+    # -- Run LOFO (deterministic: iterate over all families × n_lofo seeds) --
+    jobs = []
+    for heldout_family in family_list:
+        for seed in range(args.n_lofo):
+            jobs.append(delayed(run_one_lofo)(
+                seed, heldout_family, S, S_bin, df, model_names,
+                instance_ids, families, args.n_samples, args.n_components,
+                is_wmt,
+            ))
 
-    rprint(f'[blue]Running {len(jobs)} LOFO iterations ...[/blue]')
+    rprint(f'[blue]Running {len(jobs)} LOFO iterations ({len(family_list)} families x {args.n_lofo} seeds) ...[/blue]')
     all_results = Parallel(n_jobs=args.n_jobs, verbose=10)(jobs)
     res = sum(all_results, [])
 

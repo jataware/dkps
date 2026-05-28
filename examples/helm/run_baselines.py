@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument('--score_col',    type=str, default='score')
     parser.add_argument('--sample',       type=float, default=None,
                         help='Subsample fraction of instances (for WMT)')
-    parser.add_argument('--n_lofo',       type=int, default=256)
+    parser.add_argument('--n_lofo',       type=int, default=20)
     parser.add_argument('--n_samples',    type=int, nargs='+', default=[1, 4, 16, 64])
     parser.add_argument('--outdir',       type=str, default='results-baselines')
     parser.add_argument('--n_jobs',       type=int, default=-1)
@@ -68,18 +68,15 @@ def build_score_matrix(df, model_names, instance_ids, score_col='score'):
     return S
 
 
-def run_one_lofo(lofo_seed, S, model_names, families, family_list,
+def run_one_lofo(lofo_seed, heldout_family, S, model_names, families,
                  n_samples_list, is_wmt):
     """
-    One LOFO iteration: sample a held-out family, fit baselines, predict.
+    One LOFO iteration for a specific held-out family.
     """
     rng = np.random.default_rng(lofo_seed)
     n_models, M = S.shape
-    t0 = time.time()
 
-    # sample held-out family
-    heldout_family = rng.choice(family_list)
-    heldout_mask   = np.array([f == heldout_family for f in families])
+    heldout_mask = np.array([f == heldout_family for f in families])
     ref_mask       = ~heldout_mask
 
     ref_idx     = np.where(ref_mask)[0]
@@ -222,15 +219,16 @@ def main():
     S = build_score_matrix(df, model_names, instance_ids)
     rprint(f'[green]Score matrix: {S.shape}[/green]')
 
-    # -- run LOFO --
+    # -- run LOFO (deterministic: iterate over all families × n_lofo seeds) --
     jobs = []
-    for lofo_seed in range(args.n_lofo):
-        jobs.append(delayed(run_one_lofo)(
-            lofo_seed, S, model_names, families, family_list,
-            args.n_samples, is_wmt,
-        ))
+    for heldout_family in family_list:
+        for lofo_seed in range(args.n_lofo):
+            jobs.append(delayed(run_one_lofo)(
+                lofo_seed, heldout_family, S, model_names, families,
+                args.n_samples, is_wmt,
+            ))
 
-    rprint(f'[blue]Running {len(jobs)} LOFO iterations ...[/blue]')
+    rprint(f'[blue]Running {len(jobs)} LOFO iterations ({len(family_list)} families x {args.n_lofo} seeds) ...[/blue]')
     all_results = Parallel(n_jobs=args.n_jobs, verbose=10)(jobs)
     res = sum(all_results, [])
 

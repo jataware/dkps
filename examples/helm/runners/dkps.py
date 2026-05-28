@@ -46,13 +46,16 @@ def run_one(df_sample, n_samples, mode, seed, y_acts, pred_null, **kwargs):
         # for n_components_cmds in [8]:
             # for n_models in [20, 50, len(train_models)]:
             # for n_models in [len(train_models)]:
-            for n_models in [20]:
-                _train_models = np.random.choice(train_models, size=n_models, replace=False)
+            for n_models in [len(train_models)]:
+                rng = np.random.default_rng(seed)
+                _train_models = rng.choice(train_models, size=n_models, replace=False)
 
                 # --
                 # dkps w/ target model
 
-                _embedding_dict = {k:embedding_dict[k] for k in (set(_train_models) | set([target_model]))}
+                _all_models = list(_train_models) + [target_model]
+                rng.shuffle(_all_models)
+                _embedding_dict = {k:embedding_dict[k] for k in _all_models}
                 P = DKPS(n_components_cmds=n_components_cmds)
                 P = P.fit_transform(_embedding_dict, return_dict=True)
                 

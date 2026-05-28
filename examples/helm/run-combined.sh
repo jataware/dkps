@@ -17,11 +17,11 @@ python run_combined.py --dataset "math:subject=prealgebra"                 --emb
 python run_combined.py --dataset "math:subject=precalculus"                --embed_provider google
 
 # LegalBench
-python run_combined.py --dataset "legalbench:subset=abercrombie"                       --embed_model onehot
+python run_combined.py --dataset "legalbench:subset=abercrombie"                         --embed_model onehot
 python run_combined.py --dataset "legalbench:subset=international_citizenship_questions" --embed_model onehot
-python run_combined.py --dataset "legalbench:subset=corporate_lobbying"                 --embed_model onehot
-python run_combined.py --dataset "legalbench:subset=function_of_decision_section"       --embed_model onehot
-python run_combined.py --dataset "legalbench:subset=proa"                               --embed_model onehot
+python run_combined.py --dataset "legalbench:subset=corporate_lobbying"                  --embed_model onehot
+python run_combined.py --dataset "legalbench:subset=function_of_decision_section"        --embed_model onehot
+python run_combined.py --dataset "legalbench:subset=proa"                                --embed_model onehot
 
 # MedQA
 python run_combined.py --dataset "med_qa" --embed_model onehot
