@@ -1,21 +1,26 @@
-from .block1 import offdiag_mse, run_s0_synthetic, run_s1_exchange_rate, run_s2_query_kernel, run_s3_inverter_robustness
-from .plots import (
-    plot_s0_results,
-    plot_s1_results,
-    plot_s2_results,
-    plot_s3_results,
-    save_block1_plots,
+from .block1 import (
+    ESTIMATORS,
+    predict_scores_knn,
+    evaluate_predictions,
+    run_exp_n_models,
+    run_exp_n_tasks,
+    run_exp_task_parity,
+    run_exp_query_sparsity,
+    run_exp_task_spread,
+    run_exp_noise_x_queries,
 )
+from .plots import plot_figure, save_figure
 
 __all__ = [
-    'offdiag_mse',
-    'run_s0_synthetic',
-    'run_s1_exchange_rate',
-    'run_s2_query_kernel',
-    'run_s3_inverter_robustness',
-    'plot_s0_results',
-    'plot_s1_results',
-    'plot_s2_results',
-    'plot_s3_results',
-    'save_block1_plots',
+    'ESTIMATORS',
+    'predict_scores_knn',
+    'evaluate_predictions',
+    'run_exp_n_models',
+    'run_exp_n_tasks',
+    'run_exp_task_parity',
+    'run_exp_query_sparsity',
+    'run_exp_n_queries',
+    'run_exp_noise_x_queries',
+    'plot_figure',
+    'save_figure',
 ]

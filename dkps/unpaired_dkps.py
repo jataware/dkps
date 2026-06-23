@@ -1,564 +1,217 @@
-import warnings
-
 import numpy as np
 import pandas as pd
-from graspologic.embed import ClassicalMDS, select_dimension
-from scipy.spatial.distance import cdist, pdist
-from sklearn.decomposition import PCA
-from sklearn.neighbors import KernelDensity
+from scipy.spatial.distance import pdist, cdist
+from graspologic.embed import ClassicalMDS
 
 
-class UnpairedDKPS:
+class DoubleKernelDKPS:
+    """
+    Double-kernel DKPS: extends DKPS to partially-observed (model x query) designs.
+
+    Uses a product kernel k_Q * k_R where k_Q weights response comparisons by
+    query similarity. Reduces to standard paired DKPS when query_kernel='delta'
+    and all models share the same queries.
+
+    For each model pair (i, k):
+
+        D^2(i,k) = A_ii + A_kk - 2 * A_ik
+
+        A_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l) * k_R(x_aj, x_bl) / Z_ab
+
+    where Z_ab = sum k_Q(q_j, q_l) is the query kernel mass.
+
+    Parameters
+    ----------
+    query_kernel : str or callable
+        'rbf' (default) — RBF kernel on query embeddings.
+        'delta' — 1 if same query_id, 0 otherwise. Recovers standard paired DKPS.
+        callable(Q_a, Q_b) -> (n_a, n_b) matrix.
+    response_kernel : str or callable
+        'linear' (default) — dot product on response embeddings.
+        'rbf' — RBF kernel.
+        callable(X_a, X_b) -> (n_a, n_b) matrix.
+    query_bandwidth : float or 'median'
+        Bandwidth for RBF query kernel.
+    response_bandwidth : float or 'median'
+        Bandwidth for RBF response kernel.
+    task_filter : str or None
+        None (default) — use all queries.
+        'shared' — restrict to queries from tasks shared by both models.
+        'unshared' — restrict to queries from tasks unique to each model.
+        Requires task_id column in data.
+    n_components_cmds : int or None
+        Embedding dimension for ClassicalMDS.
+    n_elbows_cmds : int
+        Number of elbows for automatic dimension selection.
+    """
+
     def __init__(
-            self,
-            mode='combined',
-            query_kernel='constant',
-            use_coverage=False,
-            coverage_mode='oracle',
-            paired_weight=None,
-            query_bandwidth='median',
-            coverage_bandwidth='scott',
-            coverage_pca_components=None,
-            query_imputation=None,
-            n_components_cmds=None,
-            n_elbows_cmds=2,
-            dissimilarity="precomputed",
-        ):
-
-        assert mode in {'paired', 'unpaired', 'combined', 'pooled'}, \
-            "mode must be one of {'paired', 'unpaired', 'combined', 'pooled'}"
-        assert query_kernel in {'constant', 'rbf'}, \
-            "query_kernel must be one of {'constant', 'rbf'}"
-        assert coverage_mode in {'oracle', 'pca'}, \
-            "coverage_mode must be one of {'oracle', 'pca'}"
-        if paired_weight is not None:
-            assert 0.0 <= paired_weight <= 1.0, 'paired_weight must be in [0, 1]'
-        if query_imputation is not None:
-            assert query_imputation == 'embedding_pca' or callable(query_imputation), \
-                "query_imputation must be None, 'embedding_pca', or a callable"
-
-        self.mode = mode
+        self,
+        query_kernel='rbf',
+        response_kernel='linear',
+        query_bandwidth='median',
+        response_bandwidth='median',
+        task_filter=None,
+        n_components_cmds=None,
+        n_elbows_cmds=2,
+    ):
         self.query_kernel = query_kernel
-        self.use_coverage = use_coverage
-        self.coverage_mode = coverage_mode
-        self.paired_weight = paired_weight
+        self.response_kernel = response_kernel
         self.query_bandwidth = query_bandwidth
-        self.coverage_bandwidth = coverage_bandwidth
-        self.coverage_pca_components = coverage_pca_components
-        self.query_imputation = query_imputation
+        self.response_bandwidth = response_bandwidth
+        self.task_filter = task_filter
         self.n_components_cmds = n_components_cmds
         self.n_elbows_cmds = n_elbows_cmds
-        self.dissimilarity = dissimilarity
-
-    def _validate_input_dataframe(self, data):
-        assert isinstance(data, pd.DataFrame), 'data must be a DataFrame'
-
-        required_cols = ['model_id', 'query_id', 'embedding']
-        has_query_vec = 'query_vec' in data.columns
-        if self.query_imputation is None:
-            required_cols.append('query_vec')
-        for col in required_cols:
-            assert col in data.columns, f'DataFrame must have column: {col}'
-
-        df = data.copy()
-        duplicate_pairs = df.duplicated(['model_id', 'query_id'], keep=False)
-        assert not duplicate_pairs.any(), 'duplicate (model_id, query_id) rows are not supported'
-
-        embedding_shapes = {np.asarray(emb).shape for emb in df['embedding'].values}
-        assert len(embedding_shapes) == 1, 'all embeddings must have the same shape'
-        embedding_shape = next(iter(embedding_shapes))
-        assert len(embedding_shape) == 1, 'each embedding must be a 1D vector'
-
-        query_dim = None
-        if has_query_vec:
-            query_shapes = {np.asarray(q).shape for q in df['query_vec'].values}
-            assert len(query_shapes) == 1, 'all query_vec values must have the same shape'
-            query_shape = next(iter(query_shapes))
-            assert len(query_shape) == 1, 'each query_vec must be a 1D vector'
-            assert query_shape[0] <= embedding_shape[0], \
-                'query_vec dimensionality must not exceed embedding dimensionality'
-            query_dim = query_shape[0]
-
-        model_names = sorted(df['model_id'].unique())
-        assert len(model_names) >= 2, 'at least two models are required'
-
-        df['query_code'] = pd.factorize(df['query_id'])[0]
-
-        return df, model_names, embedding_shape[0], query_dim
-
-    def _resolve_bandwidth(self, X, bandwidth, context='bandwidth'):
-        if callable(bandwidth):
-            value = float(bandwidth(X))
-        elif isinstance(bandwidth, (int, float)):
-            value = float(bandwidth)
-        elif bandwidth == 'scott':
-            n, d = X.shape
-            scale = float(np.mean(np.std(X, axis=0, ddof=0)))
-            if not np.isfinite(scale) or scale <= 0:
-                scale = 1.0
-            value = scale * (max(n, 1) ** (-1.0 / (d + 4)))
-        elif bandwidth == 'median':
-            if len(X) < 2:
-                value = 1.0
-            else:
-                dists = pdist(X)
-                positive = dists[dists > 0]
-                value = float(np.median(positive)) if len(positive) else 1.0
-        else:
-            raise ValueError(f'unsupported {context}: {bandwidth}')
-
-        if not np.isfinite(value) or value <= 0:
-            value = 1.0
-        return value
-
-    def _make_query_features(self, df, embedding_dim, query_dim):
-        if self.coverage_mode == 'oracle':
-            # Block I synthetic experiments can use the true latent query vectors directly.
-            self.query_feature_transformer_ = None
-            self.coverage_pca_components_ = None
-            return np.stack(df['query_vec'].values)
-
-        X = np.stack(df['embedding'].values)
-        # The plan's coverage construction uses a low-dimensional PCA space derived
-        # from responses. If the caller does not force a dimension, choose one from
-        # the scree/elbow rule rather than assuming it equals the latent query dim.
-        max_components = min(X.shape[0], X.shape[1])
-        if self.coverage_pca_components is None:
-            centered = X - np.mean(X, axis=0, keepdims=True)
-            elbows, _ = select_dimension(centered, n_elbows=self.n_elbows_cmds)
-            n_components = int(elbows[-1]) if elbows else min(query_dim, max_components)
-        else:
-            n_components = int(self.coverage_pca_components)
-        
-        n_components = max(1, min(n_components, max_components))
-
-        pca = PCA(n_components=n_components)
-        pca.fit(X)
-
-        padded_queries = np.zeros((len(df), embedding_dim), dtype=float)
-        padded_queries[:, :query_dim] = np.stack(df['query_vec'].values)
-        self.query_feature_transformer_ = pca
-        self.coverage_pca_components_ = n_components
-        return pca.transform(padded_queries)
-
-    def _impute_query_features(self, df, embedding_dim):
-        """
-        Produce query features without access to query_vec.
-
-        For 'embedding_pca': PCA on response embeddings is used directly as the
-        query feature space — the same projection that _make_query_features uses
-        for coverage, but without needing oracle query vectors.
-
-        For callable: the user-provided function returns query vectors which are
-        then treated the same as if query_vec were present in the DataFrame.
-        """
-        if callable(self.query_imputation):
-            query_vecs = self.query_imputation(df)
-            query_vecs = np.asarray(query_vecs, dtype=float)
-            assert query_vecs.shape[0] == len(df), \
-                'query_imputation callable must return one vector per row'
-            df['query_vec'] = list(query_vecs)
-            query_dim = query_vecs.shape[1]
-            return self._make_query_features(df, embedding_dim, query_dim), query_dim
-
-        # 'embedding_pca': project embeddings into a low-dimensional PCA space
-        X = np.stack(df['embedding'].values)
-        max_components = min(X.shape[0], X.shape[1])
-        if self.coverage_pca_components is None:
-            centered = X - np.mean(X, axis=0, keepdims=True)
-            elbows, _ = select_dimension(centered, n_elbows=self.n_elbows_cmds)
-            n_components = int(elbows[-1]) if elbows else min(10, max_components)
-        else:
-            n_components = int(self.coverage_pca_components)
-
-        n_components = max(1, min(n_components, max_components))
-
-        pca = PCA(n_components=n_components)
-        query_features = pca.fit_transform(X)
-
-        self.query_feature_transformer_ = pca
-        self.coverage_pca_components_ = n_components
-        return query_features, n_components
-
-    def _prepare_model_data(self, df, model_names):
-        model_data = {}
-        for model_name in model_names:
-            sub = df[df['model_id'] == model_name].sort_values('query_code')
-            model_data[model_name] = {
-                'embeddings'     : np.stack(sub['embedding'].values),
-                'query_features' : np.stack(sub['query_feature'].values),
-                'query_codes'    : sub['query_code'].to_numpy(),
-                'query_code_set' : set(sub['query_code'].to_numpy().tolist()),
-            }
-        return model_data
-
-    def _infer_paired_weight(self, model_data):
-        if self.mode == 'paired':
-            return 1.0
-        if self.mode == 'unpaired':
-            return 0.0
-        if self.paired_weight is not None:
-            return float(self.paired_weight)
-
-        # This is the empirical analogue of Section 3's optimal combination weight
-        # alpha* for the composed kernel kappa_{alpha,w}. In the Block I synthetic
-        # setup, alpha* = m_p / (m_p + m_u), so estimating it from the fraction of
-        # each model's observed query budget that is globally shared recovers the
-        # realized paired fraction.
-        shared_query_codes = set.intersection(*(xx['query_code_set'] for xx in model_data.values()))
-        avg_queries_per_model = float(np.mean([len(xx['query_codes']) for xx in model_data.values()]))
-        if avg_queries_per_model == 0:
-            return 0.0
-        return len(shared_query_codes) / avg_queries_per_model
-
-    def _fit_coverage_models(self, model_data):
-        if not self.use_coverage:
-            return None, None
-
-        # Section 2's coverage adjustment uses one density estimate per model in
-        # query space. Pairwise weights later take a harmonic mean of these KDEs,
-        # so regions uncovered by either model are downweighted.
-        all_query_features = np.vstack([xx['query_features'] for xx in model_data.values()])
-        coverage_bandwidth = self._resolve_bandwidth(
-            all_query_features,
-            self.coverage_bandwidth,
-            context='coverage_bandwidth',
-        )
-
-        coverage_models = {}
-        for model_name, model_entry in model_data.items():
-            kde = KernelDensity(kernel='gaussian', bandwidth=coverage_bandwidth)
-            kde.fit(model_entry['query_features'])
-            coverage_models[model_name] = kde
-        return coverage_models, coverage_bandwidth
-
-    def _evaluate_density(self, coverage_models, model_name, query_features):
-        if not self.use_coverage:
-            return np.ones(len(query_features), dtype=float)
-        log_density = coverage_models[model_name].score_samples(query_features)
-        return np.exp(log_density)
-
-    def _resolve_query_bandwidth(self, model_i, model_k, query_features_i, query_features_k):
-        if callable(self.query_bandwidth):
-            value = float(self.query_bandwidth(model_i, model_k, self))
-            if not np.isfinite(value) or value <= 0:
-                value = 1.0
-            return value
-
-        pooled = np.vstack([query_features_i, query_features_k])
-        return self._resolve_bandwidth(pooled, self.query_bandwidth, context='query_bandwidth')
-
-    def _unpaired_query_kernel_matrix(
-            self,
-            density_model_a,
-            density_model_b,
-            query_features_a,
-            query_features_b,
-            coverage_models,
-        ):
-        """
-        Build the unpaired query-kernel block between two query collections.
-
-        This is the w(i, k, q, q') / kappa^*(q, q') part of the estimator from
-        the plan, evaluated on two finite sets of query features:
-
-        - if `query_kernel == "constant"`, every query pair starts with weight 1
-          (linear MMD over unpaired queries)
-        - if `query_kernel == "rbf"`, query pairs are additionally weighted by
-          similarity in query space
-        - if `use_coverage` is enabled, the base kernel is multiplied by the
-          harmonic-mean coverage weight so regions poorly covered by either
-          model contribute less
-
-        The same helper is used for both self terms (`ii`, `kk`) and the cross
-        term (`ik`). The `density_model_*` arguments specify which pair of KDEs
-        define the coverage weight; `query_features_a` and `query_features_b`
-        specify where that pairwise kernel is evaluated.
-
-        For example, when called on model i's queries against model k's queries,
-        entry (j, j') is the weight assigned to comparing query j from model i
-        with query j' from model k. When called for the `ii` self term of the
-        `(i, k)` comparison, both query collections come from model i, but the
-        coverage weight still uses model i's KDE and model k's KDE so all three
-        blocks (`ii`, `kk`, `ik`) share the same pair-specific kernel.
-        """
-        if self.query_kernel == 'constant':
-            kernel_matrix = np.ones((len(query_features_a), len(query_features_b)), dtype=float)
-        elif self.query_kernel == 'rbf':
-            bandwidth = self._resolve_query_bandwidth(
-                density_model_a,
-                density_model_b,
-                query_features_a,
-                query_features_b,
-            )
-            sq_dists = cdist(query_features_a, query_features_b, metric='sqeuclidean')
-            kernel_matrix = np.exp(-sq_dists / (2.0 * bandwidth ** 2))
-        else:
-            raise ValueError(f'unsupported query_kernel: {self.query_kernel}')
-
-        if not self.use_coverage:
-            return kernel_matrix
-
-        # Multiply the base query kernel by the coverage weight w(i, k, q, q').
-        # This matches the identifiability correction in the plan: if either model
-        # assigns low density to the relevant query region, that pair gets little
-        # influence on the estimated distance.
-        density_a = self._evaluate_density(coverage_models, density_model_a, query_features_a)
-        density_b = self._evaluate_density(coverage_models, density_model_b, query_features_b)
-        denom = density_a[:, None] + density_b[None, :]
-        with np.errstate(divide='ignore', invalid='ignore'):
-            coverage = np.where(
-                denom > 0,
-                2.0 * density_a[:, None] * density_b[None, :] / denom,
-                0.0,
-            )
-        return kernel_matrix * coverage
-
-    def _weighted_linear_average(self, X_a, X_b, query_kernel_matrix):
-        normalizer = np.sum(query_kernel_matrix)
-        if normalizer <= 0:
-            return np.nan
-        return float(np.sum((query_kernel_matrix @ X_b) * X_a) / normalizer)
-
-    def _paired_distance_sq(self, data_i, data_k, shared_query_codes):
-        """
-        Paired component: ||mu_hat_i - mu_hat_k||^2
-
-        Averages the response embeddings over shared queries first, then
-        computes the squared distance between the averages.  This targets
-        ||mu_i - mu_k||^2 (distance between population mean responses),
-        the same quantity the unpaired estimator converges to.
-        """
-        if not shared_query_codes:
-            return np.nan
-
-        shared_mask_i = np.isin(data_i['query_codes'], list(shared_query_codes))
-        shared_mask_k = np.isin(data_k['query_codes'], list(shared_query_codes))
-
-        emb_i = data_i['embeddings'][shared_mask_i]
-        emb_k = data_k['embeddings'][shared_mask_k]
-
-        mu_i = emb_i.mean(axis=0)
-        mu_k = emb_k.mean(axis=0)
-        diff = mu_i - mu_k
-        return float(np.dot(diff, diff))
-
-    def _unpaired_distance_sq(self, model_i, model_k, data_i, data_k, shared_query_codes, coverage_models):
-        """
-        Unpaired component with separate normalizations per block:
-
-        A^U_ii = (1/Z_ii) * Σ_{j,l in J^U_i} w(q_j,q_l) * K(P_ij, P_il)
-        A^U_kk = (1/Z_kk) * Σ_{j',l' in J^U_k} w(q_j',q_l') * K(P_kj', P_kl')
-        A^U_ik = (1/Z_ik) * Σ_{j in J^U_i, j' in J^U_k} w(q_j,q_j') * K(P_ij, P_kj')
-
-        D^2_unpaired = A_ii + A_kk - 2*A_ik
-        """
-        # Build masks for unpaired queries (not in shared set)
-        unpaired_mask_i = ~np.isin(data_i['query_codes'], list(shared_query_codes)) if shared_query_codes else np.ones(len(data_i['query_codes']), dtype=bool)
-        unpaired_mask_k = ~np.isin(data_k['query_codes'], list(shared_query_codes)) if shared_query_codes else np.ones(len(data_k['query_codes']), dtype=bool)
-
-        emb_i = data_i['embeddings'][unpaired_mask_i]
-        emb_k = data_k['embeddings'][unpaired_mask_k]
-        qf_i = data_i['query_features'][unpaired_mask_i]
-        qf_k = data_k['query_features'][unpaired_mask_k]
-
-        if len(emb_i) == 0 or len(emb_k) == 0:
-            return np.nan
-
-        # Build coverage-adjusted kernel matrices for each block
-        W_ii = self._unpaired_query_kernel_matrix(
-            density_model_a=model_i, density_model_b=model_k,
-            query_features_a=qf_i, query_features_b=qf_i,
-            coverage_models=coverage_models,
-        )
-        W_kk = self._unpaired_query_kernel_matrix(
-            density_model_a=model_k, density_model_b=model_i,
-            query_features_a=qf_k, query_features_b=qf_k,
-            coverage_models=coverage_models,
-        )
-        W_ik = self._unpaired_query_kernel_matrix(
-            density_model_a=model_i, density_model_b=model_k,
-            query_features_a=qf_i, query_features_b=qf_k,
-            coverage_models=coverage_models,
-        )
-
-        # Each A term is separately normalized
-        A_ii = self._weighted_linear_average(emb_i, emb_i, W_ii)
-        A_kk = self._weighted_linear_average(emb_k, emb_k, W_kk)
-        A_ik = self._weighted_linear_average(emb_i, emb_k, W_ik)
-
-        if not np.isfinite(A_ii) or not np.isfinite(A_kk) or not np.isfinite(A_ik):
-            return np.nan
-
-        return A_ii + A_kk - 2.0 * A_ik
-
-    def _pooled_distance_sq(self, data_i, data_k):
-        """
-        Pooled estimator: ||hat_mu_i - hat_mu_k||^2
-
-        Uses ALL of each model's queries (paired + unpaired) to estimate
-        the mean response, then computes the squared distance between means.
-        """
-        mu_i = data_i['embeddings'].mean(axis=0)
-        mu_k = data_k['embeddings'].mean(axis=0)
-        diff = mu_i - mu_k
-        return float(np.dot(diff, diff))
-
-    def _pair_distance(self, model_i, model_k, data_i, data_k, paired_weight, coverage_models):
-        """
-        Compute distance between models i and k.
-
-        When mode is 'paired', 'unpaired', or 'combined', uses the
-        corresponding separate estimators.  The combined estimator blends
-        paired and unpaired components with weight alpha.
-        """
-        shared_query_codes = data_i['query_code_set'] & data_k['query_code_set']
-
-        # Compute each component
-        if paired_weight > 0 and shared_query_codes:
-            dist_sq_paired = self._paired_distance_sq(data_i, data_k, shared_query_codes)
-        else:
-            dist_sq_paired = np.nan
-
-        if paired_weight < 1.0:
-            dist_sq_unpaired = self._unpaired_distance_sq(
-                model_i, model_k, data_i, data_k, shared_query_codes, coverage_models,
-            )
-        else:
-            dist_sq_unpaired = np.nan
-
-        # Combine
-        if paired_weight == 1.0:
-            dist_sq = dist_sq_paired
-        elif paired_weight == 0.0:
-            dist_sq = dist_sq_unpaired
-        else:
-            if not np.isfinite(dist_sq_paired) and not np.isfinite(dist_sq_unpaired):
-                return np.nan
-            elif not np.isfinite(dist_sq_paired):
-                dist_sq = dist_sq_unpaired
-            elif not np.isfinite(dist_sq_unpaired):
-                dist_sq = dist_sq_paired
-            else:
-                dist_sq = paired_weight * dist_sq_paired + (1.0 - paired_weight) * dist_sq_unpaired
-
-        if not np.isfinite(dist_sq):
-            return np.nan
-        if dist_sq < 0 and abs(dist_sq) < 1e-10:
-            dist_sq = 0.0
-        return float(np.sqrt(max(dist_sq, 0.0)))
-
-    def _compute_dist_matrix(self, model_names, model_data, paired_weight, coverage_models):
-        n_models    = len(model_names)
-        dist_matrix = np.zeros((n_models, n_models), dtype=float)
-
-        for i, model_i in enumerate(model_names):
-            for k in range(i + 1, n_models):
-                model_k = model_names[k]
-
-                if self.mode == 'pooled':
-                    dist_sq = self._pooled_distance_sq(
-                        model_data[model_i], model_data[model_k],
-                    )
-                    if dist_sq < 0 and abs(dist_sq) < 1e-10:
-                        dist_sq = 0.0
-                    dist_matrix[i, k] = dist_matrix[k, i] = float(np.sqrt(max(dist_sq, 0.0)))
-                else:
-                    dist_matrix[i, k] = dist_matrix[k, i] = self._pair_distance(
-                        model_i         = model_i,
-                        model_k         = model_k,
-                        data_i          = model_data[model_i],
-                        data_k          = model_data[model_k],
-                        paired_weight   = paired_weight,
-                        coverage_models = coverage_models,
-                    )
-
-        return dist_matrix
-
-    def _aggregate_replicates(self, data):
-        """Average embeddings across replicates for each (model_id, query_id)."""
-        if 'replicate_id' not in data.columns:
-            return data
-
-        embedding_dim = len(data['embedding'].iloc[0])
-        agg_cols = ['model_id', 'query_id']
-        # Preserve non-embedding columns from the first replicate
-        first = data.groupby(agg_cols, sort=False).first().reset_index()
-        # Average embeddings
-        emb_matrix = np.stack(data['embedding'].values)
-        group_keys = data[agg_cols].apply(tuple, axis=1)
-        group_codes, uniques = pd.factorize(group_keys, sort=False)
-        n_groups = len(uniques)
-        mean_embs = np.zeros((n_groups, embedding_dim), dtype=float)
-        counts = np.zeros(n_groups, dtype=int)
-        for i, code in enumerate(group_codes):
-            mean_embs[code] += emb_matrix[i]
-            counts[code] += 1
-        mean_embs /= counts[:, None]
-
-        first['embedding'] = list(mean_embs)
-        first = first.drop(columns=['replicate_id'], errors='ignore')
-        return first
 
     def fit(self, data):
-        data = self._aggregate_replicates(data)
-        df, model_names, embedding_dim, query_dim = self._validate_input_dataframe(data)
+        """Compute pairwise distance matrix from partially-observed response data."""
+        model_data, model_names = self._prepare_model_data(data)
 
-        # Step 1: choose the query representation used by coverage adjustment.
-        if self.query_imputation is not None:
-            query_features, query_dim = self._impute_query_features(df, embedding_dim)
+        if self.query_kernel == 'rbf':
+            all_q = np.vstack([md['query_emb'] for md in model_data.values()])
+            self.query_bandwidth_ = self._resolve_bandwidth(all_q, self.query_bandwidth)
+
+        if self.response_kernel == 'rbf':
+            all_r = np.vstack([md['emb'] for md in model_data.values()])
+            self.response_bandwidth_ = self._resolve_bandwidth(all_r, self.response_bandwidth)
+
+        n = len(model_names)
+        dist_sq = np.zeros((n, n))
+
+        if self.task_filter is not None:
+            for i in range(n):
+                for k in range(i + 1, n):
+                    d2 = self._pairwise_dist_sq_filtered(
+                        model_data[model_names[i]], model_data[model_names[k]])
+                    dist_sq[i, k] = dist_sq[k, i] = max(d2, 0.0) if np.isfinite(d2) else np.nan
         else:
-            query_features = self._make_query_features(df, embedding_dim, query_dim)
-        df['query_feature'] = list(query_features)
+            a_self = np.array([
+                self._compute_A(model_data[m], model_data[m]) for m in model_names
+            ])
+            for i in range(n):
+                for k in range(i + 1, n):
+                    a_ik = self._compute_A(model_data[model_names[i]], model_data[model_names[k]])
+                    d2 = a_self[i] + a_self[k] - 2 * a_ik
+                    dist_sq[i, k] = dist_sq[k, i] = max(d2, 0.0)
 
-        # Step 2: reorganize the flat DataFrame into per-model arrays so the
-        # estimator can work directly with embeddings, query features, and ids.
-        model_data = self._prepare_model_data(df, model_names)
-
-        # Step 3: infer the paired fraction alpha used by kappa_{alpha,w}.
-        paired_weight = self._infer_paired_weight(model_data)
-
-        if len({len(xx['query_codes']) for xx in model_data.values()}) > 1:
-            warnings.warn(
-                'models have differing numbers of queries; paired_weight uses the average per-model query count',
-                stacklevel=2,
-            )
-
-        # Step 4: fit per-model KDEs if coverage adjustment is enabled.
-        coverage_models, coverage_bandwidth = self._fit_coverage_models(model_data)
-
-        # Step 5: evaluate the pairwise model distances under the composed kernel.
-        dist_matrix = self._compute_dist_matrix(
-            model_names,
-            model_data,
-            paired_weight,
-            coverage_models,
-        )
-
-        # Persist the fitted artifacts after the local computation is complete so
-        # the data flow through fit() stays explicit rather than side-effectful.
-        self.model_names_         = model_names
-        self.embedding_dim_       = embedding_dim
-        self.query_dim_           = query_dim
-        self.query_feature_dim_   = query_features.shape[1]
-        self.model_data_          = model_data
-        self.shared_query_codes_  = set.intersection(*(xx['query_code_set'] for xx in model_data.values()))
-        self.paired_weight_       = paired_weight
-        self.coverage_models_     = coverage_models
-        self.coverage_bandwidth_  = coverage_bandwidth
-        self.dist_matrix_         = dist_matrix
+        self.dist_matrix_ = np.sqrt(np.nan_to_num(dist_sq, nan=np.nan))
+        self.model_names_ = model_names
         return self
 
     def fit_transform(self, data):
+        """Fit and embed models into low-dimensional space via ClassicalMDS."""
         self.fit(data)
-        if not np.isfinite(self.dist_matrix_).all():
-            raise ValueError('dist_matrix_ contains non-finite values; cannot run ClassicalMDS')
-
-        cmds_embds = ClassicalMDS(
+        cmds = ClassicalMDS(
             n_components=self.n_components_cmds,
             n_elbows=self.n_elbows_cmds,
-            dissimilarity=self.dissimilarity,
+            dissimilarity='precomputed',
         ).fit_transform(self.dist_matrix_)
+        return {m: cmds[i] for i, m in enumerate(self.model_names_)}
 
-        self.embedding_ = cmds_embds
-        return {model_name: cmds_embds[i] for i, model_name in enumerate(self.model_names_)}
+    def _prepare_model_data(self, data):
+        assert isinstance(data, pd.DataFrame), 'data must be a DataFrame'
+        for col in ('model_id', 'query_id', 'embedding'):
+            assert col in data.columns, f'missing column: {col}'
+        if self.query_kernel not in ('delta',) and not callable(self.query_kernel):
+            assert 'query_embedding' in data.columns, \
+                'query_embedding column required when query_kernel is not delta'
+        if self.task_filter is not None:
+            assert 'task_id' in data.columns, \
+                'task_id column required when task_filter is set'
+
+        assert not data.duplicated(['model_id', 'query_id']).any(), \
+            'duplicate (model_id, query_id) pairs'
+
+        model_names = sorted(data['model_id'].unique())
+        model_data = {}
+        for name in model_names:
+            sub = data[data['model_id'] == name].sort_values('query_id')
+            md = {
+                'emb': np.stack(sub['embedding'].values),
+                'query_ids': sub['query_id'].values,
+            }
+            if 'query_embedding' in data.columns:
+                md['query_emb'] = np.stack(sub['query_embedding'].values)
+            if 'task_id' in data.columns:
+                md['task_ids'] = sub['task_id'].values
+            model_data[name] = md
+
+        return model_data, model_names
+
+    def _resolve_bandwidth(self, X, method):
+        if isinstance(method, (int, float)):
+            return float(method)
+        if method == 'median':
+            dists = pdist(X)
+            return float(np.median(dists)) if len(dists) > 0 else 1.0
+        if callable(method):
+            return float(method(X))
+        raise ValueError(f'unknown bandwidth method: {method}')
+
+    def _filter_to_tasks(self, md, tasks):
+        """Return a subset of model data restricted to the given task set."""
+        mask = np.isin(md['task_ids'], list(tasks))
+        if not mask.any():
+            return None
+        out = {'emb': md['emb'][mask], 'query_ids': md['query_ids'][mask]}
+        if 'query_emb' in md:
+            out['query_emb'] = md['query_emb'][mask]
+        if 'task_ids' in md:
+            out['task_ids'] = md['task_ids'][mask]
+        return out
+
+    def _pairwise_dist_sq_filtered(self, md_a, md_b):
+        """Compute D^2 using only shared or unshared task queries."""
+        tasks_a = set(md_a['task_ids'])
+        tasks_b = set(md_b['task_ids'])
+
+        if self.task_filter == 'shared':
+            keep_a = tasks_a & tasks_b
+            keep_b = keep_a
+        elif self.task_filter == 'unshared':
+            keep_a = tasks_a - tasks_b
+            keep_b = tasks_b - tasks_a
+        else:
+            raise ValueError(f'unknown task_filter: {self.task_filter}')
+
+        if not keep_a or not keep_b:
+            return np.nan
+
+        fa = self._filter_to_tasks(md_a, keep_a)
+        fb = self._filter_to_tasks(md_b, keep_b)
+        if fa is None or fb is None:
+            return np.nan
+
+        a_ii = self._compute_A(fa, fa)
+        a_kk = self._compute_A(fb, fb)
+        a_ik = self._compute_A(fa, fb)
+        return a_ii + a_kk - 2 * a_ik
+
+    def _compute_A(self, data_a, data_b):
+        """Compute A_ab = sum(K_Q * K_R) / sum(K_Q)."""
+        if self.query_kernel == 'delta':
+            ids_a, ids_b = data_a['query_ids'], data_b['query_ids']
+            K_Q = (ids_a[:, None] == ids_b[None, :]).astype(np.float64)
+        elif self.query_kernel == 'rbf':
+            sq = cdist(data_a['query_emb'], data_b['query_emb'], 'sqeuclidean')
+            K_Q = np.exp(-sq / (2 * self.query_bandwidth_ ** 2))
+        elif callable(self.query_kernel):
+            K_Q = np.asarray(self.query_kernel(data_a['query_emb'], data_b['query_emb']))
+        else:
+            raise ValueError(f'unknown query_kernel: {self.query_kernel}')
+
+        emb_a, emb_b = data_a['emb'], data_b['emb']
+        if self.response_kernel == 'linear':
+            K_R = emb_a @ emb_b.T
+        elif self.response_kernel == 'rbf':
+            sq = cdist(emb_a, emb_b, 'sqeuclidean')
+            K_R = np.exp(-sq / (2 * self.response_bandwidth_ ** 2))
+        elif callable(self.response_kernel):
+            K_R = np.asarray(self.response_kernel(emb_a, emb_b))
+        else:
+            raise ValueError(f'unknown response_kernel: {self.response_kernel}')
+
+        Z = K_Q.sum()
+        if Z == 0:
+            return np.nan
+        return (K_Q * K_R).sum() / Z

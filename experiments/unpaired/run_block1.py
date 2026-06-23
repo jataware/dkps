@@ -1,68 +1,77 @@
 import argparse
 from pathlib import Path
 
-from .block1 import run_s0_synthetic, run_s1_exchange_rate, run_s2_query_kernel, run_s3_inverter_robustness
-from .plots import save_block1_plots
+from .block1 import (
+    run_exp_n_models, run_exp_n_tasks, run_exp_task_parity,
+    run_exp_query_sparsity, run_exp_task_spread, run_exp_noise_x_queries,
+)
+from .plots import save_figure
 
 
 PRESETS = {
     'paper': {
-        's0': dict(
-            n_models=20,
-            d_act=10,
-            d_obs=50,
-            m_totals=(200, 500, 1000),
-            alphas=(0.0, 0.05, 0.1, 0.2, 0.5, 1.0),
-            s=2,
-            t=2,
-            d_sep=2.0,
-            coverage_modes=('oracle', 'pca'),
+        'n_models': dict(
+            n_models=(10, 20, 50, 100, 120, 150),
             n_seeds=50,
         ),
-        's1': {},
-        's2': {},
-        's3': {},
+        'n_tasks': dict(
+            n_tasks=(5, 10, 20, 30, 40, 50),
+            n_seeds=50,
+        ),
+        'task_parity': dict(
+            obs_prob=(0.1, 0.2, 0.3, 0.5, 0.7, 0.9),
+            n_seeds=50,
+        ),
+        'query_sparsity': dict(
+            query_obs_prob=(0.1, 0.2, 0.3, 0.5, 0.7, 1.0),
+            n_seeds=50,
+        ),
+        'task_spread': dict(
+            task_spread=(0.1, 0.25, 0.5, 1.0, 2.0, 5.0),
+            n_seeds=50,
+        ),
+        'noise_x_queries': dict(
+            response_noises=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
+            n_queries_values=(3, 10, 50),
+            n_seeds=50,
+        ),
     },
     'quick': {
-        's0': dict(
-            n_models=4,
-            d_act=2,
-            d_obs=4,
-            m_totals=(24,),
-            alphas=(0.0, 0.5, 1.0),
-            coverage_modes=('oracle', 'pca'),
-            n_seeds=2,
+        'n_models': dict(
+            n_models=(10, 50, 100),
+            n_seeds=3,
         ),
-        's1': dict(
-            n_models=4,
-            d_act=2,
-            d_obs=4,
-            epsilons=(0.25, 0.5, 1.0),
-            m_p_values=(2, 4),
-            m_u_grid=(2, 4, 8),
-            coverage_modes=('oracle', 'pca'),
-            n_seeds=2,
+        'n_tasks': dict(
+            n_tasks=(5, 10, 20),
+            n_seeds=3,
         ),
-        's2': dict(
-            n_models=4,
-            d_act=2,
-            d_obs=4,
-            n_queries=24,
-            d_seps=(0.0, 1.0, 2.0),
-            alphas=(0.0,),
-            coverage_modes=('oracle', 'pca'),
-            n_seeds=2,
+        'task_parity': dict(
+            obs_prob=(0.15, 0.3, 0.7),
+            n_seeds=3,
         ),
-        's3': dict(
-            n_models=4,
-            d_act=2,
-            d_obs=4,
-            n_queries=24,
-            noise_levels=(0.0, 0.5, 2.0),
-            coverage_modes=('oracle', 'pca'),
-            n_seeds=2,
+        'query_sparsity': dict(
+            query_obs_prob=(0.3, 0.7, 1.0),
+            n_seeds=3,
+        ),
+        'task_spread': dict(
+            task_spread=(0.25, 1.0, 5.0),
+            n_seeds=3,
+        ),
+        'noise_x_queries': dict(
+            response_noises=(0.1, 1.0, 10.0),
+            n_queries_values=(3, 10, 50),
+            n_seeds=3,
         ),
     },
+}
+
+RUNNERS = {
+    'n_models': run_exp_n_models,
+    'n_tasks': run_exp_n_tasks,
+    'task_parity': run_exp_task_parity,
+    'query_sparsity': run_exp_query_sparsity,
+    'task_spread': run_exp_task_spread,
+    'noise_x_queries': run_exp_noise_x_queries,
 }
 
 
@@ -74,53 +83,25 @@ def _save_csv(df, path):
 def run_block1_experiments(experiment, preset):
     config = PRESETS[preset]
     results = {}
-
-    if experiment in {'s0', 'all'}:
-        results['s0'] = run_s0_synthetic(**config['s0'])
-
-    if experiment in {'s1', 'all'}:
-        s1_summary, s1_search = run_s1_exchange_rate(return_search=True, **config['s1'])
-        results['s1_summary'] = s1_summary
-        results['s1_search'] = s1_search
-
-    if experiment in {'s2', 'all'}:
-        results['s2'] = run_s2_query_kernel(**config['s2'])
-
-    if experiment in {'s3', 'all'}:
-        results['s3'] = run_s3_inverter_robustness(**config['s3'])
-
+    exps = list(RUNNERS.keys()) if experiment == 'all' else [experiment]
+    for exp in exps:
+        results[exp] = RUNNERS[exp](**config[exp])
     return results
 
 
 def save_block1_results(results, output_dir):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    if 's0' in results:
-        _save_csv(results['s0'], output_dir / 's0_results.csv')
-    if 's1_summary' in results:
-        _save_csv(results['s1_summary'], output_dir / 's1_summary.csv')
-    if 's1_search' in results:
-        _save_csv(results['s1_search'], output_dir / 's1_search.csv')
-    if 's2' in results:
-        _save_csv(results['s2'], output_dir / 's2_results.csv')
-    if 's3' in results:
-        _save_csv(results['s3'], output_dir / 's3_results.csv')
-
-    plot_dir = output_dir / 'plots'
-    save_block1_plots(
-        plot_dir,
-        s0_df=results.get('s0'),
-        s1_summary_df=results.get('s1_summary'),
-        s2_df=results.get('s2'),
-        s3_df=results.get('s3'),
-    )
+    for name, df in results.items():
+        _save_csv(df, output_dir / f'{name}.csv')
+    save_figure(output_dir, results)
     return output_dir
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run Block I unpaired DKPS synthetic experiments.')
-    parser.add_argument('--experiment', choices=['s0', 's1', 's2', 's3', 'all'], default='all')
+    parser = argparse.ArgumentParser(description='Run double-kernel DKPS synthetic experiments.')
+    parser.add_argument('--experiment',
+                        choices=list(RUNNERS.keys()) + ['all'], default='all')
     parser.add_argument('--preset', choices=sorted(PRESETS), default='paper')
     parser.add_argument('--output-dir', default=None)
     args = parser.parse_args()

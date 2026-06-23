@@ -1,9 +1,9 @@
 from .dkps import DataKernelPerspectiveSpace
-from .synthetic import generate_synthetic_data
-from .unpaired_dkps import UnpairedDKPS
+from .synthetic import generate_benchmark_data
+from .unpaired_dkps import DoubleKernelDKPS
 
 __all__ = [
     'DataKernelPerspectiveSpace',
-    'UnpairedDKPS',
-    'generate_synthetic_data',
+    'DoubleKernelDKPS',
+    'generate_benchmark_data',
 ]
