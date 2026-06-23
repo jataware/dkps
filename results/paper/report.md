@@ -125,6 +125,8 @@ The realistic regime is: many models (~100), moderate tasks (~20), low task pari
 
 ## 4. Experiments
 
+![Synthetic experiments: 2x3 panel](fig_synthetic.png)
+
 All experiments use 50 random seeds. The metric is RMSE on held-out (model, task) score predictions via 5-NN in the DKPS embedding space. Each experiment sweeps one parameter while holding others at their defaults.
 
 ### 4.1 Number of models (panel a)
