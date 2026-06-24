@@ -25,6 +25,8 @@ ESTIMATOR_LABELS = {
 
 ESTIMATOR_ORDER = ['rbf_paired', 'rbf_unpaired', 'rbf_combined']
 
+_BASELINE_STYLE = {}
+
 NQ_STYLES = {3: '--', 10: '-', 50: ':'}
 
 
@@ -39,15 +41,16 @@ def _aggregate(df, group_cols, value_col):
 
 
 def _plot_standard_panel(ax, df, x_col, xlabel, log_x=False, log_y=False):
-    """Standard panel: 3 estimators, x vs RMSE."""
-    summary = _aggregate(df, [x_col, 'estimator'], 'rmse')
+    """Standard panel: 3 estimators, x vs MAE."""
+    summary = _aggregate(df, [x_col, 'estimator'], 'mae')
     for est in ESTIMATOR_ORDER:
         if est not in summary['estimator'].values:
             continue
         curve = summary[summary['estimator'] == est].sort_values(x_col)
         c = ESTIMATOR_COLORS[est]
         label = ESTIMATOR_LABELS[est]
-        ax.plot(curve[x_col], curve['mean'], marker='o', lw=1.5, color=c, label=label)
+        ls = _BASELINE_STYLE.get(est, '-')
+        ax.plot(curve[x_col], curve['mean'], marker='o', lw=1.5, color=c, label=label, linestyle=ls)
         ax.fill_between(curve[x_col], curve['mean'] - curve['sem'],
                         curve['mean'] + curve['sem'], color=c, alpha=0.18)
     ax.set_xlabel(xlabel)
@@ -62,7 +65,7 @@ def _plot_standard_panel(ax, df, x_col, xlabel, log_x=False, log_y=False):
 def _plot_noise_x_queries(ax, df):
     """Interaction panel: response noise x queries per task (combined only)."""
     nq_values = sorted(df['n_queries_per_task'].unique())
-    summary = _aggregate(df, ['response_noise', 'n_queries_per_task'], 'rmse')
+    summary = _aggregate(df, ['response_noise', 'n_queries_per_task'], 'mae')
 
     c = ESTIMATOR_COLORS['rbf_combined']
     for nq in nq_values:
@@ -118,7 +121,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.5)):
                 _plot_standard_panel(ax, df, x_col, xlabel, log_x, log_y)
 
             if col == 0:
-                ax.set_ylabel('RMSE')
+                ax.set_ylabel('MAE')
             ax.set_title(f'({chr(97 + panel_idx)})', fontsize=10, loc='left', fontweight='bold')
 
             panel_idx += 1

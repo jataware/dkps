@@ -1,7 +1,28 @@
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, cdist
-from graspologic.embed import ClassicalMDS
+from sklearn.utils.extmath import randomized_svd
+from graspologic.embed import ClassicalMDS, select_dimension
+
+
+def pca_reduce_elbow(X, n_elbows=2, max_components=128, random_state=0):
+    """Center + PCA-reduce X, choosing the dimension at the n_elbows-th elbow.
+
+    Learned only from the rows of X passed in (use observed/sampled data for a
+    given run). Returns the PCA scores (n_samples, dim). dim = 2nd Zhu-Ghodsi
+    elbow of the singular value spectrum, matching ClassicalMDS(n_elbows=2).
+    """
+    X = np.asarray(X, dtype=np.float64)
+    n, d = X.shape
+    Xc = X - X.mean(axis=0)
+    k = int(min(max_components, n - 1, d))
+    if k < 1:
+        return Xc
+    _, S, Vt = randomized_svd(Xc, n_components=k, random_state=random_state)
+    elbows, _ = select_dimension(S, n_elbows=n_elbows)
+    dim = int(elbows[-1]) if len(elbows) else k
+    dim = max(1, min(dim, k))
+    return Xc @ Vt[:dim].T
 
 
 class DoubleKernelDKPS:
@@ -195,6 +216,14 @@ class DoubleKernelDKPS:
         elif self.query_kernel == 'rbf':
             sq = cdist(data_a['query_emb'], data_b['query_emb'], 'sqeuclidean')
             K_Q = np.exp(-sq / (2 * self.query_bandwidth_ ** 2))
+        elif self.query_kernel == 'linear':
+            # Linear (dot-product) query kernel on L2-normalized query embeddings
+            # (cosine), clipped to [0, 1] so it is a valid non-negative weight.
+            qa = data_a['query_emb'] / np.clip(
+                np.linalg.norm(data_a['query_emb'], axis=1, keepdims=True), 1e-12, None)
+            qb = data_b['query_emb'] / np.clip(
+                np.linalg.norm(data_b['query_emb'], axis=1, keepdims=True), 1e-12, None)
+            K_Q = np.clip(qa @ qb.T, 0.0, None)
         elif callable(self.query_kernel):
             K_Q = np.asarray(self.query_kernel(data_a['query_emb'], data_b['query_emb']))
         else:

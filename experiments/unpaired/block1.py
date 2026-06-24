@@ -4,13 +4,37 @@ from joblib import Parallel, delayed
 from sklearn.neighbors import KNeighborsRegressor
 
 from dkps.synthetic import generate_benchmark_data
-from dkps.unpaired_dkps import DoubleKernelDKPS
+from dkps.unpaired_dkps import DoubleKernelDKPS, pca_reduce_elbow
 
 
+def _reduce_df(data, n_elbows=2, max_components=128):
+    """Per-run PCA reduction of response and (separately) query embeddings,
+    learned only from the rows in `data` (the observed/sampled responses)."""
+    R = np.stack(data['embedding'].values)
+    Rr = pca_reduce_elbow(R, n_elbows=n_elbows, max_components=max_components)
+    out = data.copy()
+    out['embedding'] = list(Rr)
+
+    qsub = data[['query_id', 'query_embedding']].drop_duplicates('query_id')
+    Q = np.stack(qsub['query_embedding'].values)
+    Qr = pca_reduce_elbow(Q, n_elbows=n_elbows, max_components=max_components)
+    qmap = {qid: v for qid, v in zip(qsub['query_id'].values, Qr)}
+    out['query_embedding'] = [qmap[q] for q in data['query_id'].values]
+    return out
+
+
+import os
+
+# Kernel types are configurable via env (default: both RBF). Set
+# DKPS_QUERY_KERNEL / DKPS_RESPONSE_KERNEL=linear for the both-linear supplement.
+QUERY_KERNEL = os.environ.get('DKPS_QUERY_KERNEL', 'rbf')
+RESPONSE_KERNEL = os.environ.get('DKPS_RESPONSE_KERNEL', 'rbf')
+
+_KERNELS = dict(query_kernel=QUERY_KERNEL, response_kernel=RESPONSE_KERNEL)
 ESTIMATORS = {
-    'rbf_paired':    dict(query_kernel='rbf', task_filter='shared'),
-    'rbf_unpaired':  dict(query_kernel='rbf', task_filter='unshared'),
-    'rbf_combined':  dict(query_kernel='rbf'),
+    'rbf_paired':    dict(**_KERNELS, task_filter='shared'),
+    'rbf_unpaired':  dict(**_KERNELS, task_filter='unshared'),
+    'rbf_combined':  dict(**_KERNELS),
 }
 
 
@@ -35,18 +59,21 @@ def predict_scores_knn(embeddings, scores, observed, k=5):
 
 
 def evaluate_predictions(predictions, scores, observed):
-    """Compute RMSE on held-out (model, task) pairs."""
+    """Compute MAE on held-out (model, task) pairs."""
     held_out = ~observed & np.isfinite(predictions)
     if held_out.sum() == 0:
         return np.nan
 
     y_true = scores[held_out]
     y_pred = predictions[held_out]
-    return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+    return float(np.mean(np.abs(y_true - y_pred)))
 
 
-def _fit_and_predict(data, scores, observed, k_neighbors=5, n_components=None, **dkps_kwargs):
-    """Fit DoubleKernelDKPS, embed models, predict held-out scores."""
+def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
+    """Fit DoubleKernelDKPS, embed models via ClassicalMDS(n_elbows=2), predict.
+
+    `data` is assumed already PCA-reduced (see _reduce_df).
+    """
     est = DoubleKernelDKPS(**dkps_kwargs)
     est.fit(data)
 
@@ -58,11 +85,8 @@ def _fit_and_predict(data, scores, observed, k_neighbors=5, n_components=None, *
         dist = np.nan_to_num(dist, nan=max_dist)
 
     from graspologic.embed import ClassicalMDS
-    if n_components is None:
-        n_components = min(10, len(est.model_names_) - 1)
-    n_components = min(n_components, len(est.model_names_) - 1)
     embeddings = ClassicalMDS(
-        n_components=n_components, dissimilarity='precomputed',
+        n_components=None, n_elbows=2, dissimilarity='precomputed',
     ).fit_transform(dist)
 
     predictions = predict_scores_knn(embeddings, scores, observed, k=k_neighbors)
@@ -70,16 +94,19 @@ def _fit_and_predict(data, scores, observed, k_neighbors=5, n_components=None, *
 
 
 def _run_estimators(data, scores, observed, experiment, k_neighbors, n_components, extra_fields):
-    """Run all estimators on one dataset, return list of result rows."""
+    """Run all estimators on one dataset, return list of result rows.
+
+    Reduces embeddings once per run (observed data only), then runs estimators.
+    """
+    data = _reduce_df(data)
     rows = []
     for est_name, est_kwargs in ESTIMATORS.items():
-        rmse = _fit_and_predict(
+        mae = _fit_and_predict(
             data, scores, observed,
             k_neighbors=k_neighbors,
-            n_components=n_components,
             **est_kwargs,
         )
-        row = {'experiment': experiment, 'estimator': est_name, 'rmse': rmse}
+        row = {'experiment': experiment, 'estimator': est_name, 'mae': mae}
         row.update(extra_fields)
         rows.append(row)
     return rows
@@ -152,7 +179,6 @@ def run_exp_noise_x_queries(
     kw = {**_DEFAULTS, **gen_kwargs}
 
     def _run(response_noise, n_queries_per_task, seed):
-        n_components = kw.get('d_latent', _DEFAULTS['d_latent'])
         data, scores, observed, _, _ = generate_benchmark_data(
             n_models=n_models, n_tasks=n_tasks,
             n_queries_per_task=n_queries_per_task,
@@ -160,10 +186,10 @@ def run_exp_noise_x_queries(
             response_noise=response_noise,
             random_state=seed, **{k: v for k, v in kw.items() if k != 'response_noise'},
         )
-        rmse = _fit_and_predict(
-            data, scores, observed,
-            k_neighbors=k_neighbors, n_components=n_components,
-            query_kernel='rbf',
+        mae = _fit_and_predict(
+            _reduce_df(data), scores, observed,
+            k_neighbors=k_neighbors,
+            **_KERNELS,
         )
         return {
             'experiment': 'noise_x_queries',
@@ -171,7 +197,7 @@ def run_exp_noise_x_queries(
             'seed': seed,
             'response_noise': response_noise,
             'n_queries_per_task': n_queries_per_task,
-            'rmse': rmse,
+            'mae': mae,
         }
 
     params = [(rn, nq, s)
