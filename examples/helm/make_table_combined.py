@@ -47,6 +47,10 @@ SPLIT_WEIGHTS = {
     'wmt_14-language_pair=ru-en':                             613,
     'wmt_14-language_pair=hi-en':                             387,
     'med_qa':                                                1000,
+    # =ALL aggregates (sum of per-split sizes)
+    'legalbench-subset=ALL':      1000 + 490 + 367 + 95 + 95,
+    'math-subject=ALL':           135 + 86 + 57 + 52 + 39 + 38 + 30,
+    'wmt_14-language_pair=ALL':   873 + 776 + 754 + 613 + 387,
 }
 
 
@@ -74,6 +78,8 @@ def parse_args():
     parser.add_argument('--n_samples',     type=int, nargs='+', default=[1, 4, 16, 64])
     parser.add_argument('--query_sel',     type=str, default='rand', choices=['rand', 'apw', 'both'],
                         help='Which query selection to show from combined results')
+    parser.add_argument('--all_only',      action='store_true',
+                        help='Use only the =ALL split files (per parent dataset), skip per-split files')
     return parser.parse_args()
 
 
@@ -85,9 +91,18 @@ TABLES_DIR.mkdir(parents=True, exist_ok=True)
 # --
 # Load baselines
 
+def keep_path(p):
+    """If --all_only, keep only =ALL files (and files with no split, e.g. med_qa)."""
+    if not args.all_only:
+        return True
+    name = p.stem
+    return ('=ALL' in name) or ('=' not in name)
+
+
 baselines_dir = Path(args.baselines_dir)
-baseline_paths = sorted(baselines_dir.glob('*.tsv'))
-rprint(f'[green]Found {len(baseline_paths)} baseline result files[/green]')
+baseline_paths = [p for p in sorted(baselines_dir.glob('*.tsv')) if keep_path(p)]
+rprint(f'[green]Found {len(baseline_paths)} baseline result files[/green]'
+       + (' [yellow](--all_only)[/yellow]' if args.all_only else ''))
 
 dfs_base = []
 for p in baseline_paths:
@@ -104,8 +119,9 @@ else:
 # Load combined
 
 combined_dir = Path(args.combined_dir)
-combined_paths = sorted(combined_dir.glob('*.tsv'))
-rprint(f'[green]Found {len(combined_paths)} combined result files[/green]')
+combined_paths = [p for p in sorted(combined_dir.glob('*.tsv')) if keep_path(p)]
+rprint(f'[green]Found {len(combined_paths)} combined result files[/green]'
+       + (' [yellow](--all_only)[/yellow]' if args.all_only else ''))
 
 dfs_comb = []
 for p in combined_paths:

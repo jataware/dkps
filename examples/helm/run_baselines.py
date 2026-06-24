@@ -187,7 +187,10 @@ def main():
     # -- load data --
     rprint(f'[blue]Loading {args.inpath} for {args.dataset}[/blue]')
     df_all = pd.read_csv(args.inpath, sep='\t')
-    df = df_all[df_all.dataset == args.dataset].copy()
+    if '=ALL' in args.dataset:
+        df = df_all.copy()
+    else:
+        df = df_all[df_all.dataset == args.dataset].copy()
 
     if args.score_col != 'score':
         rprint(f'[yellow]Using {args.score_col} as score column[/yellow]')

@@ -32,3 +32,11 @@ python run_combined.py --dataset "wmt_14:language_pair=de-en" --embed_provider g
 python run_combined.py --dataset "wmt_14:language_pair=fr-en" --embed_provider google --score_col meteor --sample 0.2
 python run_combined.py --dataset "wmt_14:language_pair=hi-en" --embed_provider google --score_col meteor --sample 0.2
 python run_combined.py --dataset "wmt_14:language_pair=ru-en" --embed_provider google --score_col meteor --sample 0.2
+
+
+
+# --
+
+python run_combined.py --dataset "math:subject=ALL"         --embed_provider google
+python run_combined.py --dataset "wmt_14:language_pair=ALL" --embed_provider google --score_col meteor --sample 0.2
+python run_combined.py --dataset "legalbench:subset=ALL"    --embed_model    onehot
