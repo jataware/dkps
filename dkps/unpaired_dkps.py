@@ -19,15 +19,19 @@ def pca_reduce_elbow(X, n_elbows=2, max_components=128, random_state=0):
     if k < 1:
         return Xc
     _, S, Vt = randomized_svd(Xc, n_components=k, random_state=random_state)
-    elbows, _ = select_dimension(S, n_elbows=n_elbows)
-    dim = int(elbows[-1]) if len(elbows) else k
+    if k < 2 or len(S) < 2:                 # too few components for an elbow
+        dim = k
+    else:
+        elbows, _ = select_dimension(S, n_elbows=n_elbows)
+        dim = int(elbows[-1]) if len(elbows) else k
     dim = max(1, min(dim, k))
     return Xc @ Vt[:dim].T
 
 
-class DoubleKernelDKPS:
+class ProductKernelPerspectiveSpace:
     """
-    Double-kernel DKPS: extends DKPS to partially-observed (model x query) designs.
+    PKPS (Product Kernel Perspective Space): extends DKPS to partially-observed
+    (model x query) designs.
 
     Uses a product kernel k_Q * k_R where k_Q weights response comparisons by
     query similarity. Reduces to standard paired DKPS when query_kernel='delta'
@@ -244,3 +248,8 @@ class DoubleKernelDKPS:
         if Z == 0:
             return np.nan
         return (K_Q * K_R).sum() / Z
+
+
+# Canonical short name and back-compat alias.
+PKPS = ProductKernelPerspectiveSpace
+DoubleKernelDKPS = ProductKernelPerspectiveSpace

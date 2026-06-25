@@ -75,7 +75,16 @@ def make_estimators(query_kernel='rbf', response_kernel='rbf'):
 ESTIMATORS = make_estimators()
 
 
-def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=None):
+DATASETS = {
+    'math': dict(parquet='exports/math_google_embeddings.parquet', tsv='data/math.tsv',
+                 query_parquet='exports/math_query_google_embeddings.parquet', score_col='score'),
+    'wmt_14': dict(parquet='exports/wmt_14_google_embeddings.parquet', tsv='data/wmt_14.tsv',
+                   query_parquet='exports/wmt_14_query_google_embeddings.parquet', score_col='meteor'),
+}
+
+
+def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=None,
+                   score_col='score'):
     """Return raw (unreduced) response/query embeddings + metadata.
 
     Reduction is deferred to each replicate (observed data only).
@@ -91,7 +100,8 @@ def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=
     groups : {(model_id, task_id): row indices}
     """
     emb = pd.read_parquet(parquet_path)
-    meta = pd.read_csv(tsv_path, sep='\t')[['dataset', 'model', 'instance_id', 'query', 'score']]
+    meta = (pd.read_csv(tsv_path, sep='\t')[['dataset', 'model', 'instance_id', 'query', score_col]]
+            .rename(columns={score_col: 'score'}))
     df = emb.merge(meta, on=['dataset', 'model', 'instance_id'], how='inner')
     df['task_id'] = df['dataset']
     df['model_id'] = df['model']
@@ -134,10 +144,11 @@ def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=
         score_mat[m_idx[m], t_idx[t]] = s
 
     groups = {key: g.index.to_numpy() for key, g in df.groupby(['model_id', 'task_id'])}
+    row_score = df['score'].to_numpy(dtype=float)  # per-(model,instance) score
 
     return (resp_X, Qu, qid_code,
             df['model_id'].to_numpy(), df['task_id'].to_numpy(), df['query_id'].to_numpy(),
-            score_mat, models, tasks, groups)
+            score_mat, models, tasks, groups, row_score)
 
 
 def sample_observed(n_models, n_tasks, obs_prob, rng):
@@ -227,10 +238,14 @@ def mae_heldout(preds, score_mat, observed):
     return float(np.mean(np.abs(score_mat[held] - preds[held])))
 
 
-def fit_predict(df_obs, score_mat, observed, models, predictor='ols', mds_dim=0,
-                bias_decomp=True, logit=True, k=5, **dkps_kwargs):
+def fit_predict(df_obs, train_score, eval_score, observed, models, predictor='ols',
+                mds_dim=0, bias_decomp=True, logit=True, k=5, **dkps_kwargs):
     """Fit DoubleKernelDKPS, embed models via ClassicalMDS (fixed mds_dim or
-    n_elbows=2 if mds_dim<=0), then predict held-out scores from the embedding."""
+    n_elbows=2 if mds_dim<=0), then predict held-out scores from the embedding.
+
+    train_score = observed-pair scores used to fit (sample means under query
+    subsampling); eval_score = true full scores used only for held-out MAE.
+    """
     est = DoubleKernelDKPS(**dkps_kwargs)
     est.fit(df_obs)
     dist = est.dist_matrix_.copy()
@@ -256,12 +271,12 @@ def fit_predict(df_obs, score_mat, observed, models, predictor='ols', mds_dim=0,
     for m in present:
         full[models.index(m)] = Z[name2row[m]]
 
-    preds = predict_from_embedding(full, score_mat, observed, predictor=predictor,
+    preds = predict_from_embedding(full, train_score, observed, predictor=predictor,
                                    bias_decomp=bias_decomp, logit=logit, k=k)
-    return mae_heldout(preds, score_mat, observed)
+    return mae_heldout(preds, eval_score, observed)
 
 
-def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups,
+def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups, row_score,
             score_mat, models, tasks, obs_prob, query_obs_prob, seed, k,
             n_models_use=None, pca_elbows=2, pca_max_components=128,
             predictor='ols', mds_dim=0, bias_decomp=True, logit=True):
@@ -272,7 +287,14 @@ def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups,
         models = [models[i] for i in sel]
         score_mat = score_mat[sel]
     observed = sample_observed(len(models), len(tasks), obs_prob, rng)
+    # Only (model, task) cells that actually exist can be observed (datasets like
+    # WMT are not fully paired — some models miss some tasks).
+    observed &= np.isfinite(score_mat)
 
+    # sample_mat: observed-pair score = mean over the *answered* queries
+    # (= full score when query_obs_prob==1). Used to fit; full score_mat is the
+    # held-out evaluation target.
+    sample_mat = np.full_like(score_mat, np.nan)
     keep = []
     for i in range(len(models)):
         for t in range(len(tasks)):
@@ -286,6 +308,7 @@ def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups,
                 if not m.any():
                     m[rng.integers(len(idx))] = True
                 idx = idx[m]
+            sample_mat[i, t] = row_score[idx].mean()
             keep.append(idx)
     if not keep:
         return []
@@ -317,25 +340,31 @@ def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups,
 
     rows = []
     for name, kw in ESTIMATORS.items():
-        mae = fit_predict(df_obs, score_mat, observed, models, predictor=predictor,
-                          mds_dim=mds_dim, bias_decomp=bias_decomp, logit=logit, k=k, **kw)
+        mae = fit_predict(df_obs, sample_mat, score_mat, observed, models,
+                          predictor=predictor, mds_dim=mds_dim,
+                          bias_decomp=bias_decomp, logit=logit, k=k, **kw)
         rows.append(_row(name, mae))
 
-    # Score-only baseline: logit-space rank-2 matrix completion (BenchPress).
+    # Score-only baseline: logit-space rank-2 matrix completion (BenchPress),
+    # fit on the observed sample scores, evaluated against full scores.
     rows.append(_row('matcomplete', mae_heldout(
-        matrix_completion_predict(score_mat, observed), score_mat, observed),
+        matrix_completion_predict(sample_mat, observed), score_mat, observed),
         pred='na', md=0))
     return rows
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--parquet', default='exports/math_google_embeddings.parquet')
-    ap.add_argument('--tsv', default='data/math.tsv')
+    ap.add_argument('--dataset', default='math',
+                    help="dataset key from DATASETS (e.g. 'math', 'wmt_14'); overrides --parquet/--tsv")
+    ap.add_argument('--parquet', default=None)
+    ap.add_argument('--tsv', default=None)
     ap.add_argument('--query_parquet', default=None,
                     help='google query-embedding parquet (default: alongside --parquet)')
+    ap.add_argument('--score_col', default=None, help='tsv score column (default per --dataset)')
     ap.add_argument('--sweep',
-                    choices=['task_parity', 'query_sparsity', 'n_models', 'mds_predictor'],
+                    choices=['task_parity', 'query_sparsity', 'n_models',
+                             'mds_predictor', 'obs_x_query'],
                     default='task_parity')
     ap.add_argument('--obs_probs', type=float, nargs='+',
                     default=[0.1, 0.2, 0.3, 0.5, 0.7, 0.9])
@@ -374,11 +403,18 @@ def main():
     print(f'kernels: query={args.query_kernel}, response={args.response_kernel}; '
           f'reduction: PCA(n_elbows={args.pca_elbows}) per run, observed only')
 
-    print('loading HELM math data ...')
+    # Resolve dataset paths (explicit --parquet/--tsv override the registry).
+    cfg = DATASETS.get(args.dataset, {})
+    parquet = args.parquet or cfg.get('parquet')
+    tsv = args.tsv or cfg.get('tsv')
+    query_parquet = args.query_parquet or cfg.get('query_parquet')
+    score_col = args.score_col or cfg.get('score_col', 'score')
+
+    print(f'loading HELM data: dataset={args.dataset} score_col={score_col} ...')
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
-     score_mat, models, tasks, groups) = load_helm_math(
-        args.parquet, args.tsv, query_source=args.query_source,
-        query_parquet=args.query_parquet)
+     score_mat, models, tasks, groups, row_score) = load_helm_math(
+        parquet, tsv, query_source=args.query_source,
+        query_parquet=query_parquet, score_col=score_col)
     print(f'  query source: {args.query_source}; resp {resp_X.shape}, Qu {Qu.shape}')
     print(f'  {len(models)} models, {len(tasks)} tasks, {len(model_id)} response rows')
 
@@ -396,6 +432,10 @@ def main():
         x_col = 'n_models'
         specs = [dict(obs_prob=args.fixed_obs_prob, query_obs_prob=1.0, n_models_use=n, **pred_cfg)
                  for n in args.n_models_values]
+    elif args.sweep == 'obs_x_query':  # 2D grid: obs_prob x query_obs_prob
+        x_col = 'obs_prob'
+        specs = [dict(obs_prob=p, query_obs_prob=q, n_models_use=None, **pred_cfg)
+                 for p in args.obs_probs for q in args.query_obs_probs]
     else:  # mds_predictor: vary MDS dim x predictor at fixed obs_prob
         x_col = 'mds_dim'
         specs = [dict(obs_prob=args.fixed_obs_prob, query_obs_prob=1.0, n_models_use=None,
@@ -405,16 +445,20 @@ def main():
           f'bias_decomp={args.bias_decomp} logit={args.logit}')
 
     jobs = [delayed(run_one)(resp_X, Qu, qid_code, model_id, task_id, query_id,
-                             groups, score_mat, models, tasks, seed=s, k=args.k,
-                             pca_elbows=args.pca_elbows,
+                             groups, row_score, score_mat, models, tasks,
+                             seed=s, k=args.k, pca_elbows=args.pca_elbows,
                              pca_max_components=args.pca_max_components, **spec)
             for spec in specs for s in range(args.n_seeds)]
     nested = Parallel(n_jobs=args.n_jobs, verbose=10)(jobs)
     res = pd.DataFrame([r for sub in nested for r in sub])
     res.to_csv(outdir / f'{args.sweep}.csv', index=False)
 
-    group_cols = (['mds_dim', 'predictor', 'estimator'] if args.sweep == 'mds_predictor'
-                  else [x_col, 'estimator'])
+    if args.sweep == 'mds_predictor':
+        group_cols = ['mds_dim', 'predictor', 'estimator']
+    elif args.sweep == 'obs_x_query':
+        group_cols = ['obs_prob', 'query_obs_prob', 'estimator']
+    else:
+        group_cols = [x_col, 'estimator']
     summary = (res.groupby(group_cols)['mae']
                .agg(['mean', 'std', 'count']).reset_index())
     print(summary.to_string(index=False))

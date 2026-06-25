@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 STYLE = {
-    'combined':    dict(color='#1d4ed8', ls='-',  label='DKPS combined'),
+    'combined':    dict(color='#1d4ed8', ls='-',  label='PKPS combined'),
     'matcomplete': dict(color='#7c3aed', ls='--', label='matrix completion'),
     'ensemble':    dict(color='#15803d', ls='-',  label='ensemble', lw=2.6),
 }
@@ -40,7 +40,7 @@ def main():
         ax.set_title(f'({chr(97 + j)}) {XLABEL.get(sw, sw)}', fontsize=10, loc='left')
         ax.legend(frameon=False, fontsize=9)
         ax.grid(alpha=0.25, lw=0.6)
-    fig.suptitle('HELM MATH: DKPS + matrix-completion ensemble (alpha tuned on held-out seeds)',
+    fig.suptitle('HELM MATH: PKPS + matrix-completion ensemble (alpha tuned on held-out seeds)',
                  fontsize=12)
     fig.tight_layout()
     for ext in ('png', 'pdf'):

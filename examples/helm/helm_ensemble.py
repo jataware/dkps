@@ -112,7 +112,7 @@ def main():
     args = ap.parse_args()
 
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
-     score_mat, models, tasks, groups) = H.load_helm_math(
+     score_mat, models, tasks, groups, _row_score) = H.load_helm_math(
         args.parquet, args.tsv, query_source='google')
     # reorder to one_seed's signature (groups before score_mat/models/tasks)
     data = (resp_X, Qu, qid_code, model_id, task_id, query_id,
