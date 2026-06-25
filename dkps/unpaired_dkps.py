@@ -249,6 +249,55 @@ class ProductKernelPerspectiveSpace:
             return np.nan
         return (K_Q * K_R).sum() / Z
 
+    # ------------------------------------------------------------------
+    # Bandwidth-grid distance matrices: the response kernel and query
+    # squared-distances are sigma-independent, so a single pair loop
+    # produces the distance matrix for an entire RBF-query-bandwidth grid.
+    # ------------------------------------------------------------------
+    def _kr_qsq(self, data_a, data_b):
+        ea, eb = data_a['emb'], data_b['emb']
+        if self.response_kernel == 'linear':
+            K_R = ea @ eb.T
+        elif self.response_kernel == 'rbf':
+            K_R = np.exp(-cdist(ea, eb, 'sqeuclidean') / (2 * self.response_bandwidth_ ** 2))
+        else:
+            K_R = np.asarray(self.response_kernel(ea, eb))
+        q_sq = cdist(data_a['query_emb'], data_b['query_emb'], 'sqeuclidean')
+        return K_R, q_sq
+
+    def dist_matrices(self, data, sigmas):
+        """Return (model_names, {sigma: distance_matrix}) for an RBF query kernel,
+        reusing the sigma-independent response kernel + query distances."""
+        model_data, names = self._prepare_model_data(data)
+        if self.response_kernel == 'rbf':
+            all_r = np.vstack([md['emb'] for md in model_data.values()])
+            self.response_bandwidth_ = self._resolve_bandwidth(all_r, self.response_bandwidth)
+        sigmas = list(sigmas)
+        n = len(names)
+
+        def A_grid(KR, qsq):
+            out = {}
+            for s in sigmas:
+                KQ = np.exp(-qsq / (2.0 * s * s))
+                Z = KQ.sum()
+                out[s] = (KQ * KR).sum() / Z if Z > 0 else np.nan
+            return out
+
+        a_self = {s: np.zeros(n) for s in sigmas}
+        for i, m in enumerate(names):
+            ag = A_grid(*self._kr_qsq(model_data[m], model_data[m]))
+            for s in sigmas:
+                a_self[s][i] = ag[s]
+        D2 = {s: np.zeros((n, n)) for s in sigmas}
+        for i in range(n):
+            for k in range(i + 1, n):
+                ag = A_grid(*self._kr_qsq(model_data[names[i]], model_data[names[k]]))
+                for s in sigmas:
+                    d2 = a_self[s][i] + a_self[s][k] - 2 * ag[s]
+                    D2[s][i, k] = D2[s][k, i] = max(d2, 0.0) if np.isfinite(d2) else np.nan
+        self.model_names_ = names
+        return names, {s: np.sqrt(D2[s]) for s in sigmas}
+
 
 # Canonical short name and back-compat alias.
 PKPS = ProductKernelPerspectiveSpace

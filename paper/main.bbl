@@ -1,0 +1,44 @@
+\begin{thebibliography}{6}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Anonymous(2026)]{dkps_qeff}
+Anonymous.
+\newblock Query-efficient model evaluation using cached responses.
+\newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
+
+\bibitem[Mazumder et~al.(2010)Mazumder, Hastie, and
+  Tibshirani]{mazumder2010softimpute}
+Rahul Mazumder, Trevor Hastie, and Robert Tibshirani.
+\newblock Spectral regularization algorithms for learning large incomplete
+  matrices.
+\newblock \emph{Journal of Machine Learning Research}, 2010.
+
+\bibitem[Papailiopoulos et~al.(2026)]{benchpress}
+Dimitris Papailiopoulos et~al.
+\newblock You don't need to run every eval: Low-rank completion of benchmark
+  matrices.
+\newblock \emph{arXiv preprint arXiv:2606.24020}, 2026.
+
+\bibitem[Polo et~al.(2024)Polo, Weber, Choshen, Sun, Xu, and
+  Yurochkin]{polo2024tinybenchmarks}
+Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
+  Mikhail Yurochkin.
+\newblock tinybenchmarks: Evaluating llms with fewer examples.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
+
+\bibitem[Rasch(1960)]{rasch1960}
+Georg Rasch.
+\newblock \emph{Probabilistic Models for Some Intelligence and Attainment
+  Tests}.
+\newblock Danish Institute for Educational Research, 1960.
+
+\bibitem[Vivek et~al.(2024)Vivek, Ethayarajh, Yang, and Kiela]{vivek2024anchor}
+Rajan Vivek, Kawin Ethayarajh, Diyi Yang, and Douwe Kiela.
+\newblock Anchor points: Benchmarking models with much fewer examples.
+\newblock In \emph{EACL}, 2024.
+
+\end{thebibliography}

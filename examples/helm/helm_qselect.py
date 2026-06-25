@@ -28,6 +28,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from scipy.spatial.distance import pdist
 from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
 from graspologic.embed import ClassicalMDS
 
 from dkps.unpaired_dkps import ProductKernelPerspectiveSpace, pca_reduce_elbow
@@ -82,24 +83,34 @@ def _embed_sigma(df, query_kernel, sigma, mds_dim):
     return Z, n2r
 
 
-def _lofo_regress(Z, n2r, models, yact_map, fams):
-    """Leave-one-family-out linear regression of perspective coords -> full score."""
+def _regressor(predictor):
+    if predictor == 'knn':
+        return KNeighborsRegressor(n_neighbors=5, weights='distance')
+    return LinearRegression()
+
+
+def _lofo_regress(Z, n2r, models, yact_map, fams, predictor='ols'):
+    """Leave-one-family-out regression of perspective coords -> full score."""
     pred = np.full(len(models), np.nan)
     present = [m for m in models if m in n2r]
     coords = {m: Z[n2r[m]] for m in present}
     for i, m in enumerate(models):
         if m not in coords:
             continue
-        tr = [mm for mm in present if fams[mm] != fams[m]]
+        tr = [mm for mm in present if fams[mm] != fams[m] and np.isfinite(yact_map[mm])]
         if len(tr) < 3:
             continue
         Xtr = np.vstack([coords[mm] for mm in tr])
         ytr = np.array([yact_map[mm] for mm in tr])
-        pred[i] = float(LinearRegression().fit(Xtr, ytr).predict(coords[m][None])[0])
+        reg = _regressor(predictor)
+        if predictor == 'knn':
+            reg.set_params(n_neighbors=min(5, len(tr)))
+        pred[i] = float(reg.fit(Xtr, ytr).predict(coords[m][None])[0])
     return np.clip(pred, 0, 1)
 
 
-def run_seed(data, n_paired, n_unpaired, n_models_use, seed, n_query_pool=None, mds_dim=8):
+def run_seed(data, n_paired, n_unpaired, n_models_use, seed, n_query_pool=None,
+             mds_dim=8, include_irt=True, predictor='ols'):
     """Each (used) model answers n_paired SHARED anchor queries plus n_unpaired
     random per-model queries. Predict the benchmark score (mean over the query
     pool); LOFO. n_models_use subsamples the cohort; n_query_pool the query pool."""
@@ -153,30 +164,44 @@ def run_seed(data, n_paired, n_unpaired, n_models_use, seed, n_query_pool=None, 
 
     out = {'sample': sample_sc}
 
-    # ---- IRT via maximal dense |F|x|Q| block
-    F, Q = max_dense_block(amask)
-    irt = np.full(nu, np.nan)
-    if len(F) >= 2 and len(Q) >= 1:
-        beta_Q, _ = irt_fit_difficulties(np.nan_to_num(S[np.ix_(F, Q)], nan=0.0))
-        for i in range(nu):
-            a = amask[i, Q]
-            if a.any():
-                irt[i] = irt_predict(irt_estimate_ability(S[i, Q[a]], beta_Q[a]), beta_Q)
-    out['irt'] = irt
+    # ---- IRT via maximal dense |F|x|Q| block (binary scores only)
+    if include_irt:
+        F, Q = max_dense_block(amask)
+        irt = np.full(nu, np.nan)
+        if len(F) >= 2 and len(Q) >= 1:
+            beta_Q, _ = irt_fit_difficulties(np.nan_to_num(S[np.ix_(F, Q)], nan=0.0))
+            for i in range(nu):
+                a = amask[i, Q]
+                if a.any():
+                    irt[i] = irt_predict(irt_estimate_ability(S[i, Q[a]], beta_Q[a]), beta_Q)
+        out['irt'] = irt
 
-    # ---- DKPS (delta) and PKPS (rbf, adaptive sigma = c*med*(M/m), c fit per run)
+    # ---- DKPS (delta) and PKPS (rbf, query bandwidth + predictor by LOFO-CV)
     df_obs, med = _prep(resp_X, Qu, qid_code, model_id, query_id, keep)
     Zd, n2rd = _embed_sigma(df_obs, 'delta', None, mds_dim)
-    out['dkps'] = _lofo_regress(Zd, n2rd, use, yact_map, fams)
+    out['dkps'] = _lofo_regress(Zd, n2rd, use, yact_map, fams, predictor=predictor)
 
+    # Direct median-scaled bandwidth grid (no analytic M/m factor: the LOFO-CV picks
+    # it, and the reference full scores give a dense, low-noise selection signal).
+    # One response-kernel pair-loop yields the whole grid (dist_matrices).
+    bw = H.SubsampleMedianBandwidth(max_n=5000)
+    est = ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='rbf',
+                                        query_bandwidth=bw, response_bandwidth=bw)
+    scales = (0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0)
+    sigmas = [s * med for s in scales]
+    names, Ds = est.dist_matrices(df_obs, sigmas)
+    n2r = {m: i for i, m in enumerate(names)}
     best = (np.inf, None, None)
-    for c in (0.01, 0.02, 0.04, 0.08, 0.16, 0.32):
-        Z, n2r = _embed_sigma(df_obs, 'rbf', c * med * (M / m_total), mds_dim)
-        pred = _lofo_regress(Z, n2r, use, yact_map, fams)
+    for s in sigmas:
+        D = Ds[s]
+        D = np.nan_to_num(D, nan=np.nanmax(D)) if np.any(np.isnan(D)) else D
+        Z = ClassicalMDS(n_components=min(mds_dim, len(names) - 1),
+                         dissimilarity='precomputed').fit_transform(D)
+        pred = _lofo_regress(Z, n2r, use, yact_map, fams, predictor=predictor)
         h = np.isfinite(pred) & np.isfinite(yv)
         e = float(np.mean(np.abs(pred[h] - yv[h]))) if h.any() else np.inf
         if e < best[0]:
-            best = (e, pred, c)
+            best = (e, pred, s / med)
     out['pkps'], chosen_c = best[1], best[2]
 
     # ---- ensemble PKPS + sample, weight fit per run by LOFO-CV
@@ -211,6 +236,10 @@ def main():
     ap.add_argument('--nm_paired', type=int, default=8)
     ap.add_argument('--nm_unpaired', type=int, default=8)
     ap.add_argument('--n_seeds', type=int, default=20)
+    ap.add_argument('--no_irt', action='store_true', help='skip IRT (e.g. continuous scores)')
+    ap.add_argument('--predictor', choices=['ols', 'knn'], default='knn',
+                    help='LOFO regressor for the perspective coords -> full score map '
+                         '(knn unifies with RD2; ~tied with ols, slightly better unpaired)')
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-rd1')
     args = ap.parse_args()
@@ -229,7 +258,8 @@ def main():
     else:                                  # n_models
         specs = [(args.nm_paired, args.nm_unpaired, n) for n in args.n_models_values]
         xcol = 'n_models'
-    jobs = [delayed(run_seed)(data, npd, nupd, nm, s)
+    jobs = [delayed(run_seed)(data, npd, nupd, nm, s, include_irt=not args.no_irt,
+                              predictor=args.predictor)
             for (npd, nupd, nm) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for sub in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) for r in sub])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)

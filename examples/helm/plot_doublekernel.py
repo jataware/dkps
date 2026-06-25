@@ -15,8 +15,8 @@ import pandas as pd
 
 COLORS = {'rbf_paired': '#0f766e', 'rbf_unpaired': '#c2410c', 'rbf_combined': '#1d4ed8',
           'matcomplete': '#7c3aed'}
-LABELS = {'rbf_paired': 'paired', 'rbf_unpaired': 'unpaired', 'rbf_combined': 'combined',
-          'matcomplete': 'matrix completion'}
+LABELS = {'rbf_paired': 'PKPS (paired k_Q)', 'rbf_unpaired': 'PKPS (unpaired k_Q)',
+          'rbf_combined': 'PKPS', 'matcomplete': 'matrix completion'}
 ORDER = ['rbf_paired', 'rbf_unpaired', 'rbf_combined', 'matcomplete']
 DASHED = {'matcomplete'}
 XLABELS = {

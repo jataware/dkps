@@ -38,7 +38,8 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression, Ridge
 from graspologic.embed import ClassicalMDS
 
-from dkps.unpaired_dkps import DoubleKernelDKPS, pca_reduce_elbow
+from dkps.unpaired_dkps import (DoubleKernelDKPS, ProductKernelPerspectiveSpace,
+                                pca_reduce_elbow)
 from dkps.baselines import matrix_completion_predict
 
 
@@ -81,6 +82,179 @@ DATASETS = {
     'wmt_14': dict(parquet='exports/wmt_14_google_embeddings.parquet', tsv='data/wmt_14.tsv',
                    query_parquet='exports/wmt_14_query_google_embeddings.parquet', score_col='meteor'),
 }
+
+# The heterogeneous suite. MATH/WMT have rich text responses -> Google embeddings;
+# med_qa/legalbench responses are single tokens (MCQ letters / class labels) -> one-hot
+# answer embeddings (linear k_R on a one-hot = answer agreement, the right MCQ signal).
+SUITE = {
+    'math':       dict(resp='google', tsv='data/math.tsv', score_col='score',
+                       query_parquet='exports/math_query_google_embeddings.parquet',
+                       parquet='exports/math_google_embeddings.parquet'),
+    'wmt_14':     dict(resp='google', tsv='data/wmt_14.tsv', score_col='meteor',
+                       query_parquet='exports/wmt_14_query_google_embeddings.parquet',
+                       parquet='exports/wmt_14_google_embeddings.parquet'),
+    'med_qa':     dict(resp='onehot', tsv='data/med_qa.tsv', score_col='score',
+                       query_parquet='exports/med_qa_query_google_embeddings.parquet'),
+    'legalbench': dict(resp='onehot', tsv='data/legalbench.tsv', score_col='score',
+                       query_parquet='exports/legalbench_query_google_embeddings.parquet'),
+}
+
+
+def load_pooled(keys=('math', 'wmt_14')):
+    """Pool multiple datasets into one (shared-model x union-task) benchmark.
+    Tasks are the union of subjects/language-pairs; restricted to shared models.
+    Returns the same 11-tuple as load_helm_math."""
+    longs = []
+    for k in keys:
+        cfg = DATASETS[k]
+        emb = pd.read_parquet(cfg['parquet'])
+        meta = (pd.read_csv(cfg['tsv'], sep='\t')[['dataset', 'model', 'instance_id',
+                'query', cfg['score_col']]].rename(columns={cfg['score_col']: 'score'}))
+        df = emb.merge(meta, on=['dataset', 'model', 'instance_id'], how='inner')
+        df['task_id'] = df['dataset']
+        df['model_id'] = df['model']
+        df['query_id'] = df['dataset'] + '::' + df['instance_id'].astype(str)
+        qdf = pd.read_parquet(cfg['query_parquet'])
+        qmap = {q: np.asarray(v) for q, v in zip(qdf['query_id'], qdf['query_embedding'])}
+        df['query_embedding'] = [qmap[q] for q in df['query_id']]
+        longs.append(df[['model_id', 'task_id', 'query_id', 'embedding', 'query_embedding', 'score']])
+    shared = set(longs[0]['model_id'])
+    for l in longs[1:]:
+        shared &= set(l['model_id'])
+    df = pd.concat([l[l['model_id'].isin(shared)] for l in longs], ignore_index=True)
+    df = df.sort_values(['model_id', 'task_id', 'query_id']).reset_index(drop=True)
+
+    resp_X = np.stack(df['embedding'].values).astype(np.float32)
+    unique_qids = sorted(df['query_id'].unique())
+    qcode = {q: i for i, q in enumerate(unique_qids)}
+    qid_code = df['query_id'].map(qcode).to_numpy()
+    qsub = df.drop_duplicates('query_id').set_index('query_id')
+    Qu = np.stack([np.asarray(qsub.loc[q, 'query_embedding']) for q in unique_qids]).astype(np.float32)
+    models = sorted(df['model_id'].unique())
+    tasks = sorted(df['task_id'].unique())
+    m_idx = {m: i for i, m in enumerate(models)}
+    t_idx = {t: i for i, t in enumerate(tasks)}
+    score_mat = np.full((len(models), len(tasks)), np.nan)
+    for (m, t), s in df.groupby(['model_id', 'task_id'])['score'].mean().items():
+        score_mat[m_idx[m], t_idx[t]] = s
+    groups = {key: g.index.to_numpy() for key, g in df.groupby(['model_id', 'task_id'])}
+    row_score = df['score'].to_numpy(dtype=float)
+    return (resp_X, Qu, qid_code, df['model_id'].to_numpy(), df['task_id'].to_numpy(),
+            df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score)
+
+
+def _suite_dataset_long(key, max_q_per_task=None, seed=0):
+    """One suite dataset -> long df (model_id, task_id, query_id, resp_vec, query_embedding,
+    score). resp_vec is the native response representation (Google emb or one-hot answer)."""
+    cfg = SUITE[key]
+    meta = pd.read_csv(cfg['tsv'], sep='\t')
+    score = meta[cfg['score_col']].to_numpy(dtype=float)
+    base = pd.DataFrame({'dataset': meta['dataset'], 'model_id': meta['model'],
+                         'instance_id': meta['instance_id'].astype(str),
+                         'response': meta['response'].astype(str), 'score': score})
+    base['query_id'] = base['dataset'] + '::' + base['instance_id']
+
+    if cfg['resp'] == 'google':
+        emb = pd.read_parquet(cfg['parquet'])[['dataset', 'model', 'instance_id', 'embedding']]
+        emb['instance_id'] = emb['instance_id'].astype(str)
+        emb = emb.rename(columns={'model': 'model_id'})
+        df = base.merge(emb, on=['dataset', 'model_id', 'instance_id'], how='inner')
+        df['resp_vec'] = list(np.stack(df['embedding'].values).astype(np.float32))
+        df = df.drop(columns='embedding')
+    else:  # one-hot answer agreement
+        vocab = sorted(base['response'].unique())
+        vi = {v: i for i, v in enumerate(vocab)}
+        eye = np.eye(len(vocab), dtype=np.float32)
+        df = base.copy()
+        df['resp_vec'] = [eye[vi[r]] for r in df['response']]
+
+    qdf = pd.read_parquet(cfg['query_parquet'])
+    qmap = {q: np.asarray(v, dtype=np.float32) for q, v in zip(qdf['query_id'], qdf['query_embedding'])}
+    df = df[df['query_id'].isin(qmap)]
+    df['query_embedding'] = [qmap[q] for q in df['query_id']]
+    df['task_id'] = df['dataset']
+
+    if max_q_per_task:  # cap queries per task so datasets contribute comparably
+        rng = np.random.default_rng(seed)
+        keep_q = []
+        for t, g in df.drop_duplicates('query_id').groupby('task_id'):
+            q = g['query_id'].to_numpy()
+            keep_q.append(q if len(q) <= max_q_per_task
+                          else rng.choice(q, max_q_per_task, replace=False))
+        df = df[df['query_id'].isin(np.concatenate(keep_q))]
+    return df[['model_id', 'task_id', 'query_id', 'resp_vec', 'query_embedding', 'score']]
+
+
+def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
+               max_q_per_task=120, seed=0):
+    """Heterogeneous joint benchmark. Each dataset's responses are reduced (Google) or
+    kept (one-hot), unit-normalized, and placed in a DISJOINT block of the response
+    vector -> with a linear response kernel, cross-dataset k_R = 0 exactly. Query
+    embeddings share one Google space; the within-domain median query distance (returned
+    as query_med) keeps the RBF query kernel ~0 across domains. Restricted to shared
+    models. Returns the load_helm_math 11-tuple plus query_med."""
+    longs = {k: _suite_dataset_long(k, max_q_per_task, seed) for k in keys}
+    shared = set.intersection(*[set(l['model_id']) for l in longs.values()])
+
+    blocks, dims = {}, {}
+    for k, l in longs.items():
+        R = np.stack(l['resp_vec'].values).astype(np.float64)
+        if R.shape[1] > reduce_dim:
+            R = pca_reduce_elbow(R, max_components=reduce_dim)
+        R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
+        blocks[k] = R.astype(np.float32)
+        dims[k] = R.shape[1]
+    total = sum(dims.values())
+    offset, off = {}, 0
+    for k in keys:
+        offset[k] = off
+        off += dims[k]
+
+    parts = []
+    for k in keys:
+        l = longs[k][longs[k]['model_id'].isin(shared)].reset_index(drop=True)
+        idx = longs[k].index[longs[k]['model_id'].isin(shared)]
+        B = np.zeros((len(l), total), np.float32)
+        B[:, offset[k]:offset[k] + dims[k]] = blocks[k][[longs[k].index.get_loc(i) for i in idx]]
+        l = l.copy()
+        l['embedding'] = list(B)
+        parts.append(l)
+    df = pd.concat(parts, ignore_index=True)
+    df = df.sort_values(['model_id', 'task_id', 'query_id']).reset_index(drop=True)
+
+    resp_X = np.stack(df['embedding'].values).astype(np.float32)
+    unique_qids = sorted(df['query_id'].unique())
+    qcode = {q: i for i, q in enumerate(unique_qids)}
+    qid_code = df['query_id'].map(qcode).to_numpy()
+    qsub = df.drop_duplicates('query_id').set_index('query_id')
+    Qu = np.stack([np.asarray(qsub.loc[q, 'query_embedding']) for q in unique_qids]).astype(np.float32)
+    # Reduce the 3072-dim Google query embeddings once (PCA) so the per-model-pair query
+    # cdist is cheap; domain separation (what blocks k_Q across datasets) is preserved.
+    Qu = pca_reduce_elbow(Qu.astype(np.float64), max_components=64).astype(np.float32)
+    q_task = qsub['task_id'].to_dict()
+
+    models = sorted(df['model_id'].unique())
+    tasks = sorted(df['task_id'].unique())
+    m_idx = {m: i for i, m in enumerate(models)}
+    t_idx = {t: i for i, t in enumerate(tasks)}
+    score_mat = np.full((len(models), len(tasks)), np.nan)
+    for (m, t), s in df.groupby(['model_id', 'task_id'])['score'].mean().items():
+        score_mat[m_idx[m], t_idx[t]] = s
+    groups = {key: g.index.to_numpy() for key, g in df.groupby(['model_id', 'task_id'])}
+    row_score = df['score'].to_numpy(dtype=float)
+
+    # within-domain median query distance (per task, pooled) for the k_Q bandwidth
+    meds = []
+    rng = np.random.default_rng(seed)
+    for t in tasks:
+        qi = [i for i, q in enumerate(unique_qids) if q_task[q] == t]
+        if len(qi) > 1:
+            sub = Qu[qi] if len(qi) <= 400 else Qu[rng.choice(qi, 400, replace=False)]
+            meds.append(np.median(pdist(sub)))
+    query_med = float(np.median(meds)) if meds else 1.0
+
+    return (resp_X, Qu, qid_code, df['model_id'].to_numpy(), df['task_id'].to_numpy(),
+            df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
 
 
 def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=None,
@@ -276,6 +450,85 @@ def fit_predict(df_obs, train_score, eval_score, observed, models, predictor='ol
     return mae_heldout(preds, eval_score, observed)
 
 
+def _mds_full(D, names, models, mds_dim=8):
+    name2row = {m: i for i, m in enumerate(names)}
+    present = [m for m in models if m in name2row]
+    if np.any(np.isnan(D)):
+        mx = np.nanmax(D)
+        if not np.isfinite(mx) or len(present) < 4:
+            return None
+        D = np.nan_to_num(D, nan=mx)
+    if len(present) < 4:
+        return None
+    Z = ClassicalMDS(n_components=min(mds_dim, len(present) - 1),
+                     dissimilarity='precomputed').fit_transform(D)
+    full = np.zeros((len(models), Z.shape[1]))
+    for m in present:
+        full[models.index(m)] = Z[name2row[m]]
+    return full
+
+
+def cv_predict_all(df_obs, score_mat, observed, models, k=5, seed=0, mds_dim=8,
+                   train_score=None, n_splits=5, response_kernel='rbf', query_med=None):
+    """Combined-PKPS + matrix-completion + their ensemble for RD2 (missing tasks).
+
+    The query bandwidth is fixed to the median query distance and the predictor to
+    KNN: empirically the combined held-out MAE is flat in sigma for sigma >= 0.5*med
+    (0.090-0.091 on MATH) and KNN robustly beats OLS (0.091 vs 0.106), so a per-run
+    grid-CV over (sigma, predictor) only injects selection noise on the sparse
+    observed split. The one hyper-parameter that genuinely varies across regimes is
+    the ensemble weight alpha, which we pick by repeated held-out CV (averaged over
+    n_splits validation masks). dist_matrices still builds the single median-bandwidth
+    distance matrix from one response-kernel pair-loop."""
+    train_score = score_mat if train_score is None else train_score
+    if query_med is not None:
+        med = query_med
+    else:
+        qsub = df_obs.drop_duplicates('query_id')
+        qemb = np.stack(qsub['query_embedding'].values)
+        med = float(np.median(pdist(qemb))) if len(qemb) > 1 else 1.0
+    bw = SubsampleMedianBandwidth(max_n=5000)
+    est = ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel=response_kernel,
+                                        query_bandwidth=bw, response_bandwidth=bw)
+    names, Ds = est.dist_matrices(df_obs, [med])
+    Z = _mds_full(Ds[med], names, models, mds_dim)
+
+    mc = matrix_completion_predict(train_score, observed)
+    if Z is None:
+        return dict(combined=np.full_like(score_mat, np.nan), matcomplete=mc,
+                    ensemble=mc, sigma=None, predictor='knn', alpha=None)
+    P_comb = predict_from_embedding(Z, train_score, observed, predictor='knn',
+                                    bias_decomp=True, logit=True, k=k)
+
+    # CV the ensemble weight over several held-out validation masks. With few observed
+    # cells a fine grid overfits the handful of validation cells -- and blending in a
+    # collapsed base (e.g. MC at tiny cohorts) is actively harmful -- so fall back to
+    # {0, 1}: pick whichever base (MC or combined) is stronger here, never blend.
+    obs_idx = np.argwhere(observed)
+    grid = np.linspace(0, 1, 21) if len(obs_idx) >= 40 else np.array([0.0, 1.0])
+    curves = []
+    for sp in range(n_splits):
+        rng = np.random.default_rng(seed * 100 + sp)
+        val = obs_idx[rng.choice(len(obs_idx), max(1, int(0.25 * len(obs_idx))), replace=False)]
+        vr, vc = val[:, 0], val[:, 1]
+        vt = score_mat[vr, vc]
+        cv_obs = observed.copy()
+        cv_obs[vr, vc] = False
+        # embedding is unchanged across splits; only the regressed scores use cv_obs
+        Pc = predict_from_embedding(Z, train_score, cv_obs, predictor='knn',
+                                    bias_decomp=True, logit=True, k=k)
+        mcv = matrix_completion_predict(train_score, cv_obs)[vr, vc]
+        pcv = Pc[vr, vc]
+        h = np.isfinite(pcv) & np.isfinite(mcv) & np.isfinite(vt)
+        if h.any():
+            curves.append([np.mean(np.abs(np.clip(a * pcv[h] + (1 - a) * mcv[h], 0, 1) - vt[h]))
+                           for a in grid])
+    alpha = float(grid[int(np.argmin(np.mean(curves, axis=0)))]) if curves else 0.5
+    ens = np.clip(alpha * P_comb + (1 - alpha) * mc, 0, 1)
+    return dict(combined=P_comb, matcomplete=mc, ensemble=ens,
+                sigma=med, predictor='knn', alpha=alpha)
+
+
 def run_one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups, row_score,
             score_mat, models, tasks, obs_prob, query_obs_prob, seed, k,
             n_models_use=None, pca_elbows=2, pca_max_components=128,
@@ -403,18 +656,20 @@ def main():
     print(f'kernels: query={args.query_kernel}, response={args.response_kernel}; '
           f'reduction: PCA(n_elbows={args.pca_elbows}) per run, observed only')
 
-    # Resolve dataset paths (explicit --parquet/--tsv override the registry).
-    cfg = DATASETS.get(args.dataset, {})
-    parquet = args.parquet or cfg.get('parquet')
-    tsv = args.tsv or cfg.get('tsv')
-    query_parquet = args.query_parquet or cfg.get('query_parquet')
-    score_col = args.score_col or cfg.get('score_col', 'score')
-
-    print(f'loading HELM data: dataset={args.dataset} score_col={score_col} ...')
-    (resp_X, Qu, qid_code, model_id, task_id, query_id,
-     score_mat, models, tasks, groups, row_score) = load_helm_math(
-        parquet, tsv, query_source=args.query_source,
-        query_parquet=query_parquet, score_col=score_col)
+    print(f'loading HELM data: dataset={args.dataset} ...')
+    if args.dataset == 'pooled':
+        (resp_X, Qu, qid_code, model_id, task_id, query_id,
+         score_mat, models, tasks, groups, row_score) = load_pooled(('math', 'wmt_14'))
+    else:
+        cfg = DATASETS.get(args.dataset, {})
+        parquet = args.parquet or cfg.get('parquet')
+        tsv = args.tsv or cfg.get('tsv')
+        query_parquet = args.query_parquet or cfg.get('query_parquet')
+        score_col = args.score_col or cfg.get('score_col', 'score')
+        (resp_X, Qu, qid_code, model_id, task_id, query_id,
+         score_mat, models, tasks, groups, row_score) = load_helm_math(
+            parquet, tsv, query_source=args.query_source,
+            query_parquet=query_parquet, score_col=score_col)
     print(f'  query source: {args.query_source}; resp {resp_X.shape}, Qu {Qu.shape}')
     print(f'  {len(models)} models, {len(tasks)} tasks, {len(model_id)} response rows')
 
