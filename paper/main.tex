@@ -245,7 +245,9 @@ embedding ensemble beats the best score-only predictor (own sample where observe
 completion where missing) across all three observation levers on MATH
 (Figure~\ref{fig:leversmath}), and helps most where evaluation is hardest: as the
 queries per cell shrink (the sample mean grows noisy while response \emph{style} stays
-stable), as coverage drops, and---most sharply---as the cohort shrinks, where rank-$2$
+stable)---all the way to $q{=}0$, where the cell is simply completed, so efficient
+benchmarking and completion are the two ends of a single axis---as coverage drops, and
+---most sharply---as the cohort shrinks, where rank-$2$
 completion collapses for lack of rows ($0.22$ at $n{=}10$) while the embedding, needing
 no rows, holds the ensemble flat. At full queries and large cohorts the score channel
 is already near-exact and the ensemble simply matches it.
@@ -256,7 +258,9 @@ is already near-exact and the ensemble simply matches it.
 \caption{Unified full-matrix estimation on MATH (MAE over every cell vs.\ the true full
 score). The one sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (green) beats
 the best score-only predictor (grey) and each channel alone across queries per cell
-(noise), task coverage, and cohort size.}
+(left; $q{=}0$ is pure completion, growing $q$ is denoising---the two are one axis),
+task coverage, and cohort size. The score-only curve spikes at $q{=}1$ (a single noisy
+query) while the ensemble flows smoothly from the completion point downward.}
 \label{fig:leversmath}
 \end{figure}
 
@@ -313,9 +317,9 @@ wherever real evaluation is incomplete.
 \caption{Unified full-matrix estimation on the heterogeneous $18$-task suite (MAE over
 every cell vs.\ the true full score). The
 sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (green) beats the best
-score-only predictor (grey) across queries per cell (noise), task coverage, and cohort
-size; at $n{=}10$ matrix completion collapses while the embedding holds the ensemble
-flat.}
+score-only predictor (grey) across queries per cell ($q{=}0$ completion through
+denoising---one axis), task coverage, and cohort size; at $n{=}10$ matrix completion
+collapses while the embedding holds the ensemble flat.}
 \label{fig:leverssuite}
 \end{figure}
 

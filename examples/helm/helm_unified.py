@@ -24,6 +24,21 @@ from helm_rd2_cv import load
 GRID = np.linspace(0, 1, 21)
 
 
+def mc_crossfit(M, O, rng, k=3, n_init=2):
+    """Matrix completion that is clean at EVERY cell: missing cells by a full fit, and
+    observed cells by k-fold cross-fitting (each predicted by a fit that excludes it), so
+    the completion never echoes a cell's own noisy sample. Mirrors PKPS's leave-one-out."""
+    pred = matrix_completion_predict(M, O, n_init=n_init)
+    oi = np.argwhere(O & np.isfinite(M))
+    if len(oi) >= k:
+        for fold in np.array_split(rng.permutation(len(oi)), k):
+            cells = oi[fold]
+            cvo = O.copy(); cvo[cells[:, 0], cells[:, 1]] = False
+            p = matrix_completion_predict(M, cvo, n_init=n_init)
+            pred[cells[:, 0], cells[:, 1]] = p[cells[:, 0], cells[:, 1]]
+    return pred
+
+
 def _perspective(rX, Qu, qc, mid, tid, qid, keep, mods, suite, qmed):
     codes = qc[keep]
     if suite:
@@ -44,21 +59,37 @@ def _perspective(rX, Qu, qc, mid, tid, qid, keep, mods, suite, qmed):
     return H._mds_full(Ds[med], names, mods, 8)
 
 
-def trial(data, suite, qmed, p, q, n_models, seed):
+def trial(data, suite, qmed, p, q, n_models, seed, q_ref=None):
+    """Estimate the full score matrix. Two modes:
+      q_ref is None : symmetric -- coverage p picks observed cells (depth q), eval all cells.
+      q_ref set     : reference/target -- a fraction p of cells is a fixed-depth (q_ref)
+                      REFERENCE scaffold; the rest are TARGET cells given q queries (q>=0,
+                      q=0 = missing/pure completion). Evaluate on the target cells, so the
+                      x-axis can include q=0 and unifies completion (q=0) with denoising (q>0).
+    """
     rX, Qu, qc, mid, tid, qid, full, mods, tasks, grp, rs = data[:11]
     rng = np.random.default_rng(seed)
     if n_models and n_models < len(mods):
         sel = np.sort(rng.choice(len(mods), n_models, replace=False))
         mods = [mods[i] for i in sel]; full = full[sel]
-    O = H.sample_observed(len(mods), len(tasks), p, rng) & np.isfinite(full)
+    fin0 = np.isfinite(full)
+    if q_ref is None:
+        O = H.sample_observed(len(mods), len(tasks), p, rng) & fin0
+        ref = np.zeros_like(O); eval_mask = np.ones_like(O)
+    else:
+        ref = H.sample_observed(len(mods), len(tasks), p, rng) & fin0
+        tgt = (~ref) & fin0
+        eval_mask = tgt
+        O = ref | tgt if (q and q > 0) else ref.copy()
     keep, samp = [], np.full_like(full, np.nan)
     ncnt = np.zeros_like(full)                                          # queries per observed cell
     s1 = np.full_like(full, np.nan); s2 = np.full_like(full, np.nan)    # half-splits (observed)
     for i in range(len(mods)):
         for t in range(len(tasks)):
             if O[i, t] and (mods[i], tasks[t]) in grp:
+                d = q_ref if (q_ref is not None and ref[i, t]) else q
                 idx = grp[(mods[i], tasks[t])]
-                take = idx if (q is None or len(idx) <= q) else rng.choice(idx, q, replace=False)
+                take = idx if (d is None or len(idx) <= d) else rng.choice(idx, d, replace=False)
                 keep.append(take); samp[i, t] = rs[take].mean(); ncnt[i, t] = len(take)
                 if len(take) >= 2:
                     h = rng.permutation(len(take))
@@ -68,54 +99,54 @@ def trial(data, suite, qmed, p, q, n_models, seed):
     Z = _perspective(rX, Qu, qc, mid, tid, qid, keep, mods, suite, qmed)
     if Z is None:
         return None
-    pk = H.predict_from_embedding_all(Z, samp, O, predictor='knn', k=5)
-    mc = matrix_completion_predict(samp, O)
-
+    # the completion prior is fit on O_score: all observed cells (symmetric), or only the
+    # reference cells (reference/target -- the noisy target samples are what we denoise, so
+    # they must not pollute the prior; targets are predicted, then blended with their own
+    # sample). Both channels are cross-fit/LOO so the prior never echoes a cell's own sample.
+    O_score = ref if q_ref is not None else O
+    pk = H.predict_from_embedding_all(Z, samp, O_score, predictor='knn', k=5)
+    mc = mc_crossfit(samp, O_score, rng)
     obs = O & np.isfinite(samp)
-    # Channels: own sample (observed only, direct but noisy), MC (its value on observed
-    # cells just echoes the sample, so it only adds signal on MISSING cells), and PKPS
-    # (cross-model, available everywhere). We ensemble each where it carries independent
-    # signal: missing cells = CV blend(MC, PKPS); observed cells = precision blend(sample,
-    # PKPS) -- the PKPS weight rises with noise and falls as queries grow.
+    nqc = np.maximum(ncnt, 1)
 
-    # missing-cell completion weight (MC vs PKPS), held-out observed cells vs their sample
-    oi = np.argwhere(obs); a_mis = 0.5
-    if len(oi) >= 8:
-        v = oi[rng.choice(len(oi), max(1, len(oi) // 4), replace=False)]
-        cvo = O.copy(); cvo[v[:, 0], v[:, 1]] = False
-        pk2 = H.predict_from_embedding_all(Z, samp, cvo, predictor='knn', k=5)
-        mc2 = matrix_completion_predict(samp, cvo)
-        vt = samp[v[:, 0], v[:, 1]]; p2 = pk2[v[:, 0], v[:, 1]]; m2 = mc2[v[:, 0], v[:, 1]]
-        hh = np.isfinite(vt) & np.isfinite(p2) & np.isfinite(m2)
-        if hh.any():
-            a_mis = GRID[int(np.argmin([np.mean(np.abs(np.clip(a * p2[hh] + (1 - a) * m2[hh], 0, 1) - vt[hh]))
-                                        for a in GRID]))]
+    # completion prior = blend(PKPS, MC). Both are cross-fit, so the prior never echoes a
+    # cell's own (noisy) sample; the blend weight and the prior's error are read directly
+    # off the now-clean residuals against the observed samples, depth-weighted so low-noise
+    # (deeply-sampled) cells dominate.
+    oo = obs & np.isfinite(pk) & np.isfinite(mc)
+    a_mis = 0.5
+    if oo.sum() >= 5:
+        so, po, mo, wo = samp[oo], pk[oo], mc[oo], nqc[oo]
+        a_mis = GRID[int(np.argmin([np.sum(wo * np.abs(np.clip(a * po + (1 - a) * mo, 0, 1) - so)) / np.sum(wo)
+                                    for a in GRID]))]
+    completion = a_mis * pk + (1 - a_mis) * mc
+    completion = np.clip(np.where(np.isfinite(completion), completion,
+                                  np.where(np.isfinite(mc), mc, pk)), 0, 1)
 
-    # observed-cell PKPS weight by precision. Half-splits give the full-sample noise
-    # (sigma_q^2 = E[(s1-s2)^2]/4) and PKPS's error incl. bias (E[(pk-s2)^2]-E[(s1-s2)^2]/2);
-    # w_pk = sigma_q^2/(sigma_q^2 + pkps_err) (q/2 -> q correction baked in).
-    hv = obs & np.isfinite(s1) & np.isfinite(s2) & np.isfinite(pk)
-    if hv.sum() >= 5:
-        ess = np.mean((s1[hv] - s2[hv]) ** 2)
-        sig_q = ess / 4.0
-        pkps_err = max(np.mean((pk[hv] - s2[hv]) ** 2) - ess / 2.0, 1e-6)
-        w_pk = float(np.clip(sig_q / (sig_q + pkps_err), 0.0, 1.0))
-    else:  # q=1: no split; use p(1-p)/m vs E[(pk-sample)^2]
-        hp = obs & np.isfinite(pk)
-        nv = np.mean(pk[hp] * (1 - pk[hp]) / np.maximum(ncnt[hp], 1)) if hp.any() else 0.0
-        tv = np.mean((pk[hp] - samp[hp]) ** 2) if hp.any() else 1.0
-        w_pk = float(np.clip(nv / tv, 0.0, 1.0)) if tv > 1e-9 else 0.0
-
+    # observed cells: precision blend of the own sample against the completion prior, PER
+    # cell by its query count -- weight on the sample = comp_err/(comp_err + p(1-p)/m). A
+    # shallow cell leans on the prior (never doing worse than completing it, the q=0 point);
+    # a deeply-sampled cell trusts its own mean. Essential when cells differ in depth.
+    pcl = np.clip(np.where(np.isfinite(pk), pk, 0.5), 1e-3, 1 - 1e-3)
+    sig_cell = pcl * (1 - pcl) / nqc
+    ce = obs & np.isfinite(completion)
+    if ce.sum() >= 5:
+        err = (completion[ce] - samp[ce]) ** 2 - sig_cell[ce]
+        comp_err = max(float(np.sum(nqc[ce] * err) / np.sum(nqc[ce])), 1e-6)
+    else:
+        comp_err = 1e-6
+    w_samp = comp_err / (comp_err + sig_cell)
     score = np.where(obs, samp, mc)
-    ens = np.where(obs, np.clip((1 - w_pk) * samp + w_pk * pk, 0, 1),
-                   np.clip(a_mis * pk + (1 - a_mis) * mc, 0, 1))
+    ens = np.where(obs, np.clip(w_samp * samp + (1 - w_samp) * completion, 0, 1), completion)
+    w_pk = float(np.nanmean(np.where(obs, w_samp, np.nan)))
     fin = np.isfinite(full)
-    def mae(P, m): mm = m & fin & np.isfinite(P); return float(np.mean(np.abs(P[mm] - full[mm])))
-    return dict(p=p, q=(q or 0), n_models=len(mods), seed=seed,
-                score_all=mae(score, np.ones_like(O)), pkps_all=mae(pk, np.ones_like(O)),
-                mc_all=mae(mc, np.ones_like(O)), ens_all=mae(ens, np.ones_like(O)),
-                score_obs=mae(score, obs), ens_obs=mae(ens, obs),
-                score_mis=mae(score, ~O), ens_mis=mae(ens, ~O),
+    ev = eval_mask & fin
+    def mae(P, m): mm = m & np.isfinite(P); return float(np.mean(np.abs(P[mm] - full[mm]))) if mm.any() else np.nan
+    return dict(p=p, q=(q if q is not None else 0), n_models=len(mods), seed=seed,
+                score_all=mae(score, ev), pkps_all=mae(pk, ev),
+                mc_all=mae(mc, ev), ens_all=mae(ens, ev),
+                score_obs=mae(score, ev & obs), ens_obs=mae(ens, ev & obs),
+                score_mis=mae(score, ev & ~O), ens_mis=mae(ens, ev & ~O),
                 w_pk=w_pk, a_mis=a_mis)
 
 
@@ -123,25 +154,28 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dataset', default='math')
     ap.add_argument('--sweep', choices=['queries', 'coverage', 'n_models'], default='queries')
-    ap.add_argument('--queries', type=int, nargs='+', default=[1, 2, 4, 8, 16, 32])
+    ap.add_argument('--queries', type=int, nargs='+', default=[0, 1, 2, 4, 8, 16, 32])
     ap.add_argument('--coverages', type=float, nargs='+', default=[0.2, 0.35, 0.5, 0.7, 0.9])
     ap.add_argument('--n_models_values', type=int, nargs='+', default=[10, 20, 40, 60, 93])
     ap.add_argument('--fixed_p', type=float, default=0.5)
     ap.add_argument('--fixed_q', type=int, default=8)
+    ap.add_argument('--q_ref', type=int, default=32, help='reference-cell depth for the queries sweep (enables q=0)')
     ap.add_argument('--n_seeds', type=int, default=12)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-unified')
     args = ap.parse_args()
     data, qmed, suite = load(args.dataset)
 
+    # the queries sweep uses a reference/target split so the x-axis can include q=0
+    # (pure completion); coverage and n_models keep the symmetric eval-all framing.
     if args.sweep == 'queries':
-        specs = [(args.fixed_p, q, None) for q in args.queries]; xcol = 'q'
+        specs = [(args.fixed_p, q, None, args.q_ref) for q in args.queries]; xcol = 'q'
     elif args.sweep == 'coverage':
-        specs = [(p, args.fixed_q, None) for p in args.coverages]; xcol = 'p'
+        specs = [(p, args.fixed_q, None, None) for p in args.coverages]; xcol = 'p'
     else:
-        specs = [(args.fixed_p, args.fixed_q, n) for n in args.n_models_values]; xcol = 'n_models'
-    jobs = [delayed(trial)(data, suite, qmed, p, q, nm, s)
-            for (p, q, nm) in specs for s in range(args.n_seeds)]
+        specs = [(args.fixed_p, args.fixed_q, n, None) for n in args.n_models_values]; xcol = 'n_models'
+    jobs = [delayed(trial)(data, suite, qmed, p, q, nm, s, qr)
+            for (p, q, nm, qr) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for r in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) if r])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     res.to_csv(Path(args.outdir) / f'unified_{args.dataset}_{args.sweep}.csv', index=False)

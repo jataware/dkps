@@ -10,7 +10,7 @@ import numpy as np
 
 def matrix_completion_predict(score_mat, observed, rank=2, lam=0.1, n_init=5,
                               max_iter=50, clip_eps=1e-3, logit=True,
-                              random_state=0):
+                              random_state=0, fill_observed=False):
     """Logit-space rank-2 bias-decomposed ALS matrix completion (BenchPress).
 
     Papailiopoulos, 'You Don't Need to Run Every Eval' (arXiv:2606.24020):
@@ -27,7 +27,7 @@ def matrix_completion_predict(score_mat, observed, rank=2, lam=0.1, n_init=5,
     mask = np.asarray(observed, dtype=bool)
     nM, nB = M.shape
     preds = np.full_like(M, np.nan)
-    if not (~mask).any():
+    if not (~mask).any() and not fill_observed:
         return preds
 
     # 1. logit transform
@@ -84,5 +84,11 @@ def matrix_completion_predict(score_mat, observed, rank=2, lam=0.1, n_init=5,
     # 5. invert standardization + logit
     Xhat = Xhat_std * sd + mu
     Phat = 1.0 / (1.0 + np.exp(-Xhat)) if logit else Xhat
-    preds[~mask] = np.clip(Phat, 0.0, 1.0)[~mask]
+    Pc = np.clip(Phat, 0.0, 1.0)
+    # default: predictions only at unobserved entries. fill_observed also returns the
+    # low-rank reconstruction at observed cells (a denoised estimate that uses the cell's
+    # own value but regularizes it toward the fitted structure).
+    preds[~mask] = Pc[~mask]
+    if fill_observed:
+        preds[mask] = Pc[mask]
     return preds
