@@ -59,7 +59,7 @@ def main():
     if c.exists():
         panel(axes[2], pd.read_csv(c), 'n_models', 'number of models')
         axes[2].set_title('(c) number of models', loc='left', fontsize=10)
-    fig.suptitle(f'RD1 missing queries ({args.dataset.upper()}): PKPS vs DKPS / IRT / sample',
+    fig.suptitle(f'Unpaired and low-budget evaluation ({args.dataset.upper()}): PKPS vs DKPS / IRT / sample',
                  fontsize=12)
     fig.tight_layout()
     for ext in ('png', 'pdf'):

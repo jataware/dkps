@@ -373,18 +373,41 @@ def _make_predictor(name, k, n_train):
     raise ValueError(f'unknown predictor: {name}')
 
 
+def _whiten(M, mask, logit=True, standardize=True):
+    """logit -> per-task column standardization (observed) -> two-way bias. Returns
+    (target = standardized residual, bias, mu, sd) and lets callers invert. Matches the
+    preprocessing of the BenchPress matrix-completion baseline so the heads are
+    comparable (without standardization, the model offset is dominated by the
+    highest-logit-variance tasks, which hurts on heterogeneous, multi-scale suites)."""
+    X = _logit(M) if logit else np.asarray(M, dtype=float).copy()
+    nB = X.shape[1]
+    mu = np.zeros(nB); sd = np.ones(nB)
+    if standardize:
+        for b in range(nB):
+            c = mask[:, b]
+            if c.any():
+                mu[b] = X[c, b].mean()
+                s = X[c, b].std()
+                sd[b] = s if s > 1e-8 else 1.0
+    Xs = (X - mu) / sd
+    gbar = Xs[mask].mean() if mask.any() else 0.0
+    row = np.array([Xs[m, mask[m]].mean() if mask[m].any() else gbar for m in range(X.shape[0])])
+    col = np.array([Xs[mask[:, b], b].mean() if mask[:, b].any() else gbar for b in range(nB)])
+    bias = row[:, None] + col[None, :] - gbar
+    return Xs - bias, bias, mu, sd
+
+
 def predict_from_embedding(Z, score_mat, observed, predictor='ols',
-                           bias_decomp=True, logit=True, k=5):
-    """Per-task regression from the model embedding Z to (optionally
-    bias-decomposed, logit) scores. Predicts held-out entries, inverts, clips."""
+                           bias_decomp=True, logit=True, k=5, standardize=True):
+    """Per-task regression from the model embedding Z to (logit, column-standardized,
+    bias-decomposed) scores. Predicts held-out entries, inverts, clips."""
     M = np.asarray(score_mat, dtype=float)
     mask = np.asarray(observed, dtype=bool)
     if bias_decomp:
-        X, bias = two_way_bias(M, mask, logit=logit)
-        target = X - bias
+        target, bias, mu, sd = _whiten(M, mask, logit=logit, standardize=standardize)
     else:
         X = _logit(M) if logit else M.copy()
-        bias = np.zeros_like(M)
+        bias = np.zeros_like(M); mu = np.zeros(M.shape[1]); sd = np.ones(M.shape[1])
         target = X
 
     resid = np.full_like(M, np.nan)
@@ -397,11 +420,49 @@ def predict_from_embedding(Z, score_mat, observed, predictor='ols',
         mdl.fit(Z[train], target[train, t])
         resid[test, t] = mdl.predict(Z[test])
 
-    Xhat = bias + resid
+    Xhat = (bias + resid) * sd + mu
     Phat = 1.0 / (1.0 + np.exp(-Xhat)) if logit else Xhat
     preds = np.full_like(M, np.nan)
     held = ~mask & np.isfinite(resid)
     preds[held] = np.clip(Phat, 0.0, 1.0)[held]
+    return preds
+
+
+def predict_from_embedding_all(Z, score_mat, observed, predictor='knn',
+                               bias_decomp=True, logit=True, k=5, standardize=True):
+    """Like predict_from_embedding but returns a cross-model estimate for EVERY cell:
+    held-out cells by the standard per-task regression, and observed cells by
+    leave-one-out (the cell's own score is excluded), so the estimate never sees the
+    target it denoises. This is the unified RD1/RD2 perspective predictor."""
+    M = np.asarray(score_mat, dtype=float)
+    mask = np.asarray(observed, dtype=bool)
+    if bias_decomp:
+        target, bias, mu, sd = _whiten(M, mask, logit=logit, standardize=standardize)
+    else:
+        X = _logit(M) if logit else M.copy()
+        bias = np.zeros_like(M); mu = np.zeros(M.shape[1]); sd = np.ones(M.shape[1])
+        target = X
+
+    resid = np.full_like(M, np.nan)
+    for t in range(M.shape[1]):
+        train = np.where(mask[:, t])[0]
+        if len(train) < 3:
+            continue
+        ytr = target[train, t]
+        test = np.where(~mask[:, t])[0]
+        if len(test):
+            mdl = _make_predictor(predictor, k, len(train))
+            resid[test, t] = mdl.fit(Z[train], ytr).predict(Z[test])
+        for pos, j in enumerate(train):  # leave-one-out for observed cells
+            keep = np.delete(np.arange(len(train)), pos)
+            mdl = _make_predictor(predictor, k, len(keep))
+            resid[j, t] = mdl.fit(Z[train[keep]], ytr[keep]).predict(Z[j:j + 1])[0]
+
+    Xhat = (bias + resid) * sd + mu
+    Phat = 1.0 / (1.0 + np.exp(-Xhat)) if logit else Xhat
+    preds = np.full_like(M, np.nan)
+    fin = np.isfinite(resid)
+    preds[fin] = np.clip(Phat, 0.0, 1.0)[fin]
     return preds
 
 
@@ -511,7 +572,10 @@ def cv_predict_all(df_obs, score_mat, observed, models, k=5, seed=0, mds_dim=8,
         rng = np.random.default_rng(seed * 100 + sp)
         val = obs_idx[rng.choice(len(obs_idx), max(1, int(0.25 * len(obs_idx))), replace=False)]
         vr, vc = val[:, 0], val[:, 1]
-        vt = score_mat[vr, vc]
+        # validate against the NOISY observed score (train_score) -- the only thing the
+        # method actually sees. Using the full score_mat here would leak the truth into
+        # the ensemble-weight CV and is unfair to MC under evaluation noise.
+        vt = train_score[vr, vc]
         cv_obs = observed.copy()
         cv_obs[vr, vc] = False
         # embedding is unchanged across splits; only the regressed scores use cv_obs
