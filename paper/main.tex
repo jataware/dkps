@@ -331,7 +331,7 @@ them from contaminating the rich-response blocks rather than expecting them to h
 \centering
 \includegraphics[width=\textwidth]{fig_rank_analysis.pdf}
 \caption{Full-query completion (obs.\ prob.\ $0.3$). Matrix completion at ranks $2$--$8$
-(purple) vs.\ \PKPS (blue line), with matched preprocessing. On high-rank MATH raising
+(blue) vs.\ \PKPS (red line), with matched preprocessing. On high-rank MATH raising
 the completion rank never reaches \PKPS; on low-rank WMT and the suite the two coincide.}
 \label{fig:rankanalysis}
 \end{figure}
@@ -352,7 +352,7 @@ is already near-exact and the ensemble simply matches it.
 \centering
 \includegraphics[width=\textwidth]{fig_unified_levers_math.pdf}
 \caption{Unified full-matrix estimation on MATH (MAE over every cell vs.\ the true full
-score). The one sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (green) beats
+score). The one sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (brown) beats
 the best score-only predictor (grey) and each channel alone across queries per cell
 (left; $q{=}0$ is pure completion, growing $q$ is denoising---the two are one axis),
 task coverage, and cohort size. The score-only curve spikes at $q{=}1$ (a single noisy
@@ -411,7 +411,7 @@ wherever real evaluation is incomplete.
 \includegraphics[width=\textwidth]{fig_unified_levers_suite.pdf}
 \caption{Unified full-matrix estimation on the heterogeneous $18$-task suite (MAE over
 every cell vs.\ the true full score). The
-sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (green) beats the best
+sample\,$\oplus$\,completion\,$\oplus$\,embedding ensemble (brown) beats the best
 score-only predictor (grey) across queries per cell ($q{=}0$ completion through
 denoising---one axis), task coverage, and cohort size; at $n{=}10$ matrix completion
 collapses while the embedding holds the ensemble flat.}
