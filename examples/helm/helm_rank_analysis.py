@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 from joblib import Parallel, delayed
 from scipy.spatial.distance import pdist
 
@@ -101,8 +102,8 @@ def main():
     fig, axes = plt.subplots(1, n, figsize=(3.9 * n, 4.0), squeeze=False)
     for ax, (_, r) in zip(axes[0], df.iterrows()):
         mc = [r[f'mc{k}'] for k in args.ranks]
-        ax.plot(args.ranks, mc, 'o-', color='#7c3aed', label='matrix completion')
-        ax.axhline(r['pkps'], color='#1d4ed8', ls='-', lw=2, label='PKPS')
+        ax.plot(args.ranks, mc, 'o-', color='#348ABC', label='matrix completion')
+        ax.axhline(r['pkps'], color='#E24A33', ls='-', lw=2, label='PKPS')
         gap = (min(mc) - r['pkps']) / min(mc)          # >0: PKPS better
         col = '#15803d' if gap > 0.02 else ('#b91c1c' if gap < -0.02 else '#334155')
         tag = 'PKPS wins' if gap > 0.02 else ('MC wins' if gap < -0.02 else 'tie')

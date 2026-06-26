@@ -6,15 +6,17 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import numpy as np
 import pandas as pd
 
+# shared method palette: PKPS red, ensemble brown, DKPS-delta blue, sample gray, IRT purple.
 STYLE = {
-    'sample': dict(color='#6b7280', ls='--', label='sample'),
-    'irt':    dict(color='#c2410c', ls='--', label='IRT'),
-    'dkps':   dict(color='#0f766e', ls='-', label='DKPS (delta)'),
-    'pkps':   dict(color='#1d4ed8', ls='-', label='PKPS (adaptive)'),
-    'ens':    dict(color='#15803d', ls='-', label='ensemble', lw=2.4),
+    'sample': dict(color='#777777', ls='--', label='sample'),
+    'irt':    dict(color='#988ED5', ls='--', label='IRT'),
+    'dkps':   dict(color='#348ABC', ls='-', label='DKPS (delta)'),
+    'pkps':   dict(color='#E24A33', ls='-', label='PKPS (adaptive)'),
+    'ens':    dict(color='#8C564B', ls='-', label='ensemble', lw=2.4),
 }
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 

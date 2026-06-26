@@ -7,14 +7,17 @@ os.environ.setdefault('MPLCONFIGDIR', str(Path(tempfile.gettempdir()) / 'matplot
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import numpy as np
 import pandas as pd
 
 
+# shared palette: the full PKPS (combined, uses all data) is red like PKPS elsewhere;
+# the paired/unpaired ablations are blue/purple.
 ESTIMATOR_COLORS = {
-    'rbf_paired': '#0f766e',
-    'rbf_unpaired': '#c2410c',
-    'rbf_combined': '#1d4ed8',
+    'rbf_paired': '#348ABC',
+    'rbf_unpaired': '#988ED5',
+    'rbf_combined': '#E24A33',
 }
 
 ESTIMATOR_LABELS = {

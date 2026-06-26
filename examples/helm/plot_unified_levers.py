@@ -8,13 +8,16 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import numpy as np
 import pandas as pd
 
-STYLE = {'mc_all': dict(color='#7c3aed', ls=':', label='matrix completion'),
-         'pkps_all': dict(color='#1d4ed8', ls=':', label='PKPS'),
-         'score_all': dict(color='#6b7280', ls='--', label='score only (sample / MC)'),
-         'ens_all': dict(color='#15803d', ls='-', label='ensemble (sample$\\oplus$MC$\\oplus$PKPS)', lw=2.4)}
+# shared method palette across the paper's figures: PKPS red, ensemble brown (the mix),
+# matrix completion blue, score-only gray.
+STYLE = {'mc_all': dict(color='#348ABC', ls=':', label='matrix completion'),
+         'pkps_all': dict(color='#E24A33', ls=':', label='PKPS'),
+         'score_all': dict(color='#777777', ls='--', label='score only (sample / MC)'),
+         'ens_all': dict(color='#8C564B', ls='-', label='ensemble (sample$\\oplus$MC$\\oplus$PKPS)', lw=2.4)}
 ORDER = ['mc_all', 'pkps_all', 'score_all', 'ens_all']
 PANELS = [('queries', 'q', 'queries per cell  ($0$ = complete $\\to$ denoise)', 'cat'),
           ('coverage', 'p', 'task coverage', False),
