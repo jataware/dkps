@@ -93,16 +93,28 @@ completion, an effective-rank analysis shows the embedding \emph{matches} comple
 every rank on low-rank matrices and \emph{beats} it where the matrix is high-rank
 (MATH), so rank sets the size of its advantage; it survives unpaired queries where DKPS
 and IRT collapse; and it rescues the small-cohort regime where rank-$2$ completion
-fails for lack of rows (Section~\ref{sec:where}).
+fails for lack of rows (Section~\ref{sec:real}).
 \item \textbf{One ensemble, every lever.} On a heterogeneous $18$-task, $93$-model
 suite spanning math, translation, medical QA and legal classification, the embedding
 already beats matrix completion on its own across coverage and cohort, and the single
 ensemble beats the best score-only predictor across noise, coverage, and cohort---by a
 margin that grows as evaluation gets sparser, noisier, or smaller-cohort
-(Section~\ref{sec:suite}).
+(Section~\ref{sec:real}).
 \end{itemize}
 
-\section{Background and method}
+\section{Related work}
+\label{sec:related}
+\textbf{Efficient benchmarking} reduces evaluation cost by scoring on a subset of
+items: item-response theory \citep{polo2024tinybenchmarks, rasch1960} and anchor
+points \citep{vivek2024anchor} select informative items, while DKPS
+\citep{dkps_qeff} predicts from cached responses in a perspective space. These assume
+a paired/anchored design. \textbf{Benchmark completion} treats the score matrix as
+low-rank and imputes missing entries \citep{benchpress, mazumder2010softimpute}; this
+uses only scores, not responses. \PKPS unifies the two settings through a single
+product-kernel mechanism that consumes unpaired responses, and we show it is
+complementary to---and combinable with---the score-only low-rank view.
+
+\section{The Product Kernel Perspective Space}
 \label{sec:method}
 
 \paragraph{Paired DKPS.} Let $x_{ij}=\mathrm{embed}(\mathrm{model}_i(q_j))$ be the
@@ -124,17 +136,43 @@ A_{ab} = \frac{\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)\, k_R(x_{aj},x_{bl})}
 where $Q_a$ is the set of queries answered by model $a$ and $q_j$ is the embedding
 of query $j$. Each term is normalized by its own query-kernel mass, so models that
 answered different numbers of (or entirely different) queries are still comparable.
-Two limits are important:
-\begin{itemize}
-\item \textbf{$k_Q=\delta$ (identity)}: only $j=l$ survives, recovering paired DKPS.
-\item \textbf{$k_Q$ RBF}: $k_Q(q_j,q_l)=\exp(-\|q_j-q_l\|^2/2\sigma^2)$ lets
-responses to \emph{similar} queries---even across tasks---contribute, so unpaired
-data is used.
-\end{itemize}
-As $\sigma\!\to\!0$ the RBF kernel converges to $\delta$ (distinct queries have
-distinct embeddings), so \PKPS is a strict generalization of DKPS with DKPS as its
-$\sigma\!\to\!0$ limit.
+We use a (linear or RBF) response kernel $k_R$ and an RBF query kernel
+$k_Q(q_j,q_l)=\exp(-\|q_j-q_l\|^2/2\sigma^2)$, so responses to \emph{similar} queries
+---even across tasks---contribute and unpaired evaluations are used
+(Figure~\ref{fig:concept}).
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_concept.pdf}
+\caption{Why the query kernel matters under \emph{unpaired} evaluation. \textbf{Left:} two
+models, $i$ (red) and $i'$ (blue), each answer their own subset of a shared query pool,
+shown both as answered-query blocks (top) and as points in query-embedding space (bottom;
+nearby points are similar queries). The two models share only a few queries.
+\textbf{Center (DKPS, $k_Q=\delta$).} The identity query kernel compares only responses to
+the \emph{same} query, so the affinity matrix over $i$'s responses ($S_i$) against $i'$'s
+($S_{i'}$) is nonzero only on the diagonal, at the few shared queries---almost every
+response is discarded. \textbf{Right (PKPS, $k_Q=$ RBF).} The product kernel weights every
+response pair by query similarity (read off the same embedding), so the shared queries stay
+brightest but \emph{similar} queries now bridge the two models and every response
+contributes. \PKPS thus turns the sparse shared-query diagonal DKPS depends on into a dense
+similarity kernel.}
+\label{fig:concept}
+\end{figure}
+
+\subsection{Theoretical properties}
+\PKPS is a strict generalization of DKPS. \textbf{(i) DKPS limit.} With $k_Q=\delta$
+(the identity kernel) only $j=l$ survives and
+$A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$---exactly paired DKPS; moreover, as
+$\sigma\!\to\!0$ the RBF kernel converges to $\delta$ (distinct queries have distinct
+embeddings), so DKPS is recovered in the small-bandwidth limit. \textbf{(ii) Unpaired
+comparability.} Because each affinity is normalized by its own query-kernel mass
+$\sum_{jl}k_Q(q_j,q_l)$, two models that answered different---or entirely disjoint---query
+sets remain comparable, whereas paired DKPS, which sums only over shared queries, is
+undefined when no query is shared. \textbf{(iii) Bandwidth interpolation.} Increasing
+$\sigma$ smoothly trades exact query matching for cross-query bridging, so a single
+scalar controls how much unpaired evidence the perspective uses.
+
+\subsection{Estimation and ensembling}
 \paragraph{Choosing the bandwidth.} The optimal $\sigma$ depends on how paired the
 data is: small when query overlap is high (recover exact matching), large when
 overlap is low (bridge across queries). We set it per run by cross-validation over a
@@ -171,17 +209,17 @@ the own sample dominates as queries grow and the embedding dominates as noise gr
 Both quantities are read off the observed queries (the noise variance from a half-split
 of each cell's queries), so the score baselines see exactly the same information.
 
-\section{Observation model and synthetic experiments}
+\section{Experiments}
+A real evaluation matrix is governed by three observation levers, which structure our
+experiments: (i) \emph{task coverage}---the fraction of (model, task) cells run at all;
+(ii) \emph{queries per cell}---how many queries a run uses, which sets the per-cell
+measurement \emph{noise}; and (iii) \emph{cohort size}---the number of models. The
+all-tasks-covered limit is efficient benchmarking (denoising); the zero-query limit is
+benchmark completion; the realistic case is a noisy mixture, and we estimate the whole
+matrix at once.
+
+\subsection{Synthetic data}
 \label{sec:synthetic}
-
-\paragraph{Three levers.} A real evaluation matrix is governed by three observation
-levers, which structure the rest of the paper: (i) \emph{task coverage}---the fraction
-of (model, task) cells run at all; (ii) \emph{queries per cell}---how many queries a
-run uses, which sets the per-cell measurement \emph{noise}; and (iii) \emph{cohort
-size}---the number of models. The all-tasks-covered limit is efficient benchmarking
-(denoising); the zero-query limit is benchmark completion; the realistic case is a
-noisy mixture, and we estimate the whole matrix at once.
-
 We generate models with latent ability vectors $v_i$ and tasks with latent vectors
 $t_k$, scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center.
 Two-level missingness (task-level and query-level) mirrors real benchmarks.
@@ -204,8 +242,8 @@ and response noise $\times$ queries-per-task.}
 \label{fig:synthetic}
 \end{figure}
 
-\section{Where the response embedding helps}
-\label{sec:where}
+\subsection{Real data}
+\label{sec:real}
 We cast benchmark estimation as one problem: recover the full (model $\times$ task)
 score matrix from observations in which each cell is run on $m\ge 0$ queries---$m{=}0$
 is a missing task, $m>0$ a noisy sample mean. Our predictor ensembles three item-level
@@ -283,9 +321,8 @@ from paired to unpaired at a fixed budget, IRT and DKPS collapse while \PKPS sur
 \label{fig:rd1}
 \end{figure}
 
-\section{The full benchmark suite}
-\label{sec:suite}
-We now run the unified estimator on one realistic, heterogeneous benchmark: $18$ tasks
+\paragraph{The full heterogeneous suite.} We now run the unified estimator on one
+realistic, heterogeneous benchmark: $18$ tasks
 across four datasets with very different response types---MATH ($7$ math subjects),
 WMT-14 ($5$ translation directions), MedQA (medical multiple-choice), and LegalBench
 ($5$ legal classification subsets)---on the $93$ models evaluated on all four. MATH and
@@ -323,18 +360,7 @@ collapses while the embedding holds the ensemble flat.}
 \label{fig:leverssuite}
 \end{figure}
 
-\section{Related work}
-\textbf{Efficient benchmarking} reduces evaluation cost by scoring on a subset of
-items: item-response theory \citep{polo2024tinybenchmarks, rasch1960} and anchor
-points \citep{vivek2024anchor} select informative items, while DKPS
-\citep{dkps_qeff} predicts from cached responses in a perspective space. These assume
-a paired/anchored design. \textbf{Benchmark completion} treats the score matrix as
-low-rank and imputes missing entries \citep{benchpress, mazumder2010softimpute}; this
-uses only scores, not responses. \PKPS unifies the two settings through a single
-product-kernel mechanism that consumes unpaired responses, and we show it is
-complementary to the score-only low-rank view.
-
-\section{Conclusion}
+\section{Discussion}
 Real benchmark coverage is doubly sparse and, crucially, \emph{noisy}: each measured
 cell is an average over a handful of queries. We argued that the cheap way to evaluate
 better is to use item-level information---a cell's responses, not only its aggregate
