@@ -119,39 +119,55 @@ complementary to---and combinable with---the score-only low-rank view.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-\paragraph{Observation model.} We evaluate $n$ models on queries drawn from a universe
-$\mathcal{Q}$. Each model $i$ is run on its own \emph{query set}
-$Q_i\subseteq\mathcal{Q}$, giving a tuple $\mathbf{Q}=(Q_1,\dots,Q_n)$ of query sets that
-may differ across models or even be disjoint; the paired design $Q_1=\dots=Q_n$ is the
-special case. Two distinct embedding functions map raw objects to vectors: a
-\emph{response} embedding $\mathrm{embed}_R$ and a \emph{query} embedding
-$\mathrm{embed}_Q$ (different embedding models, or the same one applied to responses vs.\
-queries). We write $x_{ij}=\mathrm{embed}_R(\mathrm{model}_i(q_j))$ for the embedded
-response of model $i$ to $q_j\in Q_i$, and $\mathrm{embed}_Q(q_j)$ for the embedded query.
-The goal is to predict each model's benchmark score.
+\paragraph{Models and observations.} A \emph{model} is a random mapping
+$f:\mathcal{Q}\to\mathcal{X}$ from a query space $\mathcal{Q}$ to a response space
+$\mathcal{X}$; querying $f$ at $q$ returns a response drawn from the distribution $f(q)$.
+We observe $n$ models $f_1,\dots,f_n$, each run on its own \emph{query set}
+$Q_i\subseteq\mathcal{Q}$, giving a tuple $\mathbf{Q}=(Q_1,\dots,Q_n)$ that may differ
+across models or be disjoint; the paired design $Q_1=\dots=Q_n$ is the special case. Two
+fixed, distinct embedding functions map raw objects to vectors: a \emph{response}
+embedding $\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and a \emph{query} embedding
+$\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$ (e.g.\ different text-embedding models).
+For $q_j\in Q_i$ we average the embeddings of the $r$ sampled responses,
+$x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)\in\mathbb{R}^{p}$,
+and write $u_j=\mathrm{embed}_Q(q_j)$ for the embedded query. The goal is to predict each
+model's benchmark score $y_i\in\mathcal{Y}$.
+
+\paragraph{Perspective space.} Each method summarizes the $n$ models in an $n\times n$
+affinity matrix $A$ (defined below). The squared distance between two models is
+$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
+\emph{representations} are the classical-multidimensional-scaling minimizer
+\begin{equation}
+(\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
+\sum_{i,k=1}^{n}\big(\|z_i-z_k\|-D(i,k)\big)^2,
+\label{eq:mds}
+\end{equation}
+so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
+and \PKPS differ only in the affinity $A$.
 
 \paragraph{Paired DKPS.} With all $n$ models answering the same $m$ queries
-($Q_1=\dots=Q_n$), the DKPS squared distance is
-$D^2(i,k)=\tfrac{1}{m}\sum_j \|x_{ij}-x_{kj}\|^2 = A_{ii}+A_{kk}-2A_{ik}$, where
-$A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$ and $k_R$ is a linear response
-kernel. Classical MDS on $D$ yields model coordinates; a regressor maps coordinates
-to benchmark scores. The sum over $j$ pairs response $j$ of model $a$ with response
-$j$ of model $b$: an \emph{identity} matching of queries.
+($Q_1=\dots=Q_n$), DKPS uses the identity-matched affinity
+$A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
+with response $j$ of model $b$, so the design must be paired.
 
-\paragraph{Product kernel.} \PKPS replaces identity matching with a query kernel
-$k_Q$:
+\paragraph{Product kernel.} \PKPS replaces identity matching with a query kernel $k_Q$:
 \begin{equation}
 A_{ab} = \frac{\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)\, k_R(x_{aj},x_{bl})}
               {\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)},
 \label{eq:A}
 \end{equation}
-where $Q_a$ is the query set of model $a$ (an entry of the tuple $\mathbf{Q}$). Each
-term is normalized by its own query-kernel mass, so models that answered different
-numbers of (or entirely different) queries are still comparable. We use a (linear or RBF)
-response kernel $k_R$ on $\mathrm{embed}_R$ and an RBF query kernel on $\mathrm{embed}_Q$,
-$k_Q(q_j,q_l)=\exp(-\|\mathrm{embed}_Q(q_j)-\mathrm{embed}_Q(q_l)\|^2/2\sigma^2)$, so
-responses to \emph{similar} queries---even across tasks---contribute and unpaired
-evaluations are used (Figure~\ref{fig:concept}).
+where $Q_a$ is the query set of model $a$. Each term is normalized by its own query-kernel
+mass, so models that answered different numbers of (or entirely different) queries are
+still comparable; responses to \emph{similar} queries---even across tasks---contribute and
+unpaired evaluations are used (Figure~\ref{fig:concept}). Paired DKPS is the special case
+$k_Q=\delta$, where only $j=l$ survives.
+
+\paragraph{Kernels.} The response kernel $k_R$ compares embedded responses, the query
+kernel $k_Q$ compares embedded queries. Paired DKPS uses a linear response kernel and the
+identity query kernel $k_Q=\delta$. Throughout our analysis we use a linear or RBF $k_R$
+and an RBF query kernel over the embedded queries,
+$k_Q(q_j,q_l)=\exp(-\|u_j-u_l\|^2/2\sigma^2)$, with bandwidth $\sigma$ chosen per run
+(below).
 
 \begin{figure}[t]
 \centering
@@ -160,23 +176,29 @@ evaluations are used (Figure~\ref{fig:concept}).
 models, $i$ (red) and $i'$ (blue), each answer their own subset of a shared query pool,
 shown both as answered-query blocks (top) and as points in query-embedding space (bottom;
 nearby points are similar queries). The two models share only a few queries.
-\textbf{Center (DKPS, $k_Q=\delta$).} The identity query kernel compares only responses to
-the \emph{same} query, so the affinity matrix over $i$'s responses ($S_i$) against $i'$'s
-($S_{i'}$) is nonzero only on the diagonal, at the few shared queries---almost every
-response is discarded. \textbf{Right (PKPS, $k_Q=$ RBF).} The product kernel weights every
-response pair by query similarity (read off the same embedding), so the shared queries stay
-brightest but \emph{similar} queries now bridge the two models and every response
-contributes. \PKPS thus turns the sparse shared-query diagonal DKPS depends on into a dense
-similarity kernel.}
+Both kernel panels index the queries by a single universal ordering (shared by rows and
+columns). \textbf{Center (DKPS, $k_Q=\delta$).} The identity query kernel keeps a cell only
+when the two queries are the \emph{same} ($q_j=q_l$, the diagonal) \emph{and} both models
+answered it ($q_j\in Q_i\cap Q_{i'}$), so only the few shared queries survive---almost every
+response is discarded. \textbf{Right (PKPS,
+$k_Q=$ RBF).} The RBF query kernel over the same ordering is a dense, \emph{symmetric}
+similarity matrix, so responses to \emph{similar} queries---not only identical ones---bridge
+the two models and every response can contribute. \PKPS thus turns the sparse shared-query
+diagonal DKPS depends on into a dense similarity kernel.}
 \label{fig:concept}
 \end{figure}
 
 \subsection{Theoretical properties of the \PKPS}
-\PKPS is a strict generalization of DKPS. \textbf{(i) DKPS limit.} With $k_Q=\delta$
-(the identity kernel) only $j=l$ survives and
-$A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$---exactly paired DKPS; moreover, as
-$\sigma\!\to\!0$ the RBF kernel converges to $\delta$ (distinct queries have distinct
-embeddings), so DKPS is recovered in the small-bandwidth limit. \textbf{(ii) Unpaired
+\PKPS is a strict generalization of DKPS. \textbf{(i) DKPS limit.} Take $k_Q=\delta$, the
+indicator $\mathbf{1}[q_j=q_l]$. Since the double sum already ranges over $j\in Q_a$,
+$l\in Q_b$, a term survives only if the two queries are equal \emph{and} that query lies in
+both sets,
+$\mathbf{1}[q_j=q_l]\,\mathbf{1}[q_j\in Q_a]\,\mathbf{1}[q_l\in Q_b]=\mathbf{1}[q_j=q_l\in
+Q_a\cap Q_b]$, so $A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$
+---exactly paired DKPS over the shared queries (the same-$m$-queries case recovers
+$\tfrac1m\sum_j k_R(x_{aj},x_{bj})$). Moreover, as $\sigma\!\to\!0$ the RBF kernel converges
+to $\delta$ (distinct queries have distinct embeddings), so DKPS is recovered in the
+small-bandwidth limit. \textbf{(ii) Unpaired
 comparability.} Because each affinity is normalized by its own query-kernel mass
 $\sum_{jl}k_Q(q_j,q_l)$, two models that answered different---or entirely disjoint---query
 sets remain comparable, whereas paired DKPS, which sums only over shared queries, is
@@ -185,12 +207,14 @@ $\sigma$ smoothly trades exact query matching for cross-query bridging, so a sin
 scalar controls how much unpaired evidence the perspective uses.
 
 \subsection{Inference in the \PKPS}
-Given the observed responses, inference is a two-step statistical problem, exactly as in
-the DKPS \citep{dkps_qeff}: embed each model into the \PKPS by classical MDS on the
-distances of Eq.~\ref{eq:A}, then regress its benchmark score on the resulting
-coordinates. The only free choices are the query-kernel bandwidth and the regression head,
-which we describe next; we then add the score channel that turns the embedding into an
-ensemble.
+Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
+embed each model into the perspective space by the scaling of Eq.~\ref{eq:mds}, then
+regress its benchmark score on the resulting coordinate. Concretely, on a set of reference
+models with known scores $\{(f_i,y_i)\}$ we fit a decision function
+$\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs $\{(\hat\psi_i,y_i)\}$ and predict any
+model's score as $\hat y(f)=\hat h(\hat\psi(f))$. The only free choices are the
+query-kernel bandwidth $\sigma$ and the regressor $\hat h$, which we describe next; we then
+add the score channel that turns the embedding into an ensemble.
 
 \paragraph{Choosing the bandwidth.} The optimal $\sigma$ depends on how paired the
 data is: small when query overlap is high (recover exact matching), large when

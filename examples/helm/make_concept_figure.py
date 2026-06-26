@@ -41,24 +41,20 @@ overlap = np.where(inI & inP)[0]
 lab = np.where(inI & inP, 2, np.where(inI, 0, np.where(inP, 1, 3)))
 
 # queries live in a 2-D embedding; the kernel matrices below are computed FROM these
-# positions, over the queries each model actually answered (rows = S_i, cols = S_i').
+# positions over a single UNIVERSAL ordering of the queries, shared by both axes.
 rngL = np.random.default_rng(4)
 P = np.concatenate([c + rngL.normal(0, 0.3, (4, 2))
                     for c in ([0, 0], [2.7, 0.2], [1.3, 2.4])])     # 3 tight clusters x 4 = 12 queries
 t = (P - P.mean(0)) @ np.linalg.svd(P - P.mean(0), full_matrices=False)[2][0]   # 1-D order
-# place each shared query at the SAME (random) row and column index, so DKPS's identity
-# matches land on the main diagonal -- but scattered, not parked in the top-left corner.
-ov = overlap[np.argsort(t[overlap])]
-io = np.setdiff1d(Si, overlap); io = io[np.argsort(t[io])]      # answered by i only
-po = np.setdiff1d(Sip, overlap); po = po[np.argsort(t[po])]     # answered by i' only
-K = len(Si)
-diag = np.sort(np.random.default_rng(10).choice(K, len(ov), replace=False))   # shared-query slots
-other = np.setdiff1d(np.arange(K), diag)
-rows = np.empty(K, int); rows[diag] = ov; rows[other] = io       # model i's answered queries
-cols = np.empty(K, int); cols[diag] = ov; cols[other] = po       # model i''s answered queries
-D2 = ((P[rows][:, None] - P[cols][None, :]) ** 2).sum(-1)
-Krbf = np.exp(-D2 / (2 * 1.0 ** 2))                       # PKPS: every pair, weighted by similarity
-Kdkps = (rows[:, None] == cols[None, :]).astype(float)   # DKPS: 1 only where it's the SAME query
+# order the union of the two models' answered queries by the 1-D embedding projection and
+# index BOTH axes by this single ordering. The PKPS query kernel is then a symmetric Gram
+# matrix; DKPS's identity kernel is active only on the diagonal, at the shared queries.
+U = np.union1d(Si, Sip)
+U = U[np.argsort(t[U])]
+sharedU = np.isin(U, overlap)
+D2 = ((P[U][:, None] - P[U][None, :]) ** 2).sum(-1)
+Krbf = np.exp(-D2 / (2 * 1.7 ** 2))            # PKPS: symmetric query-similarity kernel
+Kdkps = np.diag(sharedU.astype(float))         # DKPS: identity, active only at shared queries
 
 fig = plt.figure(figsize=(13.2, 4.7))
 gs = GridSpec(2, 3, width_ratios=[0.82, 1, 1], height_ratios=[0.58, 1.42],
@@ -95,8 +91,8 @@ for ax, W in [(axC, Kdkps), (axR, Krbf)]:
     ax.set_xticks([]); ax.set_yticks([])
     for s in ax.spines.values():
         s.set_edgecolor('#d7dde6')
-    ax.set_xlabel("model $i'$ responses", fontsize=10, color=BLUE)
-axC.set_ylabel('model $i$ responses', fontsize=10, color=RED)
+    ax.set_xlabel('query index', fontsize=10, color='#475569')
+axC.set_ylabel('query index', fontsize=10, color='#475569')
 
 cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
 cb = fig.colorbar(im, cax=cax)
