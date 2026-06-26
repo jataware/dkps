@@ -102,7 +102,9 @@ def main():
     fig, axes = plt.subplots(1, n, figsize=(3.9 * n, 4.0), squeeze=False)
     for ax, (_, r) in zip(axes[0], df.iterrows()):
         mc = [r[f'mc{k}'] for k in args.ranks]
-        ax.plot(args.ranks, mc, 'o-', color='#348ABC', label='matrix completion')
+        # line style = information used: matrix completion is score-only (dashed), PKPS
+        # reads the response embeddings (solid). Colour identifies the method.
+        ax.plot(args.ranks, mc, 'o--', color='#348ABC', label='matrix completion')
         ax.axhline(r['pkps'], color='#E24A33', ls='-', lw=2, label='PKPS')
         gap = (min(mc) - r['pkps']) / min(mc)          # >0: PKPS better
         col = '#15803d' if gap > 0.02 else ('#b91c1c' if gap < -0.02 else '#334155')

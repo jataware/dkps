@@ -12,10 +12,11 @@ plt.style.use('ggplot')
 import numpy as np
 import pandas as pd
 
-# shared method palette across the paper's figures: PKPS red, ensemble brown (the mix),
-# matrix completion blue, score-only gray.
-STYLE = {'mc_all': dict(color='#348ABC', ls=':', label='matrix completion'),
-         'pkps_all': dict(color='#E24A33', ls=':', label='PKPS'),
+# colour = method (PKPS red, matrix completion blue, score-only gray, ensemble brown).
+# line style = information used: solid for response-embedding methods (PKPS), dashed for
+# score-only methods (matrix completion, score-only); the ensemble is solid and thicker.
+STYLE = {'mc_all': dict(color='#348ABC', ls='--', label='matrix completion'),
+         'pkps_all': dict(color='#E24A33', ls='-', label='PKPS'),
          'score_all': dict(color='#777777', ls='--', label='score only (sample / MC)'),
          'ens_all': dict(color='#8C564B', ls='-', label='ensemble (sample$\\oplus$MC$\\oplus$PKPS)', lw=2.4)}
 ORDER = ['mc_all', 'pkps_all', 'score_all', 'ens_all']
