@@ -12,11 +12,12 @@ import numpy as np
 import pandas as pd
 
 
-# shared palette: the full PKPS (combined, uses all data) is red like PKPS elsewhere;
-# the paired/unpaired ablations are blue/purple.
+# the full PKPS (combined, uses all data) is red like PKPS elsewhere; the paired/unpaired
+# ablations get their own colours (teal/orange) so they never collide with a method's colour
+# (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
 ESTIMATOR_COLORS = {
-    'rbf_paired': '#348ABC',
-    'rbf_unpaired': '#988ED5',
+    'rbf_paired': '#17BECF',
+    'rbf_unpaired': '#FF7F0E',
     'rbf_combined': '#E24A33',
 }
 

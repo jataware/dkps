@@ -10,11 +10,12 @@ plt.style.use('ggplot')
 import numpy as np
 import pandas as pd
 
-# shared method palette: PKPS red, ensemble brown, DKPS-delta blue, sample gray, IRT purple.
+# shared method palette (unique color per method across all figures):
+# PKPS red, DKPS-delta green, matrix completion blue, IRT purple, sample gray, ensemble brown.
 STYLE = {
     'sample': dict(color='#777777', ls='--', label='sample'),
     'irt':    dict(color='#988ED5', ls='--', label='IRT'),
-    'dkps':   dict(color='#348ABC', ls='-', label='DKPS (delta)'),
+    'dkps':   dict(color='#8EBA42', ls='-', label='DKPS (delta)'),
     'pkps':   dict(color='#E24A33', ls='-', label='PKPS (adaptive)'),
     'ens':    dict(color='#8C564B', ls='-', label='ensemble', lw=2.4),
 }
