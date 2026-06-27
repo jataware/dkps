@@ -264,7 +264,7 @@ Fix a benchmark score function that is Lipschitz on the perspective space and a 
 error $\epsilon$. For a query design $\mathbf{Q}=(Q_1,\dots,Q_n)$ with cross-model overlap
 $\rho$ (the fraction of query-kernel mass shared across models), the number of queries per
 model that \PKPS needs to reach error $\epsilon$ is at most that of paired DKPS, and the
-gap is increasing as $\rho\to0$; at full overlap $\rho=1$ the two coincide.
+gap is increasing as $\rho\to0$; the two are closest in the fully paired limit $\rho=1$.
 \end{conjecture}
 
 \section{Experiments}
@@ -278,25 +278,39 @@ matrix at once.
 
 \subsection{Synthetic data}
 \label{sec:synthetic}
-We generate models with latent ability vectors $v_i$ and tasks with latent vectors
-$t_k$, scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center.
-Two-level missingness (task-level and query-level) mirrors real benchmarks.
-Figure~\ref{fig:synthetic} sweeps, one at a time, the number of models, number of
-tasks, task observation probability, query observation probability, task spread,
-and response noise. The \emph{combined} estimator (all queries) consistently beats
-the \emph{paired} (shared-task only) and \emph{unpaired} (unique-task only)
-estimators, with the largest margin in the realistic regime: many models, sparse
-task overlap, moderate task spread. The advantage shrinks when overlap is abundant
-(paired already has the data it needs) or tasks are very dissimilar (the query
-kernel cannot bridge them).
+We generate $n$ models with latent ability vectors $v_i$ and $T$ tasks with latent
+vectors $t_k$, scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center.
+Each model answers $M_{ij}$ queries per task, of which $m_{ii'}$ are shared with another
+model (overlap $\rho=m_{ii'}/M_{ij}$); a task is observed with probability $p_{\mathrm{task}}$
+and a query with probability $p_{\mathrm{query}}$. We predict held-out (model, task)
+scores and compare DKPS (identity query kernel) against \PKPS (RBF), with the score-only
+sample baseline (predict a held-out cell by its task's observed mean) as a floor
+(Figure~\ref{fig:synthetic}).
+
+\PKPS is at least as good as DKPS across every lever, and both beat the sample floor. The
+gap between them is small where queries are \emph{paired}---sweeping the cohort $n$, the
+task count $T$, and task coverage $p_{\mathrm{task}}$ (panels a--c, all at $p_{\mathrm{query}}{=}1$)
+DKPS already has the matched queries it needs---and large where they are \emph{unpaired or
+sparse}. As query coverage $p_{\mathrm{query}}$ drops (d) the two diverge; sweeping the
+overlap $\rho$ directly (e), DKPS collapses to the sample floor as $\rho\!\to\!0$ while
+\PKPS is essentially flat---it never needed pairing. The query-efficiency panel (f) makes
+the cost concrete: \PKPS's error keeps falling with the per-cell budget $M_{ij}$ even when
+fully unpaired ($\rho{=}0$), whereas unpaired DKPS gains nothing from more queries because
+none of them match. This is the empirical face of Conjecture~\ref{conj:qeff}.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_synthetic.pdf}
-\caption{Synthetic study (held-out score MAE, 50 seeds). The combined product
-kernel dominates the paired/unpaired estimators across the number of models, number
-of tasks, task observation probability, query observation probability, task spread,
-and response noise $\times$ queries-per-task.}
+\caption{Synthetic study (held-out score MAE, $\pm1$ SEM over 50 seeds). DKPS (identity
+query kernel, green) vs.\ \PKPS (RBF, red), with the score-only sample baseline (task mean,
+gray) as a floor. Each panel sweeps one parameter with the rest fixed (shown in its title):
+(a) cohort $n$, (b) tasks $T$, (c) task coverage $p_{\mathrm{task}}$, (d) query coverage
+$p_{\mathrm{query}}$, (e) cross-model overlap $\rho=m_{ii'}/M_{ij}$, (f) per-cell query
+budget $M_{ij}$ at paired ($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). \PKPS
+$\le$ DKPS throughout; the gap is small when queries are paired (a--c) and large when
+unpaired or sparse (d--f). In (e) DKPS collapses to the sample floor as overlap vanishes
+while \PKPS stays flat; in (f) \PKPS keeps improving with budget even fully unpaired while
+unpaired DKPS gains nothing.}
 \label{fig:synthetic}
 \end{figure}
 

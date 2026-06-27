@@ -15,6 +15,8 @@ def generate_benchmark_data(
         response_noise=0.5,
         task_spread=1.0,
         query_spread=0.5,
+        n_shared_queries=None,
+        n_unique_queries=None,
         random_state=None,
     ):
     """
@@ -90,12 +92,32 @@ def generate_benchmark_data(
         if not observed[:, k].any():
             observed[rng.integers(n_models), k] = True
 
-    # Generate queries per task (shared across all models evaluated on that task)
-    task_queries = {}  # task_idx -> (query_ids, query_embeddings)
-    for k in range(n_tasks):
-        q_embs = task_vectors[k] + query_spread * rng.normal(size=(n_queries_per_task, d_latent))
-        q_ids = [f'task{k:03d}_q{j:04d}' for j in range(n_queries_per_task)]
-        task_queries[k] = (q_ids, q_embs)
+    # Query-level pairing mode: each model answers a fixed budget per task, split into
+    # n_shared_queries that ALL models answer (paired) and n_unique_queries drawn fresh per
+    # model near the same task center (unpaired). Overlap rho = n_shared/(n_shared+n_unique)
+    # isolates cross-model overlap from query quantity.
+    paired_split = n_shared_queries is not None and n_unique_queries is not None
+    shared_queries = {}
+    if paired_split:
+        for k in range(n_tasks):
+            q_embs = task_vectors[k] + query_spread * rng.normal(size=(n_shared_queries, d_latent))
+            q_ids = [f'task{k:03d}_s{j:04d}' for j in range(n_shared_queries)]
+            shared_queries[k] = (q_ids, q_embs)
+    else:
+        # Queries per task, shared across all models evaluated on that task.
+        task_queries = {}  # task_idx -> (query_ids, query_embeddings)
+        for k in range(n_tasks):
+            q_embs = task_vectors[k] + query_spread * rng.normal(size=(n_queries_per_task, d_latent))
+            q_ids = [f'task{k:03d}_q{j:04d}' for j in range(n_queries_per_task)]
+            task_queries[k] = (q_ids, q_embs)
+
+    def _emit(rows, i, k, q_id, q_emb):
+        active = q_emb + model_offsets[i] + response_noise * rng.normal(size=d_latent)
+        extra = rng.normal(size=d_obs - d_latent)
+        rows.append({
+            'model_id': f'model_{i:02d}', 'task_id': f'task_{k:03d}', 'query_id': q_id,
+            'embedding': np.concatenate([active, extra]), 'query_embedding': q_emb,
+        })
 
     # Generate response embeddings for observed (model, task) pairs
     rows = []
@@ -103,28 +125,23 @@ def generate_benchmark_data(
         for k in range(n_tasks):
             if not observed[i, k]:
                 continue
+            if paired_split:
+                for q_id, q_emb in zip(*shared_queries[k]):       # shared (paired) queries
+                    _emit(rows, i, k, q_id, q_emb)
+                for j in range(n_unique_queries):                  # unique (unpaired) queries
+                    q_emb = task_vectors[k] + query_spread * rng.normal(size=d_latent)
+                    _emit(rows, i, k, f'task{k:03d}_m{i:03d}_u{j:04d}', q_emb)
+                continue
             q_ids, q_embs = task_queries[k]
-            # Determine which queries this model answers
-            if query_obs_prob < 1.0:
+            if query_obs_prob < 1.0:                               # each model a random subset
                 q_mask = rng.random(n_queries_per_task) < query_obs_prob
                 if not q_mask.any():
                     q_mask[rng.integers(n_queries_per_task)] = True
             else:
                 q_mask = np.ones(n_queries_per_task, dtype=bool)
-
             for j in range(n_queries_per_task):
-                if not q_mask[j]:
-                    continue
-                active = q_embs[j] + model_offsets[i] + response_noise * rng.normal(size=d_latent)
-                extra = rng.normal(size=d_obs - d_latent)
-                embedding = np.concatenate([active, extra])
-                rows.append({
-                    'model_id': f'model_{i:02d}',
-                    'task_id': f'task_{k:03d}',
-                    'query_id': q_ids[j],
-                    'embedding': embedding,
-                    'query_embedding': q_embs[j],
-                })
+                if q_mask[j]:
+                    _emit(rows, i, k, q_ids[j], q_embs[j])
 
     data = pd.DataFrame(rows)
     return data, scores, observed, model_offsets, task_vectors

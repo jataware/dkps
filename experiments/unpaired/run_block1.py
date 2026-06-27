@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .block1 import (
     run_exp_n_models, run_exp_n_tasks, run_exp_task_parity,
-    run_exp_query_sparsity, run_exp_task_spread, run_exp_noise_x_queries,
+    run_exp_query_sparsity, run_exp_rho, run_exp_query_efficiency,
 )
 from .plots import save_figure
 
@@ -11,7 +11,7 @@ from .plots import save_figure
 PRESETS = {
     'paper': {
         'n_models': dict(
-            n_models=(10, 20, 50, 100, 120, 150),
+            n_models=(10, 20, 50, 75, 100),
             n_seeds=50,
         ),
         'n_tasks': dict(
@@ -26,13 +26,13 @@ PRESETS = {
             query_obs_prob=(0.1, 0.2, 0.3, 0.5, 0.7, 1.0),
             n_seeds=50,
         ),
-        'task_spread': dict(
-            task_spread=(0.1, 0.25, 0.5, 1.0, 2.0, 5.0),
+        'rho': dict(
+            rhos=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
             n_seeds=50,
         ),
-        'noise_x_queries': dict(
-            response_noises=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-            n_queries_values=(3, 10, 50),
+        'query_efficiency': dict(
+            budgets=(2, 4, 8, 16, 32),
+            rhos=(0.0, 1.0),
             n_seeds=50,
         ),
     },
@@ -53,13 +53,13 @@ PRESETS = {
             query_obs_prob=(0.3, 0.7, 1.0),
             n_seeds=3,
         ),
-        'task_spread': dict(
-            task_spread=(0.25, 1.0, 5.0),
+        'rho': dict(
+            rhos=(0.0, 0.5, 1.0),
             n_seeds=3,
         ),
-        'noise_x_queries': dict(
-            response_noises=(0.1, 1.0, 10.0),
-            n_queries_values=(3, 10, 50),
+        'query_efficiency': dict(
+            budgets=(2, 8, 32),
+            rhos=(0.0, 1.0),
             n_seeds=3,
         ),
     },
@@ -70,8 +70,8 @@ RUNNERS = {
     'n_tasks': run_exp_n_tasks,
     'task_parity': run_exp_task_parity,
     'query_sparsity': run_exp_query_sparsity,
-    'task_spread': run_exp_task_spread,
-    'noise_x_queries': run_exp_noise_x_queries,
+    'rho': run_exp_rho,
+    'query_efficiency': run_exp_query_efficiency,
 }
 
 

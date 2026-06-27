@@ -31,10 +31,11 @@ QUERY_KERNEL = os.environ.get('DKPS_QUERY_KERNEL', 'rbf')
 RESPONSE_KERNEL = os.environ.get('DKPS_RESPONSE_KERNEL', 'rbf')
 
 _KERNELS = dict(query_kernel=QUERY_KERNEL, response_kernel=RESPONSE_KERNEL)
+# Every panel compares DKPS (delta query kernel: exact query matches only) against
+# PKPS (rbf: bridges similar queries). Both use all observed data (no task filter).
 ESTIMATORS = {
-    'rbf_paired':    dict(**_KERNELS, task_filter='shared'),
-    'rbf_unpaired':  dict(**_KERNELS, task_filter='unshared'),
-    'rbf_combined':  dict(**_KERNELS),
+    'dkps': dict(query_kernel='delta', response_kernel=RESPONSE_KERNEL),
+    'pkps': dict(query_kernel='rbf', response_kernel=RESPONSE_KERNEL),
 }
 
 
@@ -69,6 +70,17 @@ def evaluate_predictions(predictions, scores, observed):
     return float(np.mean(np.abs(y_true - y_pred)))
 
 
+def _sample_baseline(scores, observed):
+    """Score-only floor: predict each held-out cell by the mean observed score of its task
+    (no item-level embedding, no model-specific signal beyond the task average)."""
+    preds = np.full_like(scores, np.nan)
+    for k in range(scores.shape[1]):
+        obs = observed[:, k]
+        if obs.any() and (~obs).any():
+            preds[~obs, k] = scores[obs, k].mean()
+    return evaluate_predictions(preds, scores, observed)
+
+
 def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
     """Fit DoubleKernelDKPS, embed models via ClassicalMDS(n_elbows=2), predict.
 
@@ -85,9 +97,16 @@ def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
         dist = np.nan_to_num(dist, nan=max_dist)
 
     from graspologic.embed import ClassicalMDS
-    embeddings = ClassicalMDS(
-        n_components=None, n_elbows=2, dissimilarity='precomputed',
-    ).fit_transform(dist)
+    try:
+        if not np.any(dist > 0):
+            raise ValueError('degenerate (all-zero) distances')
+        embeddings = ClassicalMDS(
+            n_components=None, n_elbows=2, dissimilarity='precomputed',
+        ).fit_transform(dist)
+    except Exception:
+        # degenerate perspective (e.g. DKPS with no shared queries to match on): all models
+        # collapse to one point, so the embedding carries no signal -> task-mean baseline.
+        embeddings = np.zeros((dist.shape[0], 1))
 
     predictions = predict_scores_knn(embeddings, scores, observed, k=k_neighbors)
     return evaluate_predictions(predictions, scores, observed)
@@ -98,8 +117,9 @@ def _run_estimators(data, scores, observed, experiment, k_neighbors, n_component
 
     Reduces embeddings once per run (observed data only), then runs estimators.
     """
+    sample_mae = _sample_baseline(scores, observed)
     data = _reduce_df(data)
-    rows = []
+    rows = [{'experiment': experiment, 'estimator': 'sample', 'mae': sample_mae, **extra_fields}]
     for est_name, est_kwargs in ESTIMATORS.items():
         mae = _fit_and_predict(
             data, scores, observed,
@@ -162,6 +182,59 @@ run_exp_query_sparsity = _make_runner('query_sparsity', 'query_obs_prob', dict(
 
 run_exp_task_spread = _make_runner('task_spread', 'task_spread', dict(
     n_models=100, n_tasks=20, n_queries_per_task=10, obs_prob=0.3, query_obs_prob=1.0))
+
+
+def run_exp_rho(rhos=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), budget=10, n_models=100, n_tasks=20,
+                obs_prob=0.3, k_neighbors=5, n_seeds=50, **gen_kwargs):
+    """Cross-model query overlap rho at a FIXED per-cell budget. Compare DKPS (delta query
+    kernel, exact matches only) vs PKPS (rbf, bridges similar queries)."""
+    kw = {k: v for k, v in {**_DEFAULTS, **gen_kwargs}.items() if k != 'n_queries_per_task'}
+    ests = {'dkps': dict(query_kernel='delta', response_kernel=RESPONSE_KERNEL),
+            'pkps': dict(query_kernel='rbf', response_kernel=RESPONSE_KERNEL)}
+
+    def _run(rho, seed):
+        n_sh = int(round(rho * budget))
+        data, scores, observed, _, _ = generate_benchmark_data(
+            n_models=n_models, n_tasks=n_tasks, n_queries_per_task=budget, obs_prob=obs_prob,
+            n_shared_queries=n_sh, n_unique_queries=budget - n_sh, random_state=seed, **kw)
+        out = [{'experiment': 'rho', 'estimator': 'sample', 'seed': seed, 'rho': rho,
+                'mae': _sample_baseline(scores, observed)}]
+        d = _reduce_df(data)
+        out += [{'experiment': 'rho', 'estimator': name, 'seed': seed, 'rho': rho,
+                 'mae': _fit_and_predict(d, scores, observed, k_neighbors=k_neighbors, **ek)}
+                for name, ek in ests.items()]
+        return out
+
+    params = [(r, s) for r in rhos for s in range(n_seeds)]
+    nested = Parallel(n_jobs=-1, verbose=10)(delayed(_run)(r, s) for r, s in params)
+    return pd.DataFrame([r for sub in nested for r in sub])
+
+
+def run_exp_query_efficiency(budgets=(2, 4, 8, 16, 32), rhos=(0.0, 1.0), n_models=100,
+                             n_tasks=20, obs_prob=0.3, k_neighbors=5, n_seeds=50, **gen_kwargs):
+    """Query efficiency: MAE vs per-cell query budget, for DKPS and PKPS at paired (rho=1)
+    and unpaired (rho=0). PKPS stays efficient when unpaired; DKPS is stuck."""
+    kw = {k: v for k, v in {**_DEFAULTS, **gen_kwargs}.items() if k != 'n_queries_per_task'}
+    ests = {'dkps': dict(query_kernel='delta', response_kernel=RESPONSE_KERNEL),
+            'pkps': dict(query_kernel='rbf', response_kernel=RESPONSE_KERNEL)}
+
+    def _run(budget, rho, seed):
+        n_sh = int(round(rho * budget))
+        data, scores, observed, _, _ = generate_benchmark_data(
+            n_models=n_models, n_tasks=n_tasks, n_queries_per_task=budget, obs_prob=obs_prob,
+            n_shared_queries=n_sh, n_unique_queries=budget - n_sh, random_state=seed, **kw)
+        out = [{'experiment': 'query_efficiency', 'estimator': 'sample', 'seed': seed,
+                'budget': budget, 'rho': rho, 'mae': _sample_baseline(scores, observed)}]
+        d = _reduce_df(data)
+        out += [{'experiment': 'query_efficiency', 'estimator': name, 'seed': seed,
+                 'budget': budget, 'rho': rho,
+                 'mae': _fit_and_predict(d, scores, observed, k_neighbors=k_neighbors, **ek)}
+                for name, ek in ests.items()]
+        return out
+
+    params = [(b, r, s) for b in budgets for r in rhos for s in range(n_seeds)]
+    nested = Parallel(n_jobs=-1, verbose=10)(delayed(_run)(b, r, s) for b, r, s in params)
+    return pd.DataFrame([r for sub in nested for r in sub])
 
 
 def run_exp_noise_x_queries(

@@ -15,23 +15,9 @@ import pandas as pd
 # the full PKPS (combined, uses all data) is red like PKPS elsewhere; the paired/unpaired
 # ablations get their own colours (teal/orange) so they never collide with a method's colour
 # (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
-ESTIMATOR_COLORS = {
-    'rbf_paired': '#17BECF',
-    'rbf_unpaired': '#FF7F0E',
-    'rbf_combined': '#E24A33',
-}
-
-ESTIMATOR_LABELS = {
-    'rbf_paired': 'paired',
-    'rbf_unpaired': 'unpaired',
-    'rbf_combined': 'combined',
-}
-
-ESTIMATOR_ORDER = ['rbf_paired', 'rbf_unpaired', 'rbf_combined']
-
-_BASELINE_STYLE = {}
-
-NQ_STYLES = {3: '--', 10: '-', 50: ':'}
+ESTIMATOR_COLORS = {'sample': '#777777', 'dkps': '#8EBA42', 'pkps': '#E24A33'}
+ESTIMATOR_LABELS = {'sample': 'sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
+ESTIMATOR_ORDER = ['sample', 'dkps', 'pkps']
 
 
 def _aggregate(df, group_cols, value_col):
@@ -44,93 +30,98 @@ def _aggregate(df, group_cols, value_col):
     return grouped
 
 
-def _plot_standard_panel(ax, df, x_col, xlabel, log_x=False, log_y=False):
-    """Standard panel: 3 estimators, x vs MAE."""
+def _errbar(ax, x, mean, sem, color, label, ls='-'):
+    ax.errorbar(x, mean, yerr=sem, marker='o', ms=4, lw=1.5, color=color, ls=ls,
+                label=label, capsize=2, elinewidth=0.8)
+
+
+def _plot_standard_panel(ax, df, x_col, xlabel):
+    """DKPS vs PKPS, x vs MAE (no per-panel legend; the figure has one shared legend)."""
     summary = _aggregate(df, [x_col, 'estimator'], 'mae')
     for est in ESTIMATOR_ORDER:
         if est not in summary['estimator'].values:
             continue
         curve = summary[summary['estimator'] == est].sort_values(x_col)
-        c = ESTIMATOR_COLORS[est]
-        label = ESTIMATOR_LABELS[est]
-        ls = _BASELINE_STYLE.get(est, '-')
-        ax.plot(curve[x_col], curve['mean'], marker='o', lw=1.5, color=c, label=label, linestyle=ls)
-        ax.fill_between(curve[x_col], curve['mean'] - curve['sem'],
-                        curve['mean'] + curve['sem'], color=c, alpha=0.18)
+        _errbar(ax, curve[x_col], curve['mean'], curve['sem'],
+                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
     ax.set_xlabel(xlabel)
-    if log_x:
-        ax.set_xscale('log')
-    if log_y:
-        ax.set_yscale('log')
-    ax.legend(fontsize=7, frameon=False)
     ax.grid(alpha=0.25, lw=0.6)
 
 
-def _plot_noise_x_queries(ax, df):
-    """Interaction panel: response noise x queries per task (combined only)."""
-    nq_values = sorted(df['n_queries_per_task'].unique())
-    summary = _aggregate(df, ['response_noise', 'n_queries_per_task'], 'mae')
-
-    c = ESTIMATOR_COLORS['rbf_combined']
-    for nq in nq_values:
-        curve = summary[summary['n_queries_per_task'] == nq].sort_values('response_noise')
-        ls = NQ_STYLES.get(nq, '-')
-        ax.plot(curve['response_noise'], curve['mean'], marker='o', lw=1.5,
-                color=c, linestyle=ls, label=f'nq={nq}')
-        ax.fill_between(curve['response_noise'], curve['mean'] - curve['sem'],
-                        curve['mean'] + curve['sem'], color=c, alpha=0.10)
-
-    ax.set_xlabel('response noise')
-    ax.set_xscale('log')
-    ax.legend(fontsize=7, frameon=False, title='combined', title_fontsize=7)
+def _plot_rho(ax, df, xlabel):
+    """Cross-model overlap rho: DKPS (delta) collapses as rho->0, PKPS (rbf) holds."""
+    summary = _aggregate(df, ['rho', 'estimator'], 'mae')
+    for est in ESTIMATOR_ORDER:
+        curve = summary[summary['estimator'] == est].sort_values('rho')
+        _errbar(ax, curve['rho'], curve['mean'], curve['sem'],
+                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
+    ax.set_xlabel(xlabel)
     ax.grid(alpha=0.25, lw=0.6)
 
 
-# Panel specs: (experiment_name, x_col, xlabel, log_x, log_y, custom_plot_fn)
+def _plot_query_efficiency(ax, df, xlabel):
+    """MAE vs per-cell query budget for DKPS and PKPS at paired (rho=1) / unpaired (rho=0).
+    Method by colour (shared legend); overlap by line style, noted inline."""
+    rhos = sorted(df['rho'].unique())
+    ls_map = {min(rhos): '--', max(rhos): '-'}      # dashed = unpaired, solid = paired
+    # sample score is rho-independent (it ignores queries): a single reference line
+    s = _aggregate(df[df['estimator'] == 'sample'], ['budget'], 'mae').sort_values('budget')
+    _errbar(ax, s['budget'], s['mean'], s['sem'], ESTIMATOR_COLORS['sample'], None, '-')
+    summary = _aggregate(df, ['budget', 'rho', 'estimator'], 'mae')
+    for est in ('dkps', 'pkps'):
+        for rho in rhos:
+            curve = summary[(summary['estimator'] == est) & (summary['rho'] == rho)].sort_values('budget')
+            _errbar(ax, curve['budget'], curve['mean'], curve['sem'],
+                    ESTIMATOR_COLORS[est], None, ls_map.get(rho, '-'))
+    ax.set_xlabel(xlabel)
+    ax.set_xscale('log', base=2)
+    ax.text(0.97, 0.97, 'solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
+            transform=ax.transAxes, ha='right', va='top', fontsize=7, color='#444')
+    ax.grid(alpha=0.25, lw=0.6)
+
+
+# Panel specs: (experiment, x_col, xlabel, custom_fn, fixed-parameter title)
 PANELS = [
-    ('n_models',        'n_models',           'number of models',              False, False, None),
-    ('n_tasks',         'n_tasks',            'number of tasks',               False, False, None),
-    ('task_parity',     'obs_prob',           'task observation probability',   False, False, None),
-    ('query_sparsity',  'query_obs_prob',     'query observation probability',  False, False, None),
-    ('task_spread',     'task_spread',        'task spread',                    False, True,  None),
-    ('noise_x_queries', None,                 None,                            False, False, _plot_noise_x_queries),
+    ('n_models', 'n_models', r'number of models $n$', None,
+     r'$T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}1$'),
+    ('n_tasks', 'n_tasks', r'number of tasks $T$', None,
+     r'$n{=}100,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}1$'),
+    ('task_parity', 'obs_prob', r'task obs. prob. $p_{\mathrm{task}}$', None,
+     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}1$'),
+    ('query_sparsity', 'query_obs_prob', r'query obs. prob. $p_{\mathrm{query}}$', None,
+     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
+    ('rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
+     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
+    ('query_efficiency', None, r'queries per cell $M_{ij}$', _plot_query_efficiency,
+     r'$n{=}100,\ T{=}20,\ p_{\mathrm{task}}{=}0.3$'),
 ]
 
 
-def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.5)):
-    """Create the main 2x3 figure."""
+def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
+    """Create the main 2x3 figure with one shared legend and per-panel fixed-parameter titles."""
+    from matplotlib.lines import Line2D
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
 
-    panel_idx = 0
-    for row in range(nrows):
-        for col in range(ncols):
-            if panel_idx >= len(PANELS):
-                axes[row][col].set_visible(False)
-                panel_idx += 1
-                continue
+    for idx, (exp_name, x_col, xlabel, custom_fn, fixed) in enumerate(PANELS):
+        ax = axes[idx // ncols][idx % ncols]
+        if exp_name not in results or results[exp_name] is None:
+            ax.set_visible(False)
+            continue
+        df = results[exp_name]
+        if custom_fn is not None:
+            custom_fn(ax, df, xlabel)
+        else:
+            _plot_standard_panel(ax, df, x_col, xlabel)
+        if idx % ncols == 0:
+            ax.set_ylabel('held-out score MAE')
+        ax.set_title(fixed, fontsize=8.5)
+        ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=11)
 
-            exp_name, x_col, xlabel, log_x, log_y, custom_fn = PANELS[panel_idx]
-            ax = axes[row][col]
-
-            if exp_name not in results or results[exp_name] is None:
-                ax.set_visible(False)
-                panel_idx += 1
-                continue
-
-            df = results[exp_name]
-
-            if custom_fn is not None:
-                custom_fn(ax, df)
-            else:
-                _plot_standard_panel(ax, df, x_col, xlabel, log_x, log_y)
-
-            if col == 0:
-                ax.set_ylabel('MAE')
-            ax.set_title(f'({chr(97 + panel_idx)})', fontsize=10, loc='left', fontweight='bold')
-
-            panel_idx += 1
-
-    fig.tight_layout()
+    handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=1.5,
+                      label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
+    fig.legend(handles=handles, loc='upper center', ncol=3, frameon=False,
+               bbox_to_anchor=(0.5, 1.005), fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
     return fig
 
 
