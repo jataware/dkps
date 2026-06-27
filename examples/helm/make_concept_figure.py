@@ -103,18 +103,19 @@ def _loo_predict(Z):                               # predict each score from the
         pred[m] = np.clip(Zb[m] @ beta, 0, 1)
     return pred
 
-pred_dk, pred_pk = _loo_predict(_mds2(_affinity(True))), _loo_predict(_mds2(_affinity(False)))
+Zdk, Zpk = _mds2(_affinity(True)), _mds2(_affinity(False))
+pred_dk, pred_pk = _loo_predict(Zdk), _loo_predict(Zpk)
 mae_dk, mae_pk = np.mean(np.abs(pred_dk - yE)), np.mean(np.abs(pred_pk - yE))
 
-fig = plt.figure(figsize=(16.4, 4.7))
-gs = GridSpec(2, 4, width_ratios=[0.82, 1, 1, 0.92], height_ratios=[0.58, 1.42],
+fig = plt.figure(figsize=(18.0, 4.7))
+gs = GridSpec(2, 5, width_ratios=[0.82, 1, 1, 0.6, 0.6], height_ratios=[0.58, 1.42],
               wspace=0.28, hspace=0.05)
 axBlk = fig.add_subplot(gs[0, 0])
 axEmb = fig.add_subplot(gs[1, 0])
 axC = fig.add_subplot(gs[:, 1])
 axR = fig.add_subplot(gs[:, 2])
-axDK = fig.add_subplot(gs[0, 3])
-axPK = fig.add_subplot(gs[1, 3])
+axDKe = fig.add_subplot(gs[0, 3]); axDKp = fig.add_subplot(gs[0, 4])     # DKPS embed | pred
+axPKe = fig.add_subplot(gs[1, 3]); axPKp = fig.add_subplot(gs[1, 4])     # PKPS embed | pred
 
 # ---- LEFT TOP: queries as dots in embedding space ----------------------------
 for k, col, sz, z in [(3, GRAY, 42, 1), (0, RED, 105, 3), (1, BLUE, 105, 3), (2, PURPLE, 125, 4)]:
@@ -146,19 +147,29 @@ for ax, W in [(axC, Kdkps), (axR, Krbf)]:
     ax.set_xlabel('query index', fontsize=10, color='#475569')
 axC.set_ylabel('query index', fontsize=10, color='#475569')
 
-# ---- 4th COLUMN: predicted vs. true benchmark score (each dot = one model) ----
-for ax, pred, mae in [(axDK, pred_dk, mae_dk), (axPK, pred_pk, mae_pk)]:
-    ax.plot([0, 1], [0, 1], ls='--', color='#94a3b8', lw=1.2, zorder=1)
-    ax.scatter(yE, pred, s=46, c=PURPLE, edgecolors='white', lw=0.8, zorder=3)
-    ax.set_xlim(-0.05, 1.05); ax.set_ylim(-0.05, 1.05); ax.set_aspect('equal')
-    ax.set_xticks([0, 1]); ax.set_yticks([0, 1]); ax.tick_params(labelsize=8, color='#d7dde6')
-    for s in ax.spines.values():
+# ---- RIGHT 2x2 BLOCK: perspective embedding (coloured by score) + LOO prediction
+SCM = 'viridis'
+for axe, axp, Z, pred, mae in [(axDKe, axDKp, Zdk, pred_dk, mae_dk),
+                               (axPKe, axPKp, Zpk, pred_pk, mae_pk)]:
+    # MDS 2-D model representations (one dot per model), coloured by true benchmark score
+    sc = axe.scatter(Z[:, 0], Z[:, 1], c=yE, cmap=SCM, vmin=0, vmax=1,
+                     s=46, edgecolors='white', lw=0.8, zorder=3)
+    axe.set_aspect('equal'); axe.set_xticks([]); axe.set_yticks([])
+    for s in axe.spines.values():
         s.set_edgecolor('#d7dde6')
-    ax.text(0.05, 0.95, f'MAE {mae:.2f}', transform=ax.transAxes, ha='left', va='top',
-            fontsize=9.5, color='#334155')
-    ax.set_ylabel('predicted', fontsize=9.5, color='#475569', labelpad=1)
-axDK.set_xlabel('true score', fontsize=9.5, color='#475569', labelpad=1)
-axPK.set_xlabel('true score', fontsize=9.5, color='#475569', labelpad=1)
+    # predict each model's score by LOO regression onto its 2-D representation
+    axp.plot([0, 1], [0, 1], ls='--', color='#94a3b8', lw=1.2, zorder=1)
+    axp.scatter(yE, pred, c=yE, cmap=SCM, vmin=0, vmax=1, s=40, edgecolors='white', lw=0.8, zorder=3)
+    axp.set_xlim(-0.05, 1.05); axp.set_ylim(-0.05, 1.05); axp.set_aspect('equal')
+    axp.set_xticks([0, 1]); axp.set_yticks([0, 1]); axp.tick_params(labelsize=8, color='#d7dde6')
+    for s in axp.spines.values():
+        s.set_edgecolor('#d7dde6')
+    axp.text(0.06, 0.94, f'MAE {mae:.2f}', transform=axp.transAxes, ha='left', va='top',
+             fontsize=9, color='#334155')
+axPKe.set_xlabel('perspective space', fontsize=9, color='#475569', labelpad=3)
+axPKp.set_xlabel('true score', fontsize=9, color='#475569', labelpad=1)
+axDKp.set_ylabel('predicted', fontsize=9, color='#475569', labelpad=1)
+axPKp.set_ylabel('predicted', fontsize=9, color='#475569', labelpad=1)
 
 cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
 cb = fig.colorbar(im, cax=cax)
@@ -175,23 +186,33 @@ fig.suptitle('PKPS can use all available information',
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
 # coordinate text over each panel centre does.
 fig.canvas.draw()
-# stack the two perspective panels as equal squares spanning the matrices' vertical extent
-pr = axR.get_position(); pcol = axDK.get_position()
-gap = 0.16
-h = (pr.height - gap) / 2
-axDK.set_position([pcol.x0, pr.y1 - h, pcol.width, h])     # top = DKPS
-axPK.set_position([pcol.x0, pr.y0, pcol.width, h])         # bottom = PKPS
+# arrange the right 2x2 block (DKPS row / PKPS row) x (embed | pred) as equal squares
+# spanning the matrices' vertical extent
+pr = axR.get_position()
+gap_v = 0.18
+h = (pr.height - gap_v) / 2
+ce, cp = axDKe.get_position(), axDKp.get_position()
+for ax, x0, w, y0 in [(axDKe, ce.x0, ce.width, pr.y1 - h), (axDKp, cp.x0, cp.width, pr.y1 - h),
+                      (axPKe, ce.x0, ce.width, pr.y0),     (axPKp, cp.x0, cp.width, pr.y0)]:
+    ax.set_position([x0, y0, w, h])
+
+# slim colour key (true benchmark score) for the embedding + prediction dots
+cpp = axDKp.get_position()
+scax = fig.add_axes([cpp.x1 + 0.010, pr.y0, 0.007, pr.height])
+scb = fig.colorbar(sc, cax=scax); scb.set_label('true score', fontsize=8.5)
+scb.set_ticks([0, 1]); scb.ax.tick_params(labelsize=7)
 
 Y = max(ax.get_position().y1 for ax in (axBlk, axC, axR)) + 0.012
 for ax, t in [(axBlk, r'$\bf{(a)}$  answered queries'),
               (axC, r'$\bf{(b)}$  DKPS  ·  $k_Q=\delta$'),
               (axR, r'$\bf{(c)}$  PKPS  ·  $k_Q=$ RBF'),
-              (axDK, r'$\bf{(d)}$  DKPS prediction')]:
+              (axDKe, r'$\bf{(d)}$  DKPS embed'),
+              (axDKp, r"$\bf{(d')}$  DKPS pred")]:
     p = ax.get_position()
-    fig.text((p.x0 + p.x1) / 2, Y, t, ha='center', va='bottom', fontsize=12)
-pp = axPK.get_position()
-fig.text((pp.x0 + pp.x1) / 2, pp.y1 + 0.012, r'$\bf{(e)}$  PKPS prediction',
-         ha='center', va='bottom', fontsize=12)
+    fig.text((p.x0 + p.x1) / 2, Y, t, ha='center', va='bottom', fontsize=11)
+for ax, t in [(axPKe, r'$\bf{(e)}$  PKPS embed'), (axPKp, r"$\bf{(e')}$  PKPS pred")]:
+    p = ax.get_position()
+    fig.text((p.x0 + p.x1) / 2, p.y1 + 0.012, t, ha='center', va='bottom', fontsize=11)
 
 # size the embedding to fill the lower-left region, and put a shared legend at the bottom
 # (fixed in figure coords) so the left column bottoms out level with the matrices' labels.
