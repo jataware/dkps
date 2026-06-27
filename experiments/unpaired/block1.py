@@ -169,13 +169,13 @@ def _make_runner(experiment_name, sweep_param, default_gen_kwargs):
 
 # The six experiments
 run_exp_n_models = _make_runner('n_models', 'n_models', dict(
-    n_tasks=20, n_queries_per_task=10, obs_prob=0.3, query_obs_prob=1.0))
+    n_tasks=20, n_queries_per_task=10, obs_prob=0.3, query_obs_prob=0.8))
 
 run_exp_n_tasks = _make_runner('n_tasks', 'n_tasks', dict(
-    n_models=100, n_queries_per_task=10, obs_prob=0.3, query_obs_prob=1.0))
+    n_models=100, n_queries_per_task=10, obs_prob=0.3, query_obs_prob=0.8))
 
 run_exp_task_parity = _make_runner('task_parity', 'obs_prob', dict(
-    n_models=100, n_tasks=20, n_queries_per_task=10, query_obs_prob=1.0))
+    n_models=100, n_tasks=20, n_queries_per_task=10, query_obs_prob=0.8))
 
 run_exp_query_sparsity = _make_runner('query_sparsity', 'query_obs_prob', dict(
     n_models=100, n_tasks=20, n_queries_per_task=10, obs_prob=0.3))

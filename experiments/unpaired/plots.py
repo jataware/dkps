@@ -83,11 +83,11 @@ def _plot_query_efficiency(ax, df, xlabel):
 # Panel specs: (experiment, x_col, xlabel, custom_fn, fixed-parameter title)
 PANELS = [
     ('n_models', 'n_models', r'number of models $n$', None,
-     r'$T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}1$'),
+     r'$T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}0.8$'),
     ('n_tasks', 'n_tasks', r'number of tasks $T$', None,
-     r'$n{=}100,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}1$'),
+     r'$n{=}100,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}0.8$'),
     ('task_parity', 'obs_prob', r'task obs. prob. $p_{\mathrm{task}}$', None,
-     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}1$'),
+     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}0.8$'),
     ('query_sparsity', 'query_obs_prob', r'query obs. prob. $p_{\mathrm{query}}$', None,
      r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
     ('rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,

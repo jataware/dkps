@@ -288,10 +288,9 @@ sample baseline (predict a held-out cell by its task's observed mean) as a floor
 (Figure~\ref{fig:synthetic}).
 
 \PKPS is at least as good as DKPS across every lever, and both beat the sample floor. The
-gap between them is small where queries are \emph{paired}---sweeping the cohort $n$, the
-task count $T$, and task coverage $p_{\mathrm{task}}$ (panels a--c, all at $p_{\mathrm{query}}{=}1$)
-DKPS already has the matched queries it needs---and large where they are \emph{unpaired or
-sparse}. As query coverage $p_{\mathrm{query}}$ drops (d) the two diverge; sweeping the
+gap is modest where queries are \emph{mostly paired}---sweeping the cohort $n$, the task
+count $T$, and task coverage $p_{\mathrm{task}}$ at $p_{\mathrm{query}}{=}0.8$ (panels
+a--c)---and widens as queries become \emph{unpaired or sparse}. As query coverage $p_{\mathrm{query}}$ drops (d) the two diverge; sweeping the
 overlap $\rho$ directly (e), DKPS collapses to the sample floor as $\rho\!\to\!0$ while
 \PKPS is essentially flat---it never needed pairing. The query-efficiency panel (f) makes
 the cost concrete: \PKPS's error keeps falling with the per-cell budget $M_{ij}$ even when
@@ -307,8 +306,8 @@ gray) as a floor. Each panel sweeps one parameter with the rest fixed (shown in 
 (a) cohort $n$, (b) tasks $T$, (c) task coverage $p_{\mathrm{task}}$, (d) query coverage
 $p_{\mathrm{query}}$, (e) cross-model overlap $\rho=m_{ii'}/M_{ij}$, (f) per-cell query
 budget $M_{ij}$ at paired ($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). \PKPS
-$\le$ DKPS throughout; the gap is small when queries are paired (a--c) and large when
-unpaired or sparse (d--f). In (e) DKPS collapses to the sample floor as overlap vanishes
+$\le$ DKPS throughout; the gap is modest when queries are mostly paired (a--c) and large
+when unpaired or sparse (d--f). In (e) DKPS collapses to the sample floor as overlap vanishes
 while \PKPS stays flat; in (f) \PKPS keeps improving with budget even fully unpaired while
 unpaired DKPS gains nothing.}
 \label{fig:synthetic}
