@@ -16,7 +16,7 @@ from matplotlib.lines import Line2D
 D = Path('results-pkps-unified')
 COL = {'mc': '#348ABC', 'pkps': '#E24A33', 'ens': '#8C564B'}
 LBL = {'mc': 'matrix completion', 'pkps': 'PKPS', 'ens': 'ensemble'}
-LW = {'mc': 1.6, 'pkps': 1.6, 'ens': 2.4}
+LW = {'mc': 2.6, 'pkps': 2.6, 'ens': 3.6}
 NLS = {93: '-', 10: '--'}                       # cohort -> line style
 # (sweep, xcol, xlabel, fixed-title, line-family?)
 PANELS = [('coverage', 'p_task', r'task coverage $p_{\mathrm{task}}$', r'$p_{\mathrm{query}}{=}0.5,\ T{=}18$', True),

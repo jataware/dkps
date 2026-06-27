@@ -31,7 +31,7 @@ def _aggregate(df, group_cols, value_col):
 
 
 def _errbar(ax, x, mean, sem, color, label, ls='-'):
-    ax.errorbar(x, mean, yerr=sem, marker='o', ms=4, lw=1.5, color=color, ls=ls,
+    ax.errorbar(x, mean, yerr=sem, marker='o', ms=4, lw=2.6, color=color, ls=ls,
                 label=label, capsize=2, elinewidth=0.8)
 
 
@@ -118,7 +118,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
         ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=11)
 
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
-    handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=1.5,
+    handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
     fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
                bbox_to_anchor=(0.5, 1.005), fontsize=11)

@@ -17,7 +17,7 @@ STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
          'irt':    dict(color='#988ED5', ls='--', label='IRT'),
          'dkps':   dict(color='#8EBA42', ls='-',  label='DKPS'),
          'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),
-         'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=2.6)}
+         'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=3.6)}
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 
 df = pd.read_csv('results-pkps-rd1/rd1_suite_pairing.csv')
@@ -30,7 +30,7 @@ for m in ORDER:
     st = STYLE[m]
     sub = g.xs(m, level='method').sort_index()
     ax.errorbar(sub.index.values, sub['mean'], yerr=sub['sem'], marker='o', ms=5,
-                lw=st.get('lw', 1.7), color=st['color'], ls=st['ls'], label=st['label'],
+                lw=st.get('lw', 2.6), color=st['color'], ls=st['ls'], label=st['label'],
                 capsize=3, elinewidth=0.9)
 ax.set_xlabel(r"fraction of paired queries  $\rho = m_{ii'}/M_{ij}$")
 ax.set_ylabel('MAE vs full-eval score')

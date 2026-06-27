@@ -19,7 +19,7 @@ STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
          'irt':    dict(color='#988ED5', ls='--', label='IRT'),
          'dkps':   dict(color='#8EBA42', ls='-',  label='DKPS'),
          'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),
-         'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=2.6)}
+         'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=3.6)}
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 PANELS = [('budget',   'm',       r'queries per cell $m$',           r'$n{=}93,\ p_{\mathrm{task}}{=}1$', True),
           ('n_models', 'n_models', r'number of models $n$',          r'$m{=}2,\ p_{\mathrm{task}}{=}1$',   False),
@@ -37,7 +37,7 @@ def panel(ax, sweep, xcol, xlabel, fixed, logx):
         st = STYLE[m]
         sub = g.xs(m, level='method').sort_index()
         ax.errorbar(sub.index.values, sub['mean'], yerr=sub['sem'], marker='o', ms=4,
-                    lw=st.get('lw', 1.6), color=st['color'], ls=st['ls'], label=st['label'],
+                    lw=st.get('lw', 2.6), color=st['color'], ls=st['ls'], label=st['label'],
                     capsize=2, elinewidth=0.8)
     if logx:
         ax.set_xscale('log', base=2)
@@ -52,7 +52,7 @@ for ax, (sweep, xcol, xlabel, fixed, logx), letter in zip(axes, PANELS, 'abc'):
     ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
 axes[0].set_ylabel('MAE vs true score (observed cells)')
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
-                  lw=STYLE[m].get('lw', 1.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
+                  lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
 fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False,
            bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
 fig.suptitle('Query efficiency on the heterogeneous suite: PKPS denoises few-query samples, '
