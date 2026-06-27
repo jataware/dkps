@@ -56,25 +56,26 @@ D2 = ((P[U][:, None] - P[U][None, :]) ** 2).sum(-1)
 Krbf = np.exp(-D2 / (2 * 1.7 ** 2))            # PKPS: symmetric query-similarity kernel
 Kdkps = np.diag(sharedU.astype(float))         # DKPS: identity, active only at shared queries
 
-# ---- benchmark-score prediction example (4th column) ------------------------
+# ---- benchmark-score prediction example (right 2x2 block) -------------------
 # A small model population with a latent ability that sets each model's true full-benchmark
-# score. Each model answers an UNPAIRED random subset of a shared query pool, so pairwise
-# overlap is small, and the ability signal is WEAK per query (swamped by per-query noise):
-# only the average over many queries reveals it. We embed the models in each perspective
-# space and predict every model's score by leave-one-out regression onto the embedding.
-# PKPS bridges responses to *similar* queries and predicts well; the DKPS limit sees only
-# the tiny shared overlap, cannot average enough, and its prediction degrades.
-rngE = np.random.default_rng(4)
-NQ, FRAC, NM = 24, 0.30, 12                        # pool size, answered fraction, n models
+# score. Each model answers only a few queries from a LARGE shared pool, so two models rarely
+# answer the SAME query (DKPS's requirement) although they answer SIMILAR ones (PKPS's). We
+# embed the models in each perspective space (classical MDS of the pairwise distances) and
+# predict each score by leave-one-out regression onto the embedding. PKPS bridges similar
+# queries, recovers ability as a clean gradient, and predicts well; the DKPS limit, restricted
+# to the rare shared queries, sees a much noisier geometry and predicts worse.
+rngE = np.random.default_rng(9)
+NQ, NQA, NM = 160, 9, 14                            # pool size, answered per model, n models
+STY, SIG, BR = 1.6, 0.8, 1.8                        # ability signal, per-query noise, k_R bandwidth
 qE = np.concatenate([c + rngE.normal(0, 0.35, (NQ // 2, 2)) for c in ([0, 0], [2.6, 1.8])])
-abil = np.sort(rngE.uniform(-1.5, 1.5, NM))        # latent model ability
-yE = 0.5 + 0.5 * np.tanh(1.2 * abil)               # true full-benchmark score in [0, 1]
+abil = np.sort(rngE.uniform(-1.5, 1.5, NM))         # latent model ability
+yE = 0.5 + 0.5 * np.tanh(1.2 * abil)                # true full-benchmark score in [0, 1]
 edir = np.array([1.0, 0.0])
-ansE = [np.sort(rngE.choice(NQ, max(2, int(FRAC * NQ)), replace=False)) for _ in range(NM)]
-Xe = {(m, q): abil[m] * edir + 0.18 * (qE[q] - qE.mean(0)) + rngE.normal(0, 1.1, 2)
+ansE = [np.sort(rngE.choice(NQ, NQA, replace=False)) for _ in range(NM)]
+Xe = {(m, q): STY * abil[m] * edir + 0.18 * (qE[q] - qE.mean(0)) + rngE.normal(0, SIG, 2)
       for m in range(NM) for q in ansE[m]}
 
-def _affinity(delta, sig=0.8):
+def _affinity(delta, sig=0.8):                      # bounded RBF k_R (self-affinity carries no ability leak)
     A = np.zeros((NM, NM))
     for a in range(NM):
         for b in range(NM):
@@ -83,18 +84,25 @@ def _affinity(delta, sig=0.8):
                 for qb in ansE[b]:
                     kq = (1.0 if qa == qb else 0.0) if delta else \
                         np.exp(-((qE[qa] - qE[qb]) ** 2).sum() / (2 * sig ** 2))
-                    num += kq * (Xe[(a, qa)] @ Xe[(b, qb)]); den += kq
+                    if kq:
+                        kr = np.exp(-((Xe[(a, qa)] - Xe[(b, qb)]) ** 2).sum() / (2 * BR ** 2))
+                        num += kq * kr; den += kq
             A[a, b] = num / den if den > 0 else 0.0
     return A
 
-def _mds2(A):                                      # classical MDS to 2-D from an affinity
+def _mds2(A):                                       # classical MDS to 2-D from an affinity
     d2 = np.maximum(np.diag(A)[:, None] + np.diag(A)[None, :] - 2 * A, 0)
     J = np.eye(NM) - 1.0 / NM
     w, V = np.linalg.eigh(-0.5 * J @ d2 @ J)
     idx = np.argsort(w)[::-1][:2]
     return V[:, idx] * np.sqrt(np.maximum(w[idx], 0))
 
-def _loo_predict(Z):                               # predict each score from the others' embeddings
+def _align(Z):       # MDS orientation is arbitrary; rotate so the score gradient runs along +x
+    beta, *_ = np.linalg.lstsq(np.c_[np.ones(NM), Z], yE, rcond=None)
+    d = beta[1:]; d = d / (np.linalg.norm(d) + 1e-12)
+    return Z @ np.array([[d[0], d[1]], [-d[1], d[0]]]).T
+
+def _loo_predict(Z):                                # predict each score from the others' embeddings
     Zb = np.c_[np.ones(NM), Z]
     pred = np.zeros(NM)
     for m in range(NM):
@@ -103,12 +111,13 @@ def _loo_predict(Z):                               # predict each score from the
         pred[m] = np.clip(Zb[m] @ beta, 0, 1)
     return pred
 
-Zdk, Zpk = _mds2(_affinity(True)), _mds2(_affinity(False))
-pred_dk, pred_pk = _loo_predict(Zdk), _loo_predict(Zpk)
+Zdk_raw, Zpk_raw = _mds2(_affinity(True)), _mds2(_affinity(False))
+pred_dk, pred_pk = _loo_predict(Zdk_raw), _loo_predict(Zpk_raw)
+Zdk, Zpk = _align(Zdk_raw), _align(Zpk_raw)         # rotation is display-only (LOO is rotation-invariant)
 mae_dk, mae_pk = np.mean(np.abs(pred_dk - yE)), np.mean(np.abs(pred_pk - yE))
 
-fig = plt.figure(figsize=(18.0, 4.7))
-gs = GridSpec(2, 5, width_ratios=[0.82, 1, 1, 0.6, 0.6], height_ratios=[0.58, 1.42],
+fig = plt.figure(figsize=(15.5, 4.7))
+gs = GridSpec(2, 5, width_ratios=[0.82, 1, 1, 0.5, 0.5], height_ratios=[0.58, 1.42],
               wspace=0.28, hspace=0.05)
 axBlk = fig.add_subplot(gs[0, 0])
 axEmb = fig.add_subplot(gs[1, 0])
@@ -149,27 +158,29 @@ axC.set_ylabel('query index', fontsize=10, color='#475569')
 
 # ---- RIGHT 2x2 BLOCK: perspective embedding (coloured by score) + LOO prediction
 SCM = 'viridis'
-for axe, axp, Z, pred, mae in [(axDKe, axDKp, Zdk, pred_dk, mae_dk),
-                               (axPKe, axPKp, Zpk, pred_pk, mae_pk)]:
-    # MDS 2-D model representations (one dot per model), coloured by true benchmark score
+for axe, axp, Z, pred, mae, le, lp in [(axDKe, axDKp, Zdk, pred_dk, mae_dk, 'd', "d'"),
+                                       (axPKe, axPKp, Zpk, pred_pk, mae_pk, 'e', "e'")]:
+    # MDS 2-D model representations (one dot per model), coloured by true benchmark score;
+    # the embedding is rotated so the score gradient runs left->right
     sc = axe.scatter(Z[:, 0], Z[:, 1], c=yE, cmap=SCM, vmin=0, vmax=1,
-                     s=46, edgecolors='white', lw=0.8, zorder=3)
+                     s=54, edgecolors='white', lw=0.8, zorder=3)
     axe.set_aspect('equal'); axe.set_xticks([]); axe.set_yticks([])
+    axe.text(0.05, 0.94, f'({le})', transform=axe.transAxes, ha='left', va='top',
+             fontsize=9, fontweight='bold', color='#334155')
     for s in axe.spines.values():
         s.set_edgecolor('#d7dde6')
     # predict each model's score by LOO regression onto its 2-D representation
     axp.plot([0, 1], [0, 1], ls='--', color='#94a3b8', lw=1.2, zorder=1)
-    axp.scatter(yE, pred, c=yE, cmap=SCM, vmin=0, vmax=1, s=40, edgecolors='white', lw=0.8, zorder=3)
+    axp.scatter(yE, pred, c=yE, cmap=SCM, vmin=0, vmax=1, s=44, edgecolors='white', lw=0.8, zorder=3)
     axp.set_xlim(-0.05, 1.05); axp.set_ylim(-0.05, 1.05); axp.set_aspect('equal')
     axp.set_xticks([0, 1]); axp.set_yticks([0, 1]); axp.tick_params(labelsize=8, color='#d7dde6')
+    axp.text(0.05, 0.94, f'({lp})', transform=axp.transAxes, ha='left', va='top',
+             fontsize=9, fontweight='bold', color='#334155')
+    axp.text(0.95, 0.07, f'MAE {mae:.2f}', transform=axp.transAxes, ha='right', va='bottom',
+             fontsize=8.5, color='#334155')
     for s in axp.spines.values():
         s.set_edgecolor('#d7dde6')
-    axp.text(0.06, 0.94, f'MAE {mae:.2f}', transform=axp.transAxes, ha='left', va='top',
-             fontsize=9, color='#334155')
-axPKe.set_xlabel('perspective space', fontsize=9, color='#475569', labelpad=3)
-axPKp.set_xlabel('true score', fontsize=9, color='#475569', labelpad=1)
-axDKp.set_ylabel('predicted', fontsize=9, color='#475569', labelpad=1)
-axPKp.set_ylabel('predicted', fontsize=9, color='#475569', labelpad=1)
+axPKp.set_xlabel('true score', fontsize=8.5, color='#475569', labelpad=1)
 
 cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
 cb = fig.colorbar(im, cax=cax)
@@ -186,33 +197,37 @@ fig.suptitle('PKPS can use all available information',
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
 # coordinate text over each panel centre does.
 fig.canvas.draw()
-# arrange the right 2x2 block (DKPS row / PKPS row) x (embed | pred) as equal squares
-# spanning the matrices' vertical extent
+# arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
+# packed tight to save space
 pr = axR.get_position()
-gap_v = 0.18
+gap_v = 0.11
 h = (pr.height - gap_v) / 2
-ce, cp = axDKe.get_position(), axDKp.get_position()
-for ax, x0, w, y0 in [(axDKe, ce.x0, ce.width, pr.y1 - h), (axDKp, cp.x0, cp.width, pr.y1 - h),
-                      (axPKe, ce.x0, ce.width, pr.y0),     (axPKp, cp.x0, cp.width, pr.y0)]:
-    ax.set_position([x0, y0, w, h])
+side = h * (fig.get_figheight() / fig.get_figwidth())   # fig-fraction width of a square of height h
+x0 = pr.x1 + 0.105                                       # clear the matrix colour key
+hgap = 0.014
+for axe, axp, ytop in [(axDKe, axDKp, pr.y1), (axPKe, axPKp, pr.y0 + h)]:
+    axe.set_position([x0, ytop - h, side, h])
+    axp.set_position([x0 + side + hgap, ytop - h, side, h])
 
 # slim colour key (true benchmark score) for the embedding + prediction dots
-cpp = axDKp.get_position()
-scax = fig.add_axes([cpp.x1 + 0.010, pr.y0, 0.007, pr.height])
+scax = fig.add_axes([x0 + 2 * side + hgap + 0.012, pr.y0, 0.006, pr.height])
 scb = fig.colorbar(sc, cax=scax); scb.set_label('true score', fontsize=8.5)
 scb.set_ticks([0, 1]); scb.ax.tick_params(labelsize=7)
 
 Y = max(ax.get_position().y1 for ax in (axBlk, axC, axR)) + 0.012
 for ax, t in [(axBlk, r'$\bf{(a)}$  answered queries'),
               (axC, r'$\bf{(b)}$  DKPS  ·  $k_Q=\delta$'),
-              (axR, r'$\bf{(c)}$  PKPS  ·  $k_Q=$ RBF'),
-              (axDKe, r'$\bf{(d)}$  DKPS embed'),
-              (axDKp, r"$\bf{(d')}$  DKPS pred")]:
+              (axR, r'$\bf{(c)}$  PKPS  ·  $k_Q=$ RBF')]:
     p = ax.get_position()
-    fig.text((p.x0 + p.x1) / 2, Y, t, ha='center', va='bottom', fontsize=11)
-for ax, t in [(axPKe, r'$\bf{(e)}$  PKPS embed'), (axPKp, r"$\bf{(e')}$  PKPS pred")]:
+    fig.text((p.x0 + p.x1) / 2, Y, t, ha='center', va='bottom', fontsize=12)
+# block column headers (embedding | prediction) and DKPS/PKPS row labels (brand colours)
+pe2, pp2 = axDKe.get_position(), axDKp.get_position()
+fig.text((pe2.x0 + pe2.x1) / 2, Y, 'embedding', ha='center', va='bottom', fontsize=10.5)
+fig.text((pp2.x0 + pp2.x1) / 2, Y, 'prediction', ha='center', va='bottom', fontsize=10.5)
+for ax, lab, col in [(axDKe, 'DKPS', '#8EBA42'), (axPKe, 'PKPS', '#E24A33')]:
     p = ax.get_position()
-    fig.text((p.x0 + p.x1) / 2, p.y1 + 0.012, t, ha='center', va='bottom', fontsize=11)
+    fig.text(p.x0 - 0.009, (p.y0 + p.y1) / 2, lab, ha='right', va='center', fontsize=11,
+             fontweight='bold', color=col, rotation=90)
 
 # size the embedding to fill the lower-left region, and put a shared legend at the bottom
 # (fixed in figure coords) so the left column bottoms out level with the matrices' labels.

@@ -185,15 +185,16 @@ $k_Q=$ RBF).} The RBF query kernel over the same ordering is a dense, \emph{symm
 similarity matrix, so responses to \emph{similar} queries---not only identical ones---bridge
 the two models and every response can contribute. \PKPS thus turns the sparse shared-query
 diagonal DKPS depends on into a dense similarity kernel. \textbf{Right block (d, d$'$, e,
-e$'$):} a benchmark-prediction example on a small population that answers unpaired query
-subsets, where the ability signal is weak per query and only emerges by averaging many. Each
-method embeds the models in its perspective space by classical MDS of the pairwise distance
-matrix (\textbf{d, e}: the 2-D model representations, coloured by true score), then predicts
-each model's full-benchmark score by leave-one-out regression onto that embedding
-(\textbf{d$'$, e$'$}: predicted vs.\ true). Restricted to the few shared queries, \textbf{DKPS}
-cannot average enough---the score is scrambled across its embedding and predictions scatter
-off the diagonal (MAE $0.22$); \textbf{PKPS} averages over all similar queries, so score
-varies smoothly across its embedding and predictions land on the diagonal (MAE $0.08$).}
+e$'$):} a benchmark-prediction example on a small model population. Each model answers only a
+few queries from a large pool, so two models rarely answer the \emph{same} query though they
+answer \emph{similar} ones. Each method embeds the models by classical MDS of the pairwise
+distance matrix (\textbf{d, e}: the 2-D model representations, coloured by true score and
+rotated so the score gradient runs left-to-right), then predicts each model's full-benchmark
+score by leave-one-out regression onto that embedding (\textbf{d$'$, e$'$}: predicted vs.\
+true). Restricted to the rare shared queries, \textbf{DKPS} yields a noisy geometry with no
+clean score axis and predictions scatter off the diagonal (MAE $0.35$); \textbf{PKPS} bridges
+all similar queries, so score varies smoothly across its embedding and predictions land on the
+diagonal (MAE $0.05$).}
 \label{fig:concept}
 \end{figure}
 
