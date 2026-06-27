@@ -117,6 +117,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
         ax.set_title(fixed, fontsize=8.5)
         ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=11)
 
+    axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=1.5,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
     fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
