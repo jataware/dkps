@@ -97,8 +97,8 @@ PANELS = [
 ]
 
 
-def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
-    """Create the main 2x3 figure with one shared legend and per-panel fixed-parameter titles."""
+def plot_figure(results, nrows=1, ncols=6, figsize=(23, 3.9)):
+    """Create the main single-row figure with one shared legend and per-panel fixed-parameter titles."""
     from matplotlib.lines import Line2D
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
 
@@ -119,9 +119,9 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
 
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=1.5,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
-    fig.legend(handles=handles, loc='upper center', ncol=3, frameon=False,
-               bbox_to_anchor=(0.5, 1.005), fontsize=11)
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
+               bbox_to_anchor=(0.5, 1.10), fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.9])
     return fig
 
 

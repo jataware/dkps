@@ -43,21 +43,19 @@ def panel(ax, sweep, xcol, xlabel, fixed, family):
     ax.grid(alpha=0.25, lw=0.6)
 
 
-fig, axes = plt.subplots(2, 2, figsize=(10, 7.4))
-for ax, spec, letter in zip(axes.ravel(), PANELS, 'abcd'):
+fig, axes = plt.subplots(1, 4, figsize=(16, 4.0))
+for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     panel(ax, *spec)
-    ax.set_ylabel('MAE on missing cells')
     ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
+axes[0].set_ylabel('MAE on missing cells')
 meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
 n_h = [Line2D([0], [0], color='#444', ls='-', label='$n{=}93$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
-leg1 = fig.legend(handles=meth_h, loc='upper center', ncol=3, frameon=False,
-                  bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
-fig.add_artist(leg1)
-fig.legend(handles=n_h, loc='upper center', ncol=2, frameon=False, bbox_to_anchor=(0.5, 0.985), fontsize=9)
+fig.legend(handles=meth_h + n_h, loc='upper center', ncol=5, frameon=False,
+           bbox_to_anchor=(0.5, 1.03), fontsize=9.5)
 fig.suptitle('Matrix completion: the embedding rescues the small-cohort regime ($n{=}10$, dashed); '
-             'at full cohort ($n{=}93$, solid) it ties low-rank completion', fontsize=11, y=1.06)
-fig.tight_layout(rect=[0, 0, 1, 0.95])
+             'at full cohort ($n{=}93$, solid) it ties low-rank completion', fontsize=11, y=1.10)
+fig.tight_layout(rect=[0, 0, 1, 0.94])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-unified/fig_suite_completion.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-unified/fig_suite_completion.png')
