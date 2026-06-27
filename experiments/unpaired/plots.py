@@ -100,7 +100,7 @@ PANELS = [
 def plot_figure(results, nrows=1, ncols=6, figsize=(23, 3.9)):
     """Create the main single-row figure with one shared legend and per-panel fixed-parameter titles."""
     from matplotlib.lines import Line2D
-    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False, sharey=True)
 
     for idx, (exp_name, x_col, xlabel, custom_fn, fixed) in enumerate(PANELS):
         ax = axes[idx // ncols][idx % ncols]

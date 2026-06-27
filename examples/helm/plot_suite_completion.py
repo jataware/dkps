@@ -43,7 +43,7 @@ def panel(ax, sweep, xcol, xlabel, fixed, family):
     ax.grid(alpha=0.25, lw=0.6)
 
 
-fig, axes = plt.subplots(1, 4, figsize=(16, 4.0))
+fig, axes = plt.subplots(1, 4, figsize=(16, 4.0), sharey=True)
 for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     panel(ax, *spec)
     ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
