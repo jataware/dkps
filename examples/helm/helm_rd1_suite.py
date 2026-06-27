@@ -25,7 +25,7 @@ from helm_qselect import family, _lofo_regress, max_dense_block
 from baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
 
 
-def run_seed(data, m, seed, n_models=None, p_task=1.0, mds_dim=12, predictor='knn'):
+def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12, predictor='knn'):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
      score_mat, models_all, tasks, groups, row_score, qmed) = data
     rng = np.random.default_rng(seed)
@@ -45,6 +45,27 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, mds_dim=12, predictor='kn
     for t in range(len(tasks)):
         if not obs[:, t].any(): obs[rng.integers(len(models)), t] = True
 
+    # pairing experiment: a fixed budget m per cell split into n_paired SHARED queries (the
+    # same query_ids for every model) and m-n_paired UNIQUE queries (resampled per model).
+    # rho = n_paired/m slides from fully paired (DKPS works) to fully unpaired (DKPS collapses).
+    # per task: n_paired shared query_ids (all models), plus DISJOINT blocks of (m-n_paired)
+    # unique query_ids per model (cycling only if the pool is exhausted), so unpaired really
+    # means non-overlapping -- otherwise small pools leak coincidental pairing to DKPS.
+    task_want = None
+    if n_paired is not None:
+        u = max(m - n_paired, 0)
+        task_want = {}
+        for tt in tasks:
+            pool = sorted(set(query_id[task_id == tt]))
+            shared = set(pool[:n_paired])
+            ns = np.array(pool[n_paired:], dtype=object)
+            ns = ns[rng.permutation(len(ns))] if len(ns) else ns
+            assign = {}
+            for i in range(len(models)):
+                uq = set(ns[(i * u + np.arange(u)) % len(ns)]) if (u and len(ns)) else set()
+                assign[i] = shared | uq
+            task_want[tt] = assign
+
     # sample m queries per OBSERVED (model, task); collect their rows
     keep, sample_mat = [], np.full((len(models), len(tasks)), np.nan)
     for i, mm in enumerate(models):
@@ -54,7 +75,12 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, mds_dim=12, predictor='kn
             idx = groups.get((mm, tt))
             if idx is None or not len(idx):
                 continue
-            take = idx if len(idx) <= m else rng.choice(idx, m, replace=False)
+            if task_want is not None:
+                take = idx[np.isin(query_id[idx], list(task_want[tt][i]))]
+                if not len(take):
+                    take = idx[:1]
+            else:
+                take = idx if len(idx) <= m else rng.choice(idx, m, replace=False)
             keep.append(take)
             sample_mat[i, t] = row_score[take].mean()
     keep = np.concatenate(keep)
@@ -129,17 +155,20 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, mds_dim=12, predictor='kn
         for meth, p in preds.items():
             h = obs_t & np.isfinite(p) & np.isfinite(yfull)
             mae = float(np.mean(np.abs(p[h] - yfull[h]))) if h.any() else np.nan
-            rows.append(dict(m=m, n_models=len(models), p_task=p_task, seed=seed, task=tt,
+            rows.append(dict(m=m, n_paired=(-1 if n_paired is None else n_paired),
+                             n_models=len(models), p_task=p_task, seed=seed, task=tt,
                              dataset=tt.split(':')[0], method=meth, mae=mae))
     return rows
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--sweep', choices=['budget', 'n_models', 'coverage'], default='budget')
+    ap.add_argument('--sweep', choices=['budget', 'n_models', 'coverage', 'pairing'], default='budget')
     ap.add_argument('--budgets', type=int, nargs='+', default=[1, 2, 4, 8, 16, 32])
     ap.add_argument('--n_models_values', type=int, nargs='+', default=[10, 20, 40, 60, 93])
     ap.add_argument('--coverages', type=float, nargs='+', default=[0.2, 0.35, 0.5, 0.7, 0.9])
+    ap.add_argument('--pairing_budget', type=int, default=16)
+    ap.add_argument('--n_paired_values', type=int, nargs='+', default=[0, 2, 4, 8, 12, 16])
     ap.add_argument('--fixed_m', type=int, default=8)
     ap.add_argument('--n_seeds', type=int, default=8)
     ap.add_argument('--n_jobs', type=int, default=-1)
@@ -148,20 +177,22 @@ def main():
 
     data = H.load_suite()
     print(f'suite: {len(data[7])} models, {len(data[8])} tasks')
-    # query-efficiency panels: vary p_query (m, full coverage / all models), the cohort n
-    # (fixed m, full coverage), or task coverage p_task (fixed m, all models).
-    if args.sweep == 'budget':
-        specs = [(m, None, 1.0) for m in args.budgets]
+    # pairing cliff (headline): fixed budget, slide n_paired 0->m. Plus the query-efficiency
+    # panels: vary p_query (m), cohort n, or task coverage p_task. (m, n_models, p_task, n_paired)
+    if args.sweep == 'pairing':
+        specs = [(args.pairing_budget, None, 1.0, k) for k in args.n_paired_values]
+    elif args.sweep == 'budget':
+        specs = [(m, None, 1.0, None) for m in args.budgets]
     elif args.sweep == 'n_models':
-        specs = [(args.fixed_m, n, 1.0) for n in args.n_models_values]
+        specs = [(args.fixed_m, n, 1.0, None) for n in args.n_models_values]
     else:
-        specs = [(args.fixed_m, None, p) for p in args.coverages]
-    jobs = [delayed(run_seed)(data, m, s, n_models=n, p_task=p)
-            for (m, n, p) in specs for s in range(args.n_seeds)]
+        specs = [(args.fixed_m, None, p, None) for p in args.coverages]
+    jobs = [delayed(run_seed)(data, m, s, n_models=n, p_task=p, n_paired=k)
+            for (m, n, p, k) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for sub in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) for r in sub])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     res.to_csv(Path(args.outdir) / f'rd1_suite_{args.sweep}.csv', index=False)
-    xcol = {'budget': 'm', 'n_models': 'n_models', 'coverage': 'p_task'}[args.sweep]
+    xcol = {'budget': 'm', 'n_models': 'n_models', 'coverage': 'p_task', 'pairing': 'n_paired'}[args.sweep]
     print(f'overall MAE by {xcol}:')
     print(res.pivot_table(index=xcol, columns='method', values='mae').round(4).to_string())
 
