@@ -65,36 +65,43 @@ def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
                             for g in grid]))] if oo.sum() >= 5 else 0.5
     ens = np.clip(a * pk + (1 - a) * mc, 0, 1)
     mis = (~O) & fin0
-    return dict(n_models=len(mods_s), n_tasks=len(tsel), p_task=p_task, seed=seed,
+    return dict(n_models=len(mods_s), n_tasks=len(tsel), p_task=p_task, p_query=p_query, seed=seed,
                 mc=_mae(mc, mis, full_s), pkps=_mae(pk, mis, full_s), ens=_mae(ens, mis, full_s))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--sweep', choices=['n_models', 'coverage', 'n_tasks'], default='coverage')
+    ap.add_argument('--sweep', choices=['n_models', 'coverage', 'n_tasks', 'p_query'], default='coverage')
     ap.add_argument('--n_models_values', type=int, nargs='+', default=[10, 20, 40, 60, 93])
     ap.add_argument('--coverages', type=float, nargs='+', default=[0.2, 0.35, 0.5, 0.7, 0.9])
     ap.add_argument('--n_tasks_values', type=int, nargs='+', default=[4, 8, 12, 18])
+    ap.add_argument('--p_query_values', type=float, nargs='+', default=[0.1, 0.25, 0.5, 0.75, 1.0])
+    ap.add_argument('--line_models', type=int, nargs='+', default=[10, 93])  # n_models line family
     ap.add_argument('--fixed_p', type=float, default=0.5)
-    ap.add_argument('--p_query', type=float, default=0.8)
+    ap.add_argument('--fixed_pq', type=float, default=0.5)
     ap.add_argument('--n_seeds', type=int, default=8)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-unified')
     args = ap.parse_args()
     data, qmed, suite = load('suite')
+    # each spec is (n_models, n_tasks, p_task, p_query). The lever panels show one line per
+    # n_models in --line_models; the n_models panel sweeps n at fixed levers.
     if args.sweep == 'n_models':
-        specs = [(n, None, args.fixed_p) for n in args.n_models_values]
+        specs = [(n, None, args.fixed_p, args.fixed_pq) for n in args.n_models_values]
     elif args.sweep == 'coverage':
-        specs = [(None, None, p) for p in args.coverages]
-    else:
-        specs = [(None, T, args.fixed_p) for T in args.n_tasks_values]
-    jobs = [delayed(trial)(data, qmed, n, T, p, s, p_query=args.p_query)
-            for (n, T, p) in specs for s in range(args.n_seeds)]
+        specs = [(n, None, p, args.fixed_pq) for n in args.line_models for p in args.coverages]
+    elif args.sweep == 'n_tasks':
+        specs = [(n, T, args.fixed_p, args.fixed_pq) for n in args.line_models for T in args.n_tasks_values]
+    else:  # p_query
+        specs = [(n, None, args.fixed_p, pq) for n in args.line_models for pq in args.p_query_values]
+    jobs = [delayed(trial)(data, qmed, n, T, p, s, p_query=pq)
+            for (n, T, p, pq) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for r in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) if r])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     res.to_csv(Path(args.outdir) / f'completion_suite_{args.sweep}.csv', index=False)
-    xcol = {'n_models': 'n_models', 'coverage': 'p_task', 'n_tasks': 'n_tasks'}[args.sweep]
-    print(res.groupby(xcol)[['mc', 'pkps', 'ens']].mean().round(4).to_string())
+    xcol = {'n_models': 'n_models', 'coverage': 'p_task', 'n_tasks': 'n_tasks', 'p_query': 'p_query'}[args.sweep]
+    keys = [xcol] if args.sweep == 'n_models' else ['n_models', xcol]
+    print(res.groupby(keys)[['mc', 'pkps', 'ens']].mean().round(4).to_string())
 
 
 if __name__ == '__main__':

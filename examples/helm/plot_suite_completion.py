@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-"""Main real-data figure 2 -- matrix completion on the heterogeneous 18-task suite. A fraction
-of cells is evaluated in full; predict the MISSING cells. Low-rank matrix completion vs the
-PKPS embedding vs their ensemble; MAE over MISSING cells, +/- 1 SEM over seeds. Three levers:
-cohort n, task coverage p_task, number of tasks T."""
+"""Main real-data figure 2 -- matrix completion on the heterogeneous 18-task suite. Observe a
+fraction of cells (each with a fraction p_query of its queries), predict the MISSING cells.
+Low-rank matrix completion vs the PKPS embedding vs the ensemble; MAE over MISSING cells,
++/- 1 SEM. Colour = method; line style = cohort size (solid n=93, dashed n=10). Four levers:
+task coverage, query depth p_query, number of tasks T, and cohort n."""
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -13,46 +14,50 @@ import pandas as pd
 from matplotlib.lines import Line2D
 
 D = Path('results-pkps-unified')
-# colour = method; line style = score-only (dashed: matrix completion) vs response embedding
-# (solid: PKPS); the ensemble is solid and thicker.
-STYLE = {'mc':   dict(color='#348ABC', ls='--', label='matrix completion'),
-         'pkps': dict(color='#E24A33', ls='-',  label='PKPS (embedding)'),
-         'ens':  dict(color='#8C564B', ls='-',  label='ensemble', lw=2.6)}
-ORDER = ['mc', 'pkps', 'ens']
-PANELS = [('n_models', 'n_models', r'number of models $n$',
-           r'$p_{\mathrm{task}}{=}0.5,\ T{=}18,\ p_{\mathrm{query}}{=}0.8$'),
-          ('coverage', 'p_task',   r'task coverage $p_{\mathrm{task}}$',
-           r'$n{=}93,\ T{=}18,\ p_{\mathrm{query}}{=}0.8$'),
-          ('n_tasks',  'n_tasks',  r'number of tasks $T$',
-           r'$n{=}93,\ p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.8$')]
+COL = {'mc': '#348ABC', 'pkps': '#E24A33', 'ens': '#8C564B'}
+LBL = {'mc': 'matrix completion', 'pkps': 'PKPS', 'ens': 'ensemble'}
+LW = {'mc': 1.6, 'pkps': 1.6, 'ens': 2.4}
+NLS = {93: '-', 10: '--'}                       # cohort -> line style
+# (sweep, xcol, xlabel, fixed-title, line-family?)
+PANELS = [('coverage', 'p_task', r'task coverage $p_{\mathrm{task}}$', r'$p_{\mathrm{query}}{=}0.5,\ T{=}18$', True),
+          ('p_query', 'p_query', r'query depth $p_{\mathrm{query}}$',  r'$p_{\mathrm{task}}{=}0.5,\ T{=}18$', True),
+          ('n_tasks', 'n_tasks', r'number of tasks $T$',              r'$p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.5$', True),
+          ('n_models', 'n_models', r'number of models $n$',           r'$p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.5,\ T{=}18$', False)]
 
 
-def panel(ax, sweep, xcol, xlabel, fixed):
+def panel(ax, sweep, xcol, xlabel, fixed, family):
     df = pd.read_csv(D / f'completion_suite_{sweep}.csv')
-    g = df.groupby(xcol)[ORDER].agg(['mean', 'sem'])
-    x = g.index.values
-    for m in ORDER:
-        st = STYLE[m]
-        ax.errorbar(x, g[(m, 'mean')], yerr=g[(m, 'sem')], marker='o', ms=4,
-                    lw=st.get('lw', 1.6), color=st['color'], ls=st['ls'], label=st['label'],
-                    capsize=2, elinewidth=0.8)
+    for meth in ('mc', 'pkps', 'ens'):
+        if family:
+            for n, ls in NLS.items():
+                sub = df[df['n_models'] == n]
+                g = sub.groupby(xcol)[meth].agg(['mean', 'sem'])
+                ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3,
+                            lw=LW[meth], color=COL[meth], ls=ls, capsize=2, elinewidth=0.7)
+        else:
+            g = df.groupby(xcol)[meth].agg(['mean', 'sem'])
+            ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3,
+                        lw=LW[meth], color=COL[meth], ls='-', capsize=2, elinewidth=0.7)
     ax.set_xlabel(xlabel)
-    ax.set_title(fixed, fontsize=9)
+    ax.set_title(fixed, fontsize=8.5)
     ax.grid(alpha=0.25, lw=0.6)
 
 
-fig, axes = plt.subplots(1, 3, figsize=(13, 4.2))
-for ax, (sweep, xcol, xlabel, fixed), letter in zip(axes, PANELS, 'abc'):
-    panel(ax, sweep, xcol, xlabel, fixed)
+fig, axes = plt.subplots(2, 2, figsize=(10, 7.4))
+for ax, spec, letter in zip(axes.ravel(), PANELS, 'abcd'):
+    panel(ax, *spec)
+    ax.set_ylabel('MAE on missing cells')
     ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
-axes[0].set_ylabel('MAE vs true score (missing cells)')
-handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
-                  lw=STYLE[m].get('lw', 1.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
-fig.legend(handles=handles, loc='upper center', ncol=3, frameon=False,
-           bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
-fig.suptitle('Matrix completion on the heterogeneous suite: the embedding rescues the '
-             'scarce-data regimes; the ensemble tracks the best everywhere', fontsize=11, y=1.07)
-fig.tight_layout(rect=[0, 0, 1, 0.96])
+meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
+n_h = [Line2D([0], [0], color='#444', ls='-', label='$n{=}93$'),
+       Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
+leg1 = fig.legend(handles=meth_h, loc='upper center', ncol=3, frameon=False,
+                  bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
+fig.add_artist(leg1)
+fig.legend(handles=n_h, loc='upper center', ncol=2, frameon=False, bbox_to_anchor=(0.5, 0.985), fontsize=9)
+fig.suptitle('Matrix completion: the embedding rescues the small-cohort regime ($n{=}10$, dashed); '
+             'at full cohort ($n{=}93$, solid) it ties low-rank completion', fontsize=11, y=1.06)
+fig.tight_layout(rect=[0, 0, 1, 0.95])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-unified/fig_suite_completion.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-unified/fig_suite_completion.png')
