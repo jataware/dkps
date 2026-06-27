@@ -184,12 +184,13 @@ response is discarded. \textbf{Right (PKPS,
 $k_Q=$ RBF).} The RBF query kernel over the same ordering is a dense, \emph{symmetric}
 similarity matrix, so responses to \emph{similar} queries---not only identical ones---bridge
 the two models and every response can contribute. \PKPS thus turns the sparse shared-query
-diagonal DKPS depends on into a dense similarity kernel. \textbf{Right column (d, e):} the
-resulting perspective spaces for a small population of two model groups (red, blue) that
-each answer unpaired query subsets, where the group signal is weak per query and only
-emerges by averaging many. Restricted to the few shared queries, \textbf{DKPS (d)} cannot
-average enough and the groups collapse together; \textbf{PKPS (e)} averages over all similar
-queries and recovers the two groups.}
+diagonal DKPS depends on into a dense similarity kernel. \textbf{Right column (d, e):}
+predicting each model's true full-benchmark score (leave-one-out regression onto the
+perspective embedding) for a small population that answers unpaired query subsets, where the
+ability signal is weak per query and only emerges by averaging many. Restricted to the few
+shared queries, \textbf{DKPS (d)} cannot average enough and its predictions scatter off the
+diagonal (MAE $0.22$); \textbf{PKPS (e)} averages over all similar queries and predicts
+accurately (MAE $0.08$).}
 \label{fig:concept}
 \end{figure}
 

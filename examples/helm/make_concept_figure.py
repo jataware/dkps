@@ -56,22 +56,22 @@ D2 = ((P[U][:, None] - P[U][None, :]) ** 2).sum(-1)
 Krbf = np.exp(-D2 / (2 * 1.7 ** 2))            # PKPS: symmetric query-similarity kernel
 Kdkps = np.diag(sharedU.astype(float))         # DKPS: identity, active only at shared queries
 
-# ---- example perspective spaces (4th column) --------------------------------
-# A small model population: two groups with opposite response styles. Each model answers an
-# UNPAIRED random subset of a shared query pool, so pairwise query overlap is small. The
-# product kernel (RBF k_Q) bridges responses to *similar* queries and recovers the two
-# groups; the DKPS limit (delta k_Q) sees only the tiny shared overlap and collapses.
-rngE = np.random.default_rng(8)
-NQ, FRAC, NG = 24, 0.30, 6                        # pool size, answered fraction, models/group
+# ---- benchmark-score prediction example (4th column) ------------------------
+# A small model population with a latent ability that sets each model's true full-benchmark
+# score. Each model answers an UNPAIRED random subset of a shared query pool, so pairwise
+# overlap is small, and the ability signal is WEAK per query (swamped by per-query noise):
+# only the average over many queries reveals it. We embed the models in each perspective
+# space and predict every model's score by leave-one-out regression onto the embedding.
+# PKPS bridges responses to *similar* queries and predicts well; the DKPS limit sees only
+# the tiny shared overlap, cannot average enough, and its prediction degrades.
+rngE = np.random.default_rng(4)
+NQ, FRAC, NM = 24, 0.30, 12                        # pool size, answered fraction, n models
 qE = np.concatenate([c + rngE.normal(0, 0.35, (NQ // 2, 2)) for c in ([0, 0], [2.6, 1.8])])
-grp = np.array([0] * NG + [1] * NG)
-NM = len(grp)
-# the group signal is WEAK per query (+/-0.6) and swamped by per-query noise (1.0): no single
-# query tells the groups apart, only the average over many does. DKPS, restricted to the few
-# shared queries, cannot average enough and collapses; PKPS averages over all similar queries.
-sty = np.array([[0.6, 0.0], [-0.6, 0.0]])         # group response styles
+abil = np.sort(rngE.uniform(-1.5, 1.5, NM))        # latent model ability
+yE = 0.5 + 0.5 * np.tanh(1.2 * abil)               # true full-benchmark score in [0, 1]
+edir = np.array([1.0, 0.0])
 ansE = [np.sort(rngE.choice(NQ, max(2, int(FRAC * NQ)), replace=False)) for _ in range(NM)]
-Xe = {(m, q): sty[grp[m]] + 0.18 * (qE[q] - qE.mean(0)) + rngE.normal(0, 1.0, 2)
+Xe = {(m, q): abil[m] * edir + 0.18 * (qE[q] - qE.mean(0)) + rngE.normal(0, 1.1, 2)
       for m in range(NM) for q in ansE[m]}
 
 def _affinity(delta, sig=0.8):
@@ -87,15 +87,24 @@ def _affinity(delta, sig=0.8):
             A[a, b] = num / den if den > 0 else 0.0
     return A
 
-def _mds2(A):                                     # classical MDS to 2-D from an affinity
+def _mds2(A):                                      # classical MDS to 2-D from an affinity
     d2 = np.maximum(np.diag(A)[:, None] + np.diag(A)[None, :] - 2 * A, 0)
     J = np.eye(NM) - 1.0 / NM
     w, V = np.linalg.eigh(-0.5 * J @ d2 @ J)
     idx = np.argsort(w)[::-1][:2]
-    Z = V[:, idx] * np.sqrt(np.maximum(w[idx], 0))
-    return Z / (np.abs(Z).max() + 1e-9)
+    return V[:, idx] * np.sqrt(np.maximum(w[idx], 0))
 
-Zdk, Zpk = _mds2(_affinity(True)), _mds2(_affinity(False))
+def _loo_predict(Z):                               # predict each score from the others' embeddings
+    Zb = np.c_[np.ones(NM), Z]
+    pred = np.zeros(NM)
+    for m in range(NM):
+        tr = np.arange(NM) != m
+        beta, *_ = np.linalg.lstsq(Zb[tr], yE[tr], rcond=None)
+        pred[m] = np.clip(Zb[m] @ beta, 0, 1)
+    return pred
+
+pred_dk, pred_pk = _loo_predict(_mds2(_affinity(True))), _loo_predict(_mds2(_affinity(False)))
+mae_dk, mae_pk = np.mean(np.abs(pred_dk - yE)), np.mean(np.abs(pred_pk - yE))
 
 fig = plt.figure(figsize=(16.4, 4.7))
 gs = GridSpec(2, 4, width_ratios=[0.82, 1, 1, 0.92], height_ratios=[0.58, 1.42],
@@ -137,17 +146,19 @@ for ax, W in [(axC, Kdkps), (axR, Krbf)]:
     ax.set_xlabel('query index', fontsize=10, color='#475569')
 axC.set_ylabel('query index', fontsize=10, color='#475569')
 
-# ---- 4th COLUMN: the resulting perspective spaces (each dot = one model) ------
-for ax, Z in [(axDK, Zdk), (axPK, Zpk)]:
-    for g, col in [(0, RED), (1, BLUE)]:
-        m = grp == g
-        ax.scatter(Z[m, 0], Z[m, 1], s=66, c=col, edgecolors='white', lw=1.0, zorder=3)
-    ax.set_xlim(-1.28, 1.28); ax.set_ylim(-1.28, 1.28)
-    ax.set_aspect('equal'); ax.set_xticks([]); ax.set_yticks([])
+# ---- 4th COLUMN: predicted vs. true benchmark score (each dot = one model) ----
+for ax, pred, mae in [(axDK, pred_dk, mae_dk), (axPK, pred_pk, mae_pk)]:
+    ax.plot([0, 1], [0, 1], ls='--', color='#94a3b8', lw=1.2, zorder=1)
+    ax.scatter(yE, pred, s=46, c=PURPLE, edgecolors='white', lw=0.8, zorder=3)
+    ax.set_xlim(-0.05, 1.05); ax.set_ylim(-0.05, 1.05); ax.set_aspect('equal')
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1]); ax.tick_params(labelsize=8, color='#d7dde6')
     for s in ax.spines.values():
         s.set_edgecolor('#d7dde6')
-axDK.set_xlabel('models collapse', fontsize=9.5, color='#475569', labelpad=2)
-axPK.set_xlabel('models separate', fontsize=9.5, color='#475569', labelpad=2)
+    ax.text(0.05, 0.95, f'MAE {mae:.2f}', transform=ax.transAxes, ha='left', va='top',
+            fontsize=9.5, color='#334155')
+    ax.set_ylabel('predicted', fontsize=9.5, color='#475569', labelpad=1)
+axDK.set_xlabel('true score', fontsize=9.5, color='#475569', labelpad=1)
+axPK.set_xlabel('true score', fontsize=9.5, color='#475569', labelpad=1)
 
 cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
 cb = fig.colorbar(im, cax=cax)
@@ -175,11 +186,11 @@ Y = max(ax.get_position().y1 for ax in (axBlk, axC, axR)) + 0.012
 for ax, t in [(axBlk, r'$\bf{(a)}$  answered queries'),
               (axC, r'$\bf{(b)}$  DKPS  ·  $k_Q=\delta$'),
               (axR, r'$\bf{(c)}$  PKPS  ·  $k_Q=$ RBF'),
-              (axDK, r'$\bf{(d)}$  DKPS perspective')]:
+              (axDK, r'$\bf{(d)}$  DKPS prediction')]:
     p = ax.get_position()
     fig.text((p.x0 + p.x1) / 2, Y, t, ha='center', va='bottom', fontsize=12)
 pp = axPK.get_position()
-fig.text((pp.x0 + pp.x1) / 2, pp.y1 + 0.012, r'$\bf{(e)}$  PKPS perspective',
+fig.text((pp.x0 + pp.x1) / 2, pp.y1 + 0.012, r'$\bf{(e)}$  PKPS prediction',
          ha='center', va='bottom', fontsize=12)
 
 # size the embedding to fill the lower-left region, and put a shared legend at the bottom
