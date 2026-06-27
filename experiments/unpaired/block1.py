@@ -112,6 +112,41 @@ def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
     return evaluate_predictions(predictions, scores, observed)
 
 
+def _embed(data, **dkps_kwargs):
+    """Fit DoubleKernelDKPS and return model coordinates via ClassicalMDS (a collapsed
+    single point if the perspective is degenerate, e.g. DKPS with no shared queries)."""
+    est = DoubleKernelDKPS(**dkps_kwargs)
+    est.fit(data)
+    dist = est.dist_matrix_.copy()
+    if np.any(np.isnan(dist)):
+        md = np.nanmax(dist)
+        if not np.isfinite(md):
+            return None
+        dist = np.nan_to_num(dist, nan=md)
+    from graspologic.embed import ClassicalMDS
+    try:
+        if not np.any(dist > 0):
+            raise ValueError('degenerate')
+        return ClassicalMDS(n_components=None, n_elbows=2,
+                            dissimilarity='precomputed').fit_transform(dist)
+    except Exception:
+        return np.zeros((dist.shape[0], 1))
+
+
+def _denoise_mae(embeddings, noisy, true, k=8):
+    """Predict each cell's true score by a distance-weighted average of the noisy scores of its
+    model's k nearest perspective neighbours (leave-one-out). MAE vs the true scores."""
+    from sklearn.neighbors import NearestNeighbors
+    n = embeddings.shape[0]
+    dist, idx = NearestNeighbors(n_neighbors=min(k + 1, n)).fit(embeddings).kneighbors(embeddings)
+    pred = np.empty_like(true)
+    for i in range(n):
+        nb, d = idx[i][1:], dist[i][1:]
+        w = 1.0 / (d + 1e-9); w /= w.sum()
+        pred[i] = (w[:, None] * noisy[nb]).sum(axis=0)
+    return float(np.mean(np.abs(pred - true)))
+
+
 def _run_estimators(data, scores, observed, experiment, k_neighbors, n_components, extra_fields):
     """Run all estimators on one dataset, return list of result rows.
 
@@ -210,26 +245,33 @@ def run_exp_rho(rhos=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), budget=10, n_models=100, n_
     return pd.DataFrame([r for sub in nested for r in sub])
 
 
-def run_exp_query_efficiency(budgets=(2, 4, 8, 16, 32), rhos=(0.0, 1.0), n_models=100,
-                             n_tasks=20, obs_prob=0.3, k_neighbors=5, n_seeds=50, **gen_kwargs):
-    """Query efficiency: MAE vs per-cell query budget, for DKPS and PKPS at paired (rho=1)
-    and unpaired (rho=0). PKPS stays efficient when unpaired; DKPS is stuck."""
-    kw = {k: v for k, v in {**_DEFAULTS, **gen_kwargs}.items() if k != 'n_queries_per_task'}
+def run_exp_query_efficiency(budgets=(1, 2, 4, 8, 16, 32), rhos=(0.0, 1.0), n_models=60,
+                             n_tasks=12, k_neighbors=8, n_seeds=50, meas_noise=4.0, **gen_kwargs):
+    """Query efficiency (denoising face): every cell is observed with M queries, giving a noisy
+    sample score (measurement noise ~1/sqrt(M)); we predict its TRUE score. The sample baseline
+    is the M-query mean; DKPS/PKPS denoise by smoothing over the perspective. At paired (rho=1)
+    and unpaired (rho=0): PKPS denoises in both, DKPS only when paired."""
+    kw = {k: v for k, v in {**_DEFAULTS, **gen_kwargs}.items()
+          if k not in ('n_queries_per_task', 'score_noise')}
     ests = {'dkps': dict(query_kernel='delta', response_kernel=RESPONSE_KERNEL),
             'pkps': dict(query_kernel='rbf', response_kernel=RESPONSE_KERNEL)}
 
     def _run(budget, rho, seed):
         n_sh = int(round(rho * budget))
-        data, scores, observed, _, _ = generate_benchmark_data(
-            n_models=n_models, n_tasks=n_tasks, n_queries_per_task=budget, obs_prob=obs_prob,
-            n_shared_queries=n_sh, n_unique_queries=budget - n_sh, random_state=seed, **kw)
+        data, true, _, _, _ = generate_benchmark_data(
+            n_models=n_models, n_tasks=n_tasks, n_queries_per_task=budget, obs_prob=1.0,
+            n_shared_queries=n_sh, n_unique_queries=budget - n_sh, score_noise=0.0,
+            random_state=seed, **kw)
+        rng = np.random.default_rng(10_000 + seed)
+        noisy = true + meas_noise * rng.normal(size=true.shape) / np.sqrt(budget)
         out = [{'experiment': 'query_efficiency', 'estimator': 'sample', 'seed': seed,
-                'budget': budget, 'rho': rho, 'mae': _sample_baseline(scores, observed)}]
+                'budget': budget, 'rho': rho, 'mae': float(np.mean(np.abs(noisy - true)))}]
         d = _reduce_df(data)
-        out += [{'experiment': 'query_efficiency', 'estimator': name, 'seed': seed,
-                 'budget': budget, 'rho': rho,
-                 'mae': _fit_and_predict(d, scores, observed, k_neighbors=k_neighbors, **ek)}
-                for name, ek in ests.items()]
+        for name, ek in ests.items():
+            emb = _embed(d, **ek)
+            mae = _denoise_mae(emb, noisy, true, k=k_neighbors) if emb is not None else np.nan
+            out.append({'experiment': 'query_efficiency', 'estimator': name, 'seed': seed,
+                        'budget': budget, 'rho': rho, 'mae': mae})
         return out
 
     params = [(b, r, s) for b in budgets for r in rhos for s in range(n_seeds)]

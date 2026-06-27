@@ -93,7 +93,7 @@ PANELS = [
     ('rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
      r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
     ('query_efficiency', None, r'queries per cell $M_{ij}$', _plot_query_efficiency,
-     r'$n{=}100,\ T{=}20,\ p_{\mathrm{task}}{=}0.3$'),
+     r'$n{=}60,\ T{=}12,\ p_{\mathrm{task}}{=}1$'),
 ]
 
 
@@ -113,7 +113,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
         else:
             _plot_standard_panel(ax, df, x_col, xlabel)
         if idx % ncols == 0:
-            ax.set_ylabel('held-out score MAE')
+            ax.set_ylabel('score MAE')
         ax.set_title(fixed, fontsize=8.5)
         ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=11)
 

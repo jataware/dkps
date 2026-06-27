@@ -31,7 +31,7 @@ PRESETS = {
             n_seeds=50,
         ),
         'query_efficiency': dict(
-            budgets=(2, 4, 8, 16, 32),
+            budgets=(1, 2, 4, 8, 16, 32),
             rhos=(0.0, 1.0),
             n_seeds=50,
         ),
@@ -58,7 +58,7 @@ PRESETS = {
             n_seeds=3,
         ),
         'query_efficiency': dict(
-            budgets=(2, 8, 32),
+            budgets=(1, 8, 32),
             rhos=(0.0, 1.0),
             n_seeds=3,
         ),
