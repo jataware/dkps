@@ -19,9 +19,12 @@ STYLE = {'mc':   dict(color='#348ABC', ls='--', label='matrix completion'),
          'pkps': dict(color='#E24A33', ls='-',  label='PKPS (embedding)'),
          'ens':  dict(color='#8C564B', ls='-',  label='ensemble', lw=2.6)}
 ORDER = ['mc', 'pkps', 'ens']
-PANELS = [('n_models', 'n_models', r'number of models $n$', r'$p_{\mathrm{task}}{=}0.5,\ T{=}18$'),
-          ('coverage', 'p_task',   r'task coverage $p_{\mathrm{task}}$', r'$n{=}93,\ T{=}18$'),
-          ('n_tasks',  'n_tasks',  r'number of tasks $T$', r'$n{=}93,\ p_{\mathrm{task}}{=}0.5$')]
+PANELS = [('n_models', 'n_models', r'number of models $n$',
+           r'$p_{\mathrm{task}}{=}0.5,\ T{=}18,\ p_{\mathrm{query}}{=}0.8$'),
+          ('coverage', 'p_task',   r'task coverage $p_{\mathrm{task}}$',
+           r'$n{=}93,\ T{=}18,\ p_{\mathrm{query}}{=}0.8$'),
+          ('n_tasks',  'n_tasks',  r'number of tasks $T$',
+           r'$n{=}93,\ p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.8$')]
 
 
 def panel(ax, sweep, xcol, xlabel, fixed):

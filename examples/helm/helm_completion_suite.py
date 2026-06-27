@@ -20,7 +20,7 @@ def _mae(P, mask, full):
     return float(np.mean(np.abs(P[m] - full[m]))) if m.any() else np.nan
 
 
-def trial(data, qmed, n_models, n_tasks, p_task, seed):
+def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
     rX, Qu, qc, mid, tid, qid, full, mods, tasks, grp, rs = data[:11]
     rng = np.random.default_rng(seed)
     msel = (np.sort(rng.choice(len(mods), min(n_models, len(mods)), replace=False))
@@ -37,16 +37,19 @@ def trial(data, qmed, n_models, n_tasks, p_task, seed):
     for t in range(O.shape[1]):
         if not O[:, t].any() and fin0[:, t].any(): O[np.where(fin0[:, t])[0][0], t] = True
 
-    # the score is the full-eval (true) mean over ALL of a cell's queries; the perspective only
-    # needs a representative response sample, so cap it for tractability.
+    # an observed cell is measured with a p_query fraction of its queries, giving a NOISY
+    # observed score (full_s holds the true full-eval score, used only for evaluation). The
+    # perspective is capped at K_PERSP responses per cell for tractability.
     K_PERSP = 16
     keep, samp = [], np.full(full_s.shape, np.nan)
     for ii, mi in enumerate(msel):
         for tt, ti in enumerate(tsel):
             if O[ii, tt] and (mods[mi], tasks[ti]) in grp:
                 idx = grp[(mods[mi], tasks[ti])]
-                samp[ii, tt] = rs[idx].mean()                        # full-eval -> true score
-                keep.append(idx if len(idx) <= K_PERSP else rng.choice(idx, K_PERSP, replace=False))
+                nq = max(1, int(round(p_query * len(idx))))
+                take = idx if nq >= len(idx) else rng.choice(idx, nq, replace=False)
+                samp[ii, tt] = rs[take].mean()                       # noisy observed score
+                keep.append(take if len(take) <= K_PERSP else rng.choice(take, K_PERSP, replace=False))
     if not keep:
         return None
     keep = np.concatenate(keep)
@@ -73,6 +76,7 @@ def main():
     ap.add_argument('--coverages', type=float, nargs='+', default=[0.2, 0.35, 0.5, 0.7, 0.9])
     ap.add_argument('--n_tasks_values', type=int, nargs='+', default=[4, 8, 12, 18])
     ap.add_argument('--fixed_p', type=float, default=0.5)
+    ap.add_argument('--p_query', type=float, default=0.8)
     ap.add_argument('--n_seeds', type=int, default=8)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-unified')
@@ -84,7 +88,8 @@ def main():
         specs = [(None, None, p) for p in args.coverages]
     else:
         specs = [(None, T, args.fixed_p) for T in args.n_tasks_values]
-    jobs = [delayed(trial)(data, qmed, n, T, p, s) for (n, T, p) in specs for s in range(args.n_seeds)]
+    jobs = [delayed(trial)(data, qmed, n, T, p, s, p_query=args.p_query)
+            for (n, T, p) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for r in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) if r])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     res.to_csv(Path(args.outdir) / f'completion_suite_{args.sweep}.csv', index=False)
