@@ -107,44 +107,35 @@ margin that grows as evaluation gets sparser, noisier, or smaller-cohort
 \section{Related work}
 \label{sec:related}
 
-\paragraph{Low-dimensional representations of models.} A growing literature places each model
-as a point in a low-dimensional space, differing in what they read off the model. One family
-compares models through their \emph{internals}: aligning internal activations across a shared
-input set \citep{duderstadt2023comparing, huh2024platonic, horwitz2025atlas} or comparing the
-weights directly \citep{chen2025weights}. Evaluation, however, is typically \emph{black-box}---a
-practitioner sees a model's responses but not its activations or weights. The Data Kernel
-Perspective Space (DKPS) operates in exactly this regime, embedding a collection of models from
-their query \emph{responses} into a low-dimensional Euclidean space via classical
-multidimensional scaling \citep{torgerson1952mds, helm2024tracking}; the resulting
-representations are consistent and concentrate \citep{acharyya2024consistent,
-acharyya2025concentration}, support statistical inference on model-level quantities
-\citep{helm2025inference}, and are query-efficient for predicting benchmark scores
-\citep{dkps_qeff}. DKPS's distance is an average over responses to \emph{shared} queries,
-though, so it requires a paired design. \PKPS keeps the black-box, response-level representation
-but replaces identity matching with a product kernel, so models that answered different---or
-disjoint---query sets remain comparable.
+\paragraph{Low-dimensional representations of models.} Our method contributes to a literature
+on low-dimensional representations of models. Some methods compare models through their
+internals: activations on shared inputs \citep{duderstadt2023comparing, huh2024platonic,
+horwitz2025atlas} or weights \citep{chen2025weights}. Evaluation, however, is black-box: it sees
+responses, not internals. The Data Kernel Perspective Space (DKPS) embeds models from their
+responses into a low-dimensional Euclidean space via multidimensional scaling
+\citep{torgerson1952mds, helm2024tracking}. The representations are consistent and concentrate
+\citep{acharyya2024consistent, acharyya2025concentration}, support statistical inference
+\citep{helm2025inference}, and are query-efficient \citep{dkps_qeff}. DKPS averages over
+responses to \emph{shared} queries, so it requires a paired design. \PKPS keeps the
+response-level representation but replaces identity matching with a product kernel, so models
+that answer different queries remain comparable.
 
-\paragraph{Benchmark prediction.} A second line predicts unobserved (model, task) scores so
-that not every evaluation must be run; \emph{efficient benchmarking} and \emph{matrix
-completion} are its two ends. Efficient benchmarking lowers the per-task cost by scoring a small,
-informative item subset and extrapolating: item-response theory selects items by difficulty and
-discrimination \citep{rasch1960, polo2024tinybenchmarks, metabench}, anchor points cluster items
-by cross-model agreement \citep{vivek2024anchor}, cognitive-scale embeddings
-\citep{bean2025scales} and reinforcement-learned policies \citep{li2024active} acquire items
-adaptively, and design analyses optimize the cost--reliability tradeoff
-\citep{perlitz2024efficient}; rather than \emph{select} items, DKPS predicts a held-out score
-from cached responses in a perspective space \citep{dkps_qeff}, datamodels predict a model's
-output as a function of its inputs \citep{ilyas2022datamodels}, and reuse of past evaluations on
-a shared sample set is the cross-model analogue \citep{prabhu2024lifelong}. Matrix completion
-instead predicts cells that were \emph{never} run by exploiting low rank across the
-(model $\times$ task) matrix: classical low-rank imputation \citep{candes2009exact,
-mazumder2010softimpute, koren2009matrix} and, most directly, BenchPress \citep{benchpress},
-which finds the frontier-model score matrix is approximately rank-two and completes it in logit
-space with calibrated confidence. These methods use only the \emph{aggregate} score of each cell
-and discard the item-level responses that DKPS and \PKPS consume. \PKPS unifies the two
-ends---a cell observed with $m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion
-($m{=}0$)---and supplies an item-level \emph{embedding} signal complementary to the score-only
-view, which we ensemble with matrix completion rather than replace.
+\paragraph{Benchmark prediction.} A second line predicts unobserved (model, task) scores so that
+not every evaluation must be run; efficient benchmarking and matrix completion are its two ends.
+Efficient benchmarking scores a small item subset and extrapolates. Item-response theory selects
+items by difficulty and discrimination \citep{rasch1960, polo2024tinybenchmarks, metabench};
+anchor points cluster items by cross-model agreement \citep{vivek2024anchor}; cognitive-scale
+embeddings \citep{bean2025scales} and reinforcement learning \citep{li2024active} select items
+adaptively; and design analyses optimize the cost--reliability tradeoff
+\citep{perlitz2024efficient}. Closer to us, DKPS predicts a held-out score from cached responses
+\citep{dkps_qeff}, datamodels predict outputs from inputs \citep{ilyas2022datamodels}, and
+lifelong benchmarks reuse past evaluations \citep{prabhu2024lifelong}. Matrix completion instead
+predicts cells that were never run, exploiting low rank across the score matrix
+\citep{candes2009exact, mazumder2010softimpute, koren2009matrix}; BenchPress finds it is
+approximately rank-two and completes it in logit space \citep{benchpress}. These methods use only
+each cell's \emph{aggregate} score, not its responses. \PKPS unifies the two ends---a cell with
+$m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and adds an
+item-level embedding signal that we ensemble with matrix completion.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
