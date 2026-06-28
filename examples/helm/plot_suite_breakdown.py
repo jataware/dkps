@@ -49,10 +49,11 @@ for k, meth in enumerate(order):
             ms.append(g.loc[(d, meth), 'mean']); es.append(g.loc[(d, meth), 'sem'])
     ax.bar(xs, ms, width=w, yerr=es, color=COL[meth], label=LBL[meth], capsize=2,
            error_kw=dict(elinewidth=0.7))
-ax.set_xticks(range(len(datasets))); ax.set_xticklabels(datasets, rotation=20, ha='right', fontsize=8.5)
-ax.set_ylabel('MAE vs full-eval score')
-ax.set_title('(a) per dataset, unpaired ($\\rho{=}0$)', fontsize=10.5)
-ax.legend(frameon=False, fontsize=8.5, ncol=2)
+ax.set_xticks(range(len(datasets))); ax.set_xticklabels(datasets, rotation=20, ha='right', fontsize=10.5)
+ax.tick_params(axis='y', labelsize=10.5)
+ax.set_ylabel('MAE vs. full-eval score', fontsize=12.5)
+ax.set_title('(a) per dataset, unpaired ($\\rho{=}0$)', fontsize=12.5)
+ax.legend(frameon=False, fontsize=10, ncol=2)
 
 # (b) per-model cliff depth: unpaired - paired MAE -----------------------------
 def gap(d):
@@ -69,9 +70,10 @@ for x, meth in [(0, 'dkps'), (1, 'pkps')]:
     ax.text(x + 0.30, vals.mean(), f'mean {vals.mean():+.2f}', ha='left', va='center',
             fontsize=9, color=COL[meth], fontweight='bold', zorder=5)
 ax.axhline(0, color='#bbb', lw=0.9)
-ax.set_xlim(-0.5, 1.5); ax.set_xticks([0, 1]); ax.set_xticklabels(['DKPS', 'PKPS'])
-ax.set_ylabel('MAE increase when unpaired\n(unpaired $-$ paired, per model)')
-ax.set_title('(b) per-model cliff depth (lower = robust)', fontsize=10.5)
+ax.set_xlim(-0.5, 1.5); ax.set_xticks([0, 1]); ax.set_xticklabels(['DKPS', 'PKPS'], fontsize=11.5)
+ax.tick_params(axis='y', labelsize=10.5)
+ax.set_ylabel('MAE increase when unpaired\n(unpaired $-$ paired, per model)', fontsize=12)
+ax.set_title('(b) per-model cliff depth (lower = robust)', fontsize=12.5)
 
 fig.tight_layout()
 for ext in ('png', 'pdf'):

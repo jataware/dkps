@@ -48,23 +48,22 @@ def panel(ax, sweep, xcol, xlabel, fixed, logx):
                     capsize=2, elinewidth=0.8)
     if logx:
         ax.set_xscale('log', base=2)
-    ax.set_xlabel(xlabel)
-    ax.set_title(fixed, fontsize=9)
-    ax.grid(alpha=0.25, lw=0.6)
+    ax.set_xlabel(xlabel, fontsize=12.5)
+    ax.set_title(fixed, fontsize=11)
 
 
-fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(13, 4.0), sharey=True)
 for ax, (sweep, xcol, xlabel, fixed, logx), letter in zip(axes, PANELS, 'abc'):
     panel(ax, sweep, xcol, xlabel, fixed, logx)
-    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
-axes[0].set_ylabel('MAE vs true score (observed cells)')
+    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=13)
+    ax.tick_params(labelsize=10.5)
+axes[0].set_ylabel('MAE vs. true score', fontsize=12.5)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
                   lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
 fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False,
-           bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
-fig.suptitle('Query efficiency on the heterogeneous suite: PKPS denoises few-query samples, '
-             'paired or not, where DKPS and IRT cannot', fontsize=11, y=1.07)
-fig.tight_layout(rect=[0, 0, 1, 0.96])
+           bbox_to_anchor=(0.5, 0.95), fontsize=11)
+fig.suptitle('Query efficiency', fontsize=14, fontweight='bold', y=1.02)
+fig.tight_layout(rect=[0, 0, 1, 0.87])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_suite_query_efficiency.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-rd1/fig_suite_query_efficiency.png')

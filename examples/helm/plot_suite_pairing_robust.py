@@ -37,16 +37,15 @@ for ax, b in zip(axes, BUDGETS):
         st = STYLE[m]; s = g.xs(m, level='method').sort_index()
         ax.errorbar(s.index.values, s['mean'], yerr=s['sem'], marker='o', ms=4,
                     lw=st.get('lw', 2.6), color=st['color'], ls=st['ls'], capsize=3, elinewidth=0.9)
-    ax.set_xlabel(r"fraction paired  $\rho = m_{ii'}/M_{ij}$")
-    ax.set_title(f'budget $M_{{ij}}{{=}}{b}$ queries/cell', fontsize=10)
-    ax.grid(alpha=0.25, lw=0.6)
-axes[0].set_ylabel('MAE vs full-eval score')
+    ax.set_xlabel(r"fraction paired  $\rho = m_{ii'}/M_{ij}$", fontsize=12.5)
+    ax.set_title(f'budget $M_{{ij}}{{=}}{b}$ queries/cell', fontsize=11.5)
+    ax.tick_params(labelsize=10.5)
+axes[0].set_ylabel('MAE vs. full-eval score', fontsize=12.5)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'], lw=STYLE[m].get('lw', 2.6),
                   marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
-fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False, bbox_to_anchor=(0.5, 1.02), fontsize=9.5)
-fig.suptitle('The pairing cliff is robust to the per-cell budget: DKPS and IRT collapse as queries '
-             'unpair at every budget; PKPS holds', fontsize=11, y=1.07)
-fig.tight_layout(rect=[0, 0, 1, 0.96])
+fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False, bbox_to_anchor=(0.5, 0.95), fontsize=11)
+fig.suptitle('Robustness to the per-cell budget', fontsize=14, fontweight='bold', y=1.02)
+fig.tight_layout(rect=[0, 0, 1, 0.87])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_suite_pairing_robust.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-rd1/fig_suite_pairing_robust.png')

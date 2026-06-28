@@ -120,16 +120,19 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
         else:
             _plot_standard_panel(ax, df, x_col, xlabel)
         if idx % ncols == 0:
-            ax.set_ylabel('score MAE')
-        ax.set_title(fixed, fontsize=8.5)
-        ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=11)
+            ax.set_ylabel('score MAE', fontsize=12.5)
+        ax.set_xlabel(ax.get_xlabel(), fontsize=12.5)
+        ax.tick_params(labelsize=10)
+        ax.set_title(fixed, fontsize=9.5)
+        ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=12.5)
 
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
     fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
-               bbox_to_anchor=(0.5, 1.005), fontsize=11)
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+               bbox_to_anchor=(0.5, 0.97), fontsize=12)
+    fig.suptitle('Synthetic study', fontsize=15, fontweight='bold', y=1.005)
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
     return fig
 
 

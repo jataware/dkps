@@ -45,24 +45,23 @@ def panel(ax, sweep, xcol, xlabel, fixed, family):
             g = df.groupby(xcol)[meth].agg(['mean', 'sem'])
             ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3,
                         lw=LW[meth], color=COL[meth], ls='-', capsize=2, elinewidth=0.7)
-    ax.set_xlabel(xlabel)
-    ax.set_title(fixed, fontsize=8.5)
-    ax.grid(alpha=0.25, lw=0.6)
+    ax.set_xlabel(xlabel, fontsize=12.5)
+    ax.set_title(fixed, fontsize=11)
 
 
 fig, axes = plt.subplots(1, 4, figsize=(16, 4.0), sharey=True)
 for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     panel(ax, *spec)
-    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=11)
-axes[0].set_ylabel('MAE on missing cells')
+    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=13)
+    ax.tick_params(labelsize=10.5)
+axes[0].set_ylabel('MAE on missing cells', fontsize=12.5)
 meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
 n_h = [Line2D([0], [0], color='#444', ls='-', label='$n{=}93$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
 fig.legend(handles=meth_h + n_h, loc='upper center', ncol=5, frameon=False,
-           bbox_to_anchor=(0.5, 1.03), fontsize=9.5)
-fig.suptitle('Matrix completion: the embedding rescues the small-cohort regime ($n{=}10$, dashed); '
-             'at full cohort ($n{=}93$, solid) it ties low-rank completion', fontsize=11, y=1.10)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
+           bbox_to_anchor=(0.5, 0.96), fontsize=11)
+fig.suptitle('Matrix completion', fontsize=14, fontweight='bold', y=1.03)
+fig.tight_layout(rect=[0, 0, 1, 0.88])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-unified/fig_suite_completion.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-unified/fig_suite_completion.png')
