@@ -287,10 +287,9 @@ $\rho$ of each cell's queries that are shared across models, from fully paired
 ($\rho{=}1$) to fully unpaired ($\rho{=}0$). The other three set how sparse and noisy the
 observations are: (ii) \emph{task coverage}---the fraction of (model, task) cells run at
 all; (iii) \emph{queries per cell}---how many queries a run uses, which sets the per-cell
-measurement \emph{noise}; and (iv) \emph{cohort size}---the number of models. Pairing is
-our headline lever; the all-tasks-covered, few-query limit is efficient benchmarking
-(denoising) and the zero-query limit is benchmark completion---two applications of the
-same embedding.
+measurement \emph{noise}; and (iv) \emph{cohort size}---the number of models. The
+all-tasks-covered, few-query limit is efficient benchmarking (denoising) and the
+zero-query limit is benchmark completion---two applications of the same embedding.
 
 \subsection{Synthetic data}
 \label{sec:synthetic}
@@ -344,10 +343,12 @@ the full budget.}
 
 \subsection{Real data}
 \label{sec:real}
-We evaluate on one realistic, heterogeneous benchmark and ask three questions of it, in
-order of importance: can \PKPS evaluate models on \emph{unpaired} queries at all (the
-capability DKPS lacks); and given that it can, does the resulting embedding make
-evaluation more \emph{query-efficient} and complete \emph{missing} cells? The suite is
+We evaluate on one realistic, heterogeneous benchmark, studying the two applications the
+unpaired embedding buys: making evaluation more \emph{query-efficient} (denoising cheap,
+few-query runs) and completing \emph{missing} cells. Both are \emph{unpaired} regimes---each
+model answers its own queries, so DKPS's identity matching and IRT's shared-anchor fit
+degrade while \PKPS bridges similar queries. All real-data numbers are means over $16$ seeds,
+and \PKPS selects its query bandwidth by cross-validation per run. The suite is
 $18$ tasks across four datasets with very different response types---MATH ($7$ math
 subjects), WMT-14 ($5$ translation directions), MedQA (medical multiple-choice), and
 LegalBench ($5$ legal classification subsets)---on the $93$ models evaluated on all four.
@@ -357,71 +358,6 @@ natively (Gemini embeddings vs.\ one-hot answers) in disjoint blocks. With a lin
 this makes cross-dataset response similarity exactly zero, and a single shared query
 embedding with a within-domain bandwidth keeps $k_Q$ near zero across domains: the
 product kernel factorizes by domain, never comparing a proof to a legal label.
-
-\paragraph{Headline: evaluation survives unpairing.} The defining capability of \PKPS is
-that it compares models through responses to \emph{similar} queries, not only identical
-ones. We make this concrete by holding the per-cell budget fixed at $M_{ij}{=}4$ queries
-and sliding the fraction that is \emph{shared} across models, $\rho=m_{ii'}/M_{ij}$, from
-$1$ (fully paired---every model answers the same four queries) down to $0$ (fully
-unpaired---disjoint query sets per model), then predicting each cell's true full-eval
-score (Figure~\ref{fig:cliff}). The two methods that rely on a shared item block---DKPS
-(the identity-query-kernel limit) and IRT---fall off a cliff as $\rho\!\to\!0$: IRT
-degrades from $0.146$ to $0.330$ and DKPS from $0.094$ to $0.175$, the latter dropping
-\emph{below} the raw sample mean ($0.136$)---its collapsed perspective actively hurts.
-\PKPS instead holds nearly flat ($0.094\!\to\!0.119$): because its bandwidth is
-cross-validated, it recovers DKPS exactly once queries are shared (the two coincide for
-$\rho\!\ge\!0.25$) and bridges similar queries when none is, so it is the best standalone
-estimator \emph{at every} $\rho$ and beats the sample mean even when no query is shared. This
-is the paper's central result: the product kernel turns unpaired responses---which DKPS
-and IRT must discard---into usable signal. The win is per model, not just on average: at
-$\rho{=}0$, \PKPS beats DKPS for $84\%$ of individual models (Figure~\ref{fig:cliff}b). (At a
-small budget the embedding-$\oplus$-sample ensemble is best throughout; the gap between it and
-\PKPS alone is the residual value of a cell's own four queries.)
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_suite_pairing.pdf}
-\caption{\textbf{The pairing cliff (headline).} Fixed budget $M_{ij}{=}4$ queries/cell on the
-$18$-task suite. \textbf{(a)} Sliding from fully paired ($\rho{=}1$) to fully unpaired
-($\rho{=}0$), DKPS (green) collapses---crossing \emph{above} the raw sample mean (grey)---and
-IRT runs off-scale (annotated), while \PKPS (red) holds and the ensemble (brown) stays lowest.
-With its bandwidth cross-validated, \PKPS coincides with DKPS for $\rho\!\ge\!0.25$ (CV recovers
-the delta limit) and pulls ahead as queries unpair. MAE vs.\ full-eval score, $\pm1$ SEM; the
-$y$-axis is zoomed to the working band. \textbf{(b)} The same unpaired regime per model: each
-point is one model's DKPS vs.\ \PKPS error; \PKPS is better for $84\%$ of models (above the
-diagonal). Only \PKPS bridges similar but distinct queries.}
-\label{fig:cliff}
-\end{figure}
-
-\paragraph{Robustness and where the cliff bites.} The cliff is not an artifact of the
-budget: repeating the sweep at $M_{ij}\in\{2,4,8\}$ queries per cell, DKPS and IRT collapse
-as $\rho\!\to\!0$ at every budget while \PKPS stays flat
-(Figure~\ref{fig:cliffrobust}). Breaking the unpaired ($\rho{=}0$) errors down by dataset
-(Figure~\ref{fig:breakdown}a) localizes the effect: DKPS and IRT lose the most on the
-structured, single-token domains (MedQA, MATH, LegalBench), where a shared item block is what
-they rely on, while \PKPS and the ensemble stay low everywhere. Per model, unpairing inflates
-DKPS's error by $0.08$ on average but \PKPS's by only $0.03$ (Figure~\ref{fig:breakdown}b). All
-real-data numbers are means over $16$ seeds, and \PKPS selects its query bandwidth by
-cross-validation per run.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_suite_pairing_robust.pdf}
-\caption{\textbf{The cliff is robust to the budget.} The headline sweep repeated at
-$M_{ij}\in\{2,4,8\}$ queries per cell. At every budget DKPS (green) and IRT (purple) collapse
-as queries unpair while \PKPS (red) holds. MAE vs.\ full-eval score, $\pm1$ SEM.}
-\label{fig:cliffrobust}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_suite_breakdown.pdf}
-\caption{\textbf{Conditional analysis of the unpaired headline ($\rho{=}0$).} \textbf{(a)}
-Per-dataset MAE: DKPS and IRT spike on the structured single-token domains (LegalBench, MATH,
-MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff depth
-(unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$ while \PKPS barely moves ($\sim\!0.03$).}
-\label{fig:breakdown}
-\end{figure}
 
 \paragraph{Application 1: query efficiency.} Because the embedding reads response
 \emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
@@ -433,6 +369,9 @@ $0.292$; \PKPS at one query roughly matches the sample at four. As the budget gr
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
 $0.088$ at $m{=}32$); the leak-free ensemble tracks the better channel to within a few
 thousandths. The advantage is robust across cohort size and task coverage (panels b, c).
+Per cell, the denoising win is broad but tail-driven: the ensemble beats the raw sample on
+most cells, with the largest gains at the smallest budgets and on the rich-response datasets
+(Figure~\ref{fig:qecond}).
 
 \begin{figure}[t]
 \centering
@@ -445,6 +384,19 @@ IRT (purple) cannot fit at all.}
 \label{fig:qe}
 \end{figure}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
+\caption{\textbf{Query efficiency, conditionally: where the denoising win comes from.}
+Per-cell improvement $\Delta=$ sample $-$ ensemble MAE ($\Delta\!>\!0$, red, the ensemble
+wins) stacked by dataset, by per-cell budget $m$, by cohort $n$, and by task coverage
+$p_{\mathrm{task}}$, holding the other levers at their sweep median ($m{=}4$, $n{=}40$,
+$p_{\mathrm{task}}{=}0.5$). The win is broad but tail-driven---largest at the smallest
+budgets and on the rich-response datasets---with the per-row mean (\textcolor{black}{$\blacktriangledown$})
+positive throughout.}
+\label{fig:qecond}
+\end{figure}
+
 \paragraph{Application 2: matrix completion.} The same embedding also predicts cells that
 were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each at depth
 $p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
@@ -455,7 +407,9 @@ versus \PKPS's $0.127$ (Figure~\ref{fig:completion}, dashed). At full cohort ($n
 solid) \PKPS slightly edges completion ($0.104$ vs.\ $0.107$) and the ensemble is best
 ($0.100$). So even on its own turf---a low-rank, dense leaderboard---completion is matched
 or slightly beaten; the embedding's decisive advantage is the sparse-cohort corner completion
-cannot reach.
+cannot reach. The per-cell win over completion is modest and tail-driven---completion is
+strong on this low-rank suite---but stays positive in the mean across datasets, cohorts,
+coverage, and query depth (Figure~\ref{fig:mccond}).
 
 \begin{figure}[t]
 \centering
@@ -468,10 +422,23 @@ collapses for lack of rows, and ties it at full cohort.}
 \label{fig:completion}
 \end{figure}
 
-\paragraph{Summary.} Table~\ref{tab:suite} collects the three regimes at a hard operating
-point each. \PKPS is the only method present and competitive in all three---it is the only
-one that survives unpairing, and that same embedding then denoises cheap evaluations and
-completes missing cells. The ensemble, which folds in a cell's own sample, is best wherever
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
+\caption{\textbf{Matrix completion, conditionally: where the win comes from.} Per-missing-cell
+improvement $\Delta=$ matrix-completion $-$ ensemble MAE ($\Delta\!>\!0$, red, the ensemble
+wins) stacked by dataset, by cohort $n$, by task coverage $p_{\mathrm{task}}$, and by query
+depth $p_{\mathrm{query}}$, holding the other levers at their sweep median ($n{=}40$,
+$p_{\mathrm{task}}{=}0.5$, $p_{\mathrm{query}}{=}0.5$). The win is modest and tail-driven on
+this low-rank suite---completion's home turf---but the per-row mean
+(\textcolor{black}{$\blacktriangledown$}) stays positive across conditions.}
+\label{fig:mccond}
+\end{figure}
+
+\paragraph{Summary.} Table~\ref{tab:suite} collects the two applications at a hard operating
+point each. Both are unpaired regimes, so the same product-kernel embedding that DKPS and IRT
+cannot match denoises cheap evaluations and completes missing cells---\PKPS is present and
+competitive in both, and the ensemble, which folds in a cell's own sample, is best wherever
 that sample exists.
 
 \begin{table}[t]
@@ -482,17 +449,17 @@ sample mean and IRT need a query a cell never ran (completion), and matrix compl
 a cell that was never run (the observed-cell regimes). \PKPS is the throughline.}
 \label{tab:suite}
 \small
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
- & \textbf{Unpaired} & \textbf{Query-efficient} & \textbf{Completion} \\
-Method & ($\rho{=}0$) & ($m{=}1$/cell) & (missing, $n{=}10$) \\
+ & \textbf{Query-efficient} & \textbf{Completion} \\
+Method & ($m{=}1$/cell) & (missing, $n{=}10$) \\
 \midrule
-sample mean        & $0.136$ & $0.292$ & --- \\
-IRT                & $0.330$ & $0.348$ & --- \\
-matrix completion  & ---     & ---     & $0.153$ \\
-DKPS               & $0.175$ & $0.171$ & --- \\
-\PKPS              & $0.119$ & $0.136$ & $\mathbf{0.127}$ \\
-ensemble           & $\mathbf{0.096}$ & $\mathbf{0.133}$ & $\mathbf{0.127}$ \\
+sample mean        & $0.292$ & --- \\
+IRT                & $0.348$ & --- \\
+matrix completion  & ---     & $0.153$ \\
+DKPS               & $0.171$ & --- \\
+\PKPS              & $0.136$ & $\mathbf{0.127}$ \\
+ensemble           & $\mathbf{0.133}$ & $\mathbf{0.127}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
