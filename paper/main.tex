@@ -230,14 +230,14 @@ add the score channel that turns the embedding into an ensemble.
 \paragraph{Choosing the bandwidth.} The optimal $\sigma$ depends on how paired the
 data is: small when query overlap is high (recover exact matching), large when
 overlap is low (bridge across queries). We set it per run by cross-validation over a
-median-scaled grid $\sigma\in\{0.02,\dots,5\}\cdot\mathrm{med}$, where $\mathrm{med}$
-is the median pairwise query distance. The selection signal differs with the data:
-when dense reference scores are available, leave-one-family-out gives a low-noise
-criterion and the grid search is reliable; when only a sparse held-out set is
-available we find held-out MAE is flat in $\sigma$ for $\sigma\!\ge\!0.5\,\mathrm{med}$,
-so a fixed median bandwidth is both simpler and more robust. One response-kernel pass
-produces the entire $\sigma$-grid, so tuning is nearly free. We use a single regressor
-(distance-weighted $k$-NN) and a logit-space, bias-decomposed head throughout.
+median-scaled grid $\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, where $\mathrm{med}$
+is the median pairwise query distance, selecting the $\sigma$ whose perspective best predicts
+the \emph{observed} scores under leave-one-model-out $k$-NN. The criterion never touches the
+held-out scores we report, so the choice is not circular with the evaluation; and because the
+grid spans down to near-delta, cross-validation \emph{recovers DKPS} when query overlap is
+high and bridges only when it must. One response-kernel pass produces the entire
+$\sigma$-grid, so tuning is nearly free. We use a single regressor (distance-weighted $k$-NN)
+and a logit-space, bias-decomposed head throughout.
 
 \paragraph{Estimation pipeline.} For each replicate we (i) reduce response and query
 embeddings by PCA on the \emph{observed} rows only (dimension by the second Zhu--Ghodsi
@@ -363,11 +363,13 @@ score (Figure~\ref{fig:cliff}). The two methods that rely on a shared item block
 (the identity-query-kernel limit) and IRT---fall off a cliff as $\rho\!\to\!0$: IRT
 degrades from $0.146$ to $0.330$ and DKPS from $0.094$ to $0.175$, the latter dropping
 \emph{below} the raw sample mean ($0.136$)---its collapsed perspective actively hurts.
-\PKPS instead holds nearly flat ($0.103\!\to\!0.123$), staying the best standalone
-estimator at every $\rho$ and beating the sample mean even when no query is shared. This
+\PKPS instead holds nearly flat ($0.094\!\to\!0.119$): because its bandwidth is
+cross-validated, it recovers DKPS exactly once queries are shared (the two coincide for
+$\rho\!\ge\!0.25$) and bridges similar queries when none is, so it is the best standalone
+estimator \emph{at every} $\rho$ and beats the sample mean even when no query is shared. This
 is the paper's central result: the product kernel turns unpaired responses---which DKPS
 and IRT must discard---into usable signal. The win is per model, not just on average: at
-$\rho{=}0$, \PKPS beats DKPS for $82\%$ of individual models (Figure~\ref{fig:cliff}b). (At a
+$\rho{=}0$, \PKPS beats DKPS for $84\%$ of individual models (Figure~\ref{fig:cliff}b). (At a
 small budget the embedding-$\oplus$-sample ensemble is best throughout; the gap between it and
 \PKPS alone is the residual value of a cell's own four queries.)
 
@@ -378,10 +380,11 @@ small budget the embedding-$\oplus$-sample ensemble is best throughout; the gap 
 $18$-task suite. \textbf{(a)} Sliding from fully paired ($\rho{=}1$) to fully unpaired
 ($\rho{=}0$), DKPS (green) collapses---crossing \emph{above} the raw sample mean (grey)---and
 IRT runs off-scale (annotated), while \PKPS (red) holds and the ensemble (brown) stays lowest.
-MAE vs.\ full-eval score, $\pm1$ SEM; the $y$-axis is zoomed to the working band.
-\textbf{(b)} The same unpaired regime per model: each point is one model's DKPS vs.\ \PKPS
-error; \PKPS is better for $82\%$ of models (above the diagonal). Only \PKPS bridges similar
-but distinct queries.}
+With its bandwidth cross-validated, \PKPS coincides with DKPS for $\rho\!\ge\!0.25$ (CV recovers
+the delta limit) and pulls ahead as queries unpair. MAE vs.\ full-eval score, $\pm1$ SEM; the
+$y$-axis is zoomed to the working band. \textbf{(b)} The same unpaired regime per model: each
+point is one model's DKPS vs.\ \PKPS error; \PKPS is better for $84\%$ of models (above the
+diagonal). Only \PKPS bridges similar but distinct queries.}
 \label{fig:cliff}
 \end{figure}
 
@@ -392,8 +395,9 @@ as $\rho\!\to\!0$ at every budget while \PKPS stays flat
 (Figure~\ref{fig:breakdown}a) localizes the effect: DKPS and IRT lose the most on the
 structured, single-token domains (MedQA, MATH, LegalBench), where a shared item block is what
 they rely on, while \PKPS and the ensemble stay low everywhere. Per model, unpairing inflates
-DKPS's error by $0.08$ on average but \PKPS's by only $0.02$ (Figure~\ref{fig:breakdown}b). All
-real-data numbers are means over $16$ seeds.
+DKPS's error by $0.08$ on average but \PKPS's by only $0.03$ (Figure~\ref{fig:breakdown}b). All
+real-data numbers are means over $16$ seeds, and \PKPS selects its query bandwidth by
+cross-validation per run.
 
 \begin{figure}[t]
 \centering
@@ -410,7 +414,7 @@ as queries unpair while \PKPS (red) holds. MAE vs.\ full-eval score, $\pm1$ SEM.
 \caption{\textbf{Conditional analysis of the unpaired headline ($\rho{=}0$).} \textbf{(a)}
 Per-dataset MAE: DKPS and IRT spike on the structured single-token domains (LegalBench, MATH,
 MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff depth
-(unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$ while \PKPS barely moves ($\sim\!0.02$).}
+(unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$ while \PKPS barely moves ($\sim\!0.03$).}
 \label{fig:breakdown}
 \end{figure}
 
@@ -419,10 +423,10 @@ MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff
 cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
 this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
 score (Figure~\ref{fig:qe}). At a tiny budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS scores $0.143$ and the ensemble $0.129$ versus the sample's
+raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.125$ versus the sample's
 $0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
-$0.105$ at $m{=}32$), but the ensemble tracks whichever is better and is never worse than
+$0.088$ at $m{=}32$), but the ensemble tracks whichever is better and is never worse than
 either. The advantage is robust across cohort size and task coverage (panels b, c).
 
 \begin{figure}[t]
@@ -443,9 +447,10 @@ baseline (the sample does not apply---a missing cell has no sample). The contras
 cohort: low-rank completion needs many rows, so when models are scarce it fails for lack
 of them while the embedding, needing none, holds up---at $n{=}10$, completion is $0.153$
 versus \PKPS's $0.127$ (Figure~\ref{fig:completion}, dashed). At full cohort ($n{=}93$,
-solid) the two essentially tie ($0.107$ vs.\ $0.107$) and the ensemble is marginally best
-($0.103$). So on its own turf---a low-rank, dense leaderboard---completion is matched, not
-beaten; the embedding's value is in the sparse-cohort corner completion cannot reach.
+solid) \PKPS slightly edges completion ($0.104$ vs.\ $0.107$) and the ensemble is best
+($0.100$). So even on its own turf---a low-rank, dense leaderboard---completion is matched
+or slightly beaten; the embedding's decisive advantage is the sparse-cohort corner completion
+cannot reach.
 
 \begin{figure}[t]
 \centering
@@ -481,8 +486,8 @@ sample mean        & $0.136$ & $0.292$ & --- \\
 IRT                & $0.330$ & $0.348$ & --- \\
 matrix completion  & ---     & ---     & $0.153$ \\
 DKPS               & $0.175$ & $0.171$ & --- \\
-\PKPS              & $0.123$ & $0.143$ & $\mathbf{0.127}$ \\
-ensemble           & $\mathbf{0.094}$ & $\mathbf{0.129}$ & $\mathbf{0.127}$ \\
+\PKPS              & $0.119$ & $0.136$ & $\mathbf{0.127}$ \\
+ensemble           & $\mathbf{0.092}$ & $\mathbf{0.125}$ & $\mathbf{0.127}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
