@@ -158,12 +158,16 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
     pcl = np.clip(np.where(np.isfinite(pk_mat), pk_mat, 0.5), 1e-3, 1 - 1e-3)
     sig_cell = pcl * (1 - pcl) / nqc                       # per-cell sample noise variance
     ce = obs & np.isfinite(pk_mat) & np.isfinite(sample_mat)
-    if ce.sum() >= 5:
-        err = (pk_mat[ce] - sample_mat[ce]) ** 2 - sig_cell[ce]
-        prior_err = max(float(np.sum(nqc[ce] * err) / np.sum(nqc[ce])), 1e-6)
-    else:
-        prior_err = 1e-6
-    w_samp = prior_err / (prior_err + sig_cell)            # weight on the own sample
+    # per-MODEL prior error (depth-weighted over the model's own observed cells), so model i's
+    # weight depends only on its own pk/sample/depth -- never on any held-out full score, not
+    # even transitively through a global pool. Verified leak-free by tests/test_leakage.py.
+    prior_err = np.full(len(models), 1e-6)
+    for i in range(len(models)):
+        row = ce[i]
+        if row.any():
+            err = (pk_mat[i, row] - sample_mat[i, row]) ** 2 - sig_cell[i, row]
+            prior_err[i] = max(float(np.sum(nqc[i, row] * err) / np.sum(nqc[i, row])), 1e-6)
+    w_samp = prior_err[:, None] / (prior_err[:, None] + sig_cell)   # weight on the own sample
     ens_mat = np.where(ce, np.clip(w_samp * sample_mat + (1 - w_samp) * pk_mat, 0, 1),
                        np.where(np.isfinite(pk_mat), pk_mat, sample_mat))
 
