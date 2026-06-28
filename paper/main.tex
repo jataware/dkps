@@ -106,15 +106,39 @@ margin that grows as evaluation gets sparser, noisier, or smaller-cohort
 
 \section{Related work}
 \label{sec:related}
-\textbf{Efficient benchmarking} reduces evaluation cost by scoring on a subset of
-items: item-response theory \citep{polo2024tinybenchmarks, rasch1960} and anchor
-points \citep{vivek2024anchor} select informative items, while DKPS
-\citep{dkps_qeff} predicts from cached responses in a perspective space. These assume
-a paired/anchored design. \textbf{Benchmark completion} treats the score matrix as
-low-rank and imputes missing entries \citep{benchpress, mazumder2010softimpute}; this
-uses only scores, not responses. \PKPS unifies the two settings through a single
-product-kernel mechanism that consumes unpaired responses, and we show it is
-complementary to---and combinable with---the score-only low-rank view.
+
+\paragraph{Low-dimensional representations of models.} A recurring empirical finding is that
+the behavior of a language model is governed by a handful of latent factors, so a model can be
+summarized by a short vector. \citet{burnell2023structure} recover three interpretable factors
+(reasoning, comprehension, core language modeling) that explain $82\%$ of the across-model
+variance on HELM \citep{helm} by factor analysis; \citet{ruan2024observational} show that
+downstream performance across $\sim\!100$ models is well described by a low-dimensional
+\emph{capability space}, with families differing mainly in how efficiently compute is converted
+into those capabilities; and item-response theory \citep{rasch1960, polo2024tinybenchmarks,
+metabench} places each model on a latent ability axis fit from item-level correctness. These
+all consume \emph{aggregate} per-task scores. The Data Kernel Perspective Space (DKPS)
+\citep{dkps_qeff} instead builds a \emph{black-box, response-level} representation: it embeds
+each model from its cached query responses via classical multidimensional scaling
+\citep{torgerson1952mds} and regresses scores in that space. \PKPS is of this response-level
+kind but removes DKPS's requirement that every model answer the \emph{same} items, so the
+representation is defined even on organically-assembled, unpaired evaluations.
+
+\paragraph{Benchmark prediction.} A second line predicts unobserved (model, task) scores so
+that not every evaluation must be run; \emph{efficient benchmarking} and \emph{matrix
+completion} are its two ends. Efficient benchmarking lowers the per-task cost by scoring a
+curated item subset and extrapolating---IRT-based item selection
+\citep{polo2024tinybenchmarks, metabench}, anchor points \citep{vivek2024anchor},
+reliability-driven subset design \citep{perlitz2024efficient}, and response-space prediction
+from cached items \citep{dkps_qeff}---while reuse of past evaluations on a shared sample set is
+its cross-model analogue \citep{prabhu2024lifelong}. Matrix completion instead predicts cells
+that were \emph{never} run by exploiting low rank across the (model $\times$ task) matrix:
+classical low-rank imputation \citep{candes2009exact, mazumder2010softimpute, koren2009matrix}
+and, most directly, BenchPress \citep{benchpress}, which finds the frontier-model score matrix
+is approximately rank-two and completes it in logit space with calibrated confidence. Both ends
+use only the \emph{aggregate} score of each cell and discard the item-level responses. \PKPS
+unifies them---a cell observed with $m\ge0$ queries spans efficient benchmarking ($m{>}0$) and
+completion ($m{=}0$)---and supplies an item-level \emph{embedding} signal complementary to the
+score-only view, which we ensemble with matrix completion rather than replace.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
