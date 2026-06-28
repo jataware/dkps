@@ -1,15 +1,29 @@
-\begin{thebibliography}{15}
+\begin{thebibliography}{23}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
 
-\bibitem[Burnell et~al.(2023)Burnell, Hao, Conway, and
-  Hern{\'a}ndez~Orallo]{burnell2023structure}
-Ryan Burnell, Han Hao, Andrew R.~A. Conway, and Jos{\'e} Hern{\'a}ndez~Orallo.
-\newblock Revealing the structure of language model capabilities.
-\newblock \emph{arXiv preprint arXiv:2306.10062}, 2023.
+\bibitem[Acharyya et~al.(2024)Acharyya, Trosset, Priebe, and
+  Helm]{acharyya2024consistent}
+Aranyak Acharyya, Michael~W. Trosset, Carey~E. Priebe, and Hayden~S. Helm.
+\newblock Consistent estimation of generative model representations in the data
+  kernel perspective space.
+\newblock \emph{arXiv preprint arXiv:2409.17308}, 2024.
+
+\bibitem[Acharyya et~al.(2025)Acharyya, Agterberg, Park, and
+  Priebe]{acharyya2025concentration}
+Aranyak Acharyya, Joshua Agterberg, Youngser Park, and Carey~E. Priebe.
+\newblock Concentration bounds on response-based vector embeddings of black-box
+  generative models.
+\newblock \emph{arXiv preprint arXiv:2511.08307}, 2025.
+
+\bibitem[Bean et~al.(2025)]{bean2025scales}
+Andrew~M. Bean et~al.
+\newblock Scales++: Compute efficient evaluation subset selection with
+  cognitive scales embeddings.
+\newblock \emph{arXiv preprint arXiv:2510.26384}, 2025.
 
 \bibitem[Cand{\`e}s and Recht(2009)]{candes2009exact}
 Emmanuel~J. Cand{\`e}s and Benjamin Recht.
@@ -17,10 +31,56 @@ Emmanuel~J. Cand{\`e}s and Benjamin Recht.
 \newblock \emph{Foundations of Computational Mathematics}, 9\penalty0
   (6):\penalty0 717--772, 2009.
 
+\bibitem[Chen et~al.(2025)Chen, Helm, Park, Priebe, and
+  Villar]{chen2025weights}
+Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
+\newblock Extracting information from fine-tuned weights.
+\newblock In \emph{Non-Euclidean Foundation Models: Advancing AI Beyond
+  Euclidean Frameworks}, 2025.
+
+\bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
+  Priebe]{duderstadt2023comparing}
+Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
+\newblock Comparing foundation models using data kernels.
+\newblock \emph{arXiv preprint arXiv:2305.05126}, 2023.
+
+\bibitem[Helm et~al.(2024)Helm, Duderstadt, Park, and Priebe]{helm2024tracking}
+Hayden Helm, Brandon Duderstadt, Youngser Park, and Carey~E. Priebe.
+\newblock Tracking the perspectives of interacting language models.
+\newblock In \emph{Conference on Empirical Methods in Natural Language
+  Processing (EMNLP)}, 2024.
+
+\bibitem[Helm et~al.(2025)Helm, Acharyya, Park, Duderstadt, and
+  Priebe]{helm2025inference}
+Hayden Helm, Aranyak Acharyya, Youngser Park, Brandon Duderstadt, and Carey
+  Priebe.
+\newblock Statistical inference on black-box generative models in the data
+  kernel perspective space.
+\newblock In \emph{Findings of the Association for Computational Linguistics
+  (ACL)}, 2025.
+
 \bibitem[Helm et~al.(2026)Helm, Johnson, and Priebe]{dkps_qeff}
 Hayden Helm, Ben Johnson, and Carey~E. Priebe.
 \newblock Query-efficient model evaluation using cached responses.
 \newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
+
+\bibitem[Horwitz et~al.(2025)Horwitz, Kurer, Kahana, Amar, and
+  Hoshen]{horwitz2025atlas}
+Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen.
+\newblock We should chart an atlas of all the world's models.
+\newblock \emph{arXiv preprint arXiv:2503.10633}, 2025.
+
+\bibitem[Huh et~al.(2024)Huh, Cheung, Wang, and Isola]{huh2024platonic}
+Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
+\newblock The platonic representation hypothesis.
+\newblock \emph{arXiv preprint arXiv:2405.07987}, 2024.
+
+\bibitem[Ilyas et~al.(2022)Ilyas, Park, Engstrom, Leclerc, and
+  Madry]{ilyas2022datamodels}
+Andrew Ilyas, Sung~Min Park, Logan Engstrom, Guillaume Leclerc, and Aleksander
+  Madry.
+\newblock Datamodels: Predicting predictions from training data.
+\newblock \emph{arXiv preprint arXiv:2202.00622}, 2022.
 
 \bibitem[Kipnis et~al.(2024)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
 Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
@@ -33,10 +93,11 @@ Yehuda Koren, Robert Bell, and Chris Volinsky.
 \newblock Matrix factorization techniques for recommender systems.
 \newblock \emph{Computer}, 42\penalty0 (8):\penalty0 30--37, 2009.
 
-\bibitem[Liang et~al.(2023)]{helm}
-Percy Liang et~al.
-\newblock Holistic evaluation of language models.
-\newblock \emph{Transactions on Machine Learning Research (TMLR)}, 2023.
+\bibitem[Li et~al.(2024)Li, Ma, Ballesteros, Benajiba, and
+  Horwood]{li2024active}
+Yang Li, Jie Ma, Miguel Ballesteros, Yassine Benajiba, and Graham Horwood.
+\newblock Active evaluation acquisition for efficient llm benchmarking.
+\newblock \emph{arXiv preprint arXiv:2410.05952}, 2024.
 
 \bibitem[Mazumder et~al.(2010)Mazumder, Hastie, and
   Tibshirani]{mazumder2010softimpute}
@@ -73,13 +134,6 @@ Georg Rasch.
 \newblock \emph{Probabilistic Models for Some Intelligence and Attainment
   Tests}.
 \newblock Danish Institute for Educational Research, 1960.
-
-\bibitem[Ruan et~al.(2024)Ruan, Maddison, and Hashimoto]{ruan2024observational}
-Yangjun Ruan, Chris~J. Maddison, and Tatsunori Hashimoto.
-\newblock Observational scaling laws and the predictability of language model
-  performance.
-\newblock \emph{Advances in Neural Information Processing Systems (NeurIPS)},
-  2024.
 
 \bibitem[Torgerson(1952)]{torgerson1952mds}
 Warren~S Torgerson.
