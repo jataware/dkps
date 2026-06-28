@@ -366,18 +366,22 @@ degrades from $0.146$ to $0.330$ and DKPS from $0.094$ to $0.175$, the latter dr
 \PKPS instead holds nearly flat ($0.103\!\to\!0.123$), staying the best standalone
 estimator at every $\rho$ and beating the sample mean even when no query is shared. This
 is the paper's central result: the product kernel turns unpaired responses---which DKPS
-and IRT must discard---into usable signal. (At a small budget the embedding-$\oplus$-sample
-ensemble is best throughout; the gap between it and \PKPS alone is the residual value of a
-cell's own four queries.)
+and IRT must discard---into usable signal. The win is per model, not just on average: at
+$\rho{=}0$, \PKPS beats DKPS for $82\%$ of individual models (Figure~\ref{fig:cliff}b). (At a
+small budget the embedding-$\oplus$-sample ensemble is best throughout; the gap between it and
+\PKPS alone is the residual value of a cell's own four queries.)
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.72\textwidth]{fig_suite_pairing.pdf}
-\caption{\textbf{The pairing cliff (headline).} Fixed budget $M_{ij}{=}4$ queries/cell on
-the $18$-task suite; the $x$-axis slides from fully paired ($\rho{=}1$) to fully unpaired
-($\rho{=}0$). MAE vs.\ the full-eval score, $\pm1$ SEM over seeds. As queries unpair, DKPS
-(green) and IRT (purple, dashed) collapse---DKPS even below the raw sample mean
-(grey)---while \PKPS (red) holds: only it bridges similar but distinct queries.}
+\includegraphics[width=\textwidth]{fig_suite_pairing.pdf}
+\caption{\textbf{The pairing cliff (headline).} Fixed budget $M_{ij}{=}4$ queries/cell on the
+$18$-task suite. \textbf{(a)} Sliding from fully paired ($\rho{=}1$) to fully unpaired
+($\rho{=}0$), DKPS (green) collapses---crossing \emph{above} the raw sample mean (grey)---and
+IRT runs off-scale (annotated), while \PKPS (red) holds and the ensemble (brown) stays lowest.
+MAE vs.\ full-eval score, $\pm1$ SEM; the $y$-axis is zoomed to the working band.
+\textbf{(b)} The same unpaired regime per model: each point is one model's DKPS vs.\ \PKPS
+error; \PKPS is better for $82\%$ of models (above the diagonal). Only \PKPS bridges similar
+but distinct queries.}
 \label{fig:cliff}
 \end{figure}
 
@@ -385,10 +389,10 @@ the $18$-task suite; the $x$-axis slides from fully paired ($\rho{=}1$) to fully
 budget: repeating the sweep at $M_{ij}\in\{2,4,8\}$ queries per cell, DKPS and IRT collapse
 as $\rho\!\to\!0$ at every budget while \PKPS stays flat
 (Figure~\ref{fig:cliffrobust}). Breaking the unpaired ($\rho{=}0$) errors down by dataset
-and by model (Figure~\ref{fig:breakdown}) localizes the effect: DKPS and IRT lose the most
-on the structured, single-token domains (MedQA, MATH, LegalBench), where a shared item block
-is what they rely on, and \PKPS beats DKPS for $82\%$ of individual models. Per model,
-unpairing inflates DKPS's error by $0.08$ on average but \PKPS's by only $0.02$. All
+(Figure~\ref{fig:breakdown}a) localizes the effect: DKPS and IRT lose the most on the
+structured, single-token domains (MedQA, MATH, LegalBench), where a shared item block is what
+they rely on, while \PKPS and the ensemble stay low everywhere. Per model, unpairing inflates
+DKPS's error by $0.08$ on average but \PKPS's by only $0.02$ (Figure~\ref{fig:breakdown}b). All
 real-data numbers are means over $16$ seeds.
 
 \begin{figure}[t]
@@ -405,9 +409,8 @@ as queries unpair while \PKPS (red) holds. MAE vs.\ full-eval score, $\pm1$ SEM.
 \includegraphics[width=\textwidth]{fig_suite_breakdown.pdf}
 \caption{\textbf{Conditional analysis of the unpaired headline ($\rho{=}0$).} \textbf{(a)}
 Per-dataset MAE: DKPS and IRT spike on the structured single-token domains (LegalBench, MATH,
-MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model DKPS vs.\ \PKPS
-MAE: \PKPS is better for $82\%$ of models (points below the diagonal). \textbf{(c)} Per-model
-cliff depth (unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$, \PKPS $\sim\!0.02$.}
+MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff depth
+(unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$ while \PKPS barely moves ($\sim\!0.02$).}
 \label{fig:breakdown}
 \end{figure}
 
