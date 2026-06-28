@@ -361,9 +361,9 @@ $1$ (fully paired---every model answers the same four queries) down to $0$ (full
 unpaired---disjoint query sets per model), then predicting each cell's true full-eval
 score (Figure~\ref{fig:cliff}). The two methods that rely on a shared item block---DKPS
 (the identity-query-kernel limit) and IRT---fall off a cliff as $\rho\!\to\!0$: IRT
-degrades from $0.146$ to $0.337$ and DKPS from $0.094$ to $0.176$, the latter dropping
+degrades from $0.146$ to $0.330$ and DKPS from $0.094$ to $0.175$, the latter dropping
 \emph{below} the raw sample mean ($0.136$)---its collapsed perspective actively hurts.
-\PKPS instead holds nearly flat ($0.103\!\to\!0.122$), staying the best standalone
+\PKPS instead holds nearly flat ($0.103\!\to\!0.123$), staying the best standalone
 estimator at every $\rho$ and beating the sample mean even when no query is shared. This
 is the paper's central result: the product kernel turns unpaired responses---which DKPS
 and IRT must discard---into usable signal. (At a small budget the embedding-$\oplus$-sample
@@ -381,15 +381,45 @@ the $18$-task suite; the $x$-axis slides from fully paired ($\rho{=}1$) to fully
 \label{fig:cliff}
 \end{figure}
 
+\paragraph{Robustness and where the cliff bites.} The cliff is not an artifact of the
+budget: repeating the sweep at $M_{ij}\in\{2,4,8\}$ queries per cell, DKPS and IRT collapse
+as $\rho\!\to\!0$ at every budget while \PKPS stays flat
+(Figure~\ref{fig:cliffrobust}). Breaking the unpaired ($\rho{=}0$) errors down by dataset
+and by model (Figure~\ref{fig:breakdown}) localizes the effect: DKPS and IRT lose the most
+on the structured, single-token domains (MedQA, MATH, LegalBench), where a shared item block
+is what they rely on, and \PKPS beats DKPS for $82\%$ of individual models. Per model,
+unpairing inflates DKPS's error by $0.08$ on average but \PKPS's by only $0.02$. All
+real-data numbers are means over $16$ seeds.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_suite_pairing_robust.pdf}
+\caption{\textbf{The cliff is robust to the budget.} The headline sweep repeated at
+$M_{ij}\in\{2,4,8\}$ queries per cell. At every budget DKPS (green) and IRT (purple) collapse
+as queries unpair while \PKPS (red) holds. MAE vs.\ full-eval score, $\pm1$ SEM.}
+\label{fig:cliffrobust}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_suite_breakdown.pdf}
+\caption{\textbf{Conditional analysis of the unpaired headline ($\rho{=}0$).} \textbf{(a)}
+Per-dataset MAE: DKPS and IRT spike on the structured single-token domains (LegalBench, MATH,
+MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model DKPS vs.\ \PKPS
+MAE: \PKPS is better for $82\%$ of models (points below the diagonal). \textbf{(c)} Per-model
+cliff depth (unpaired $-$ paired MAE): DKPS jumps $\sim\!0.08$, \PKPS $\sim\!0.02$.}
+\label{fig:breakdown}
+\end{figure}
+
 \paragraph{Application 1: query efficiency.} Because the embedding reads response
 \emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
 cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
 this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
 score (Figure~\ref{fig:qe}). At a tiny budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS scores $0.143$ and the ensemble $0.130$ versus the sample's
-$0.293$; \PKPS at one query roughly matches the sample at four. As the budget grows the
+raw mean: at $m{=}1$, \PKPS scores $0.143$ and the ensemble $0.129$ versus the sample's
+$0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
-$0.104$ at $m{=}32$), but the ensemble tracks whichever is better and is never worse than
+$0.105$ at $m{=}32$), but the ensemble tracks whichever is better and is never worse than
 either. The advantage is robust across cohort size and task coverage (panels b, c).
 
 \begin{figure}[t]
@@ -408,9 +438,9 @@ were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each 
 $p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
 baseline (the sample does not apply---a missing cell has no sample). The contrast is the
 cohort: low-rank completion needs many rows, so when models are scarce it fails for lack
-of them while the embedding, needing none, holds up---at $n{=}10$, completion is $0.163$
-versus \PKPS's $0.137$ (Figure~\ref{fig:completion}, dashed). At full cohort ($n{=}93$,
-solid) the two essentially tie ($0.105$ vs.\ $0.107$) and the ensemble is marginally best
+of them while the embedding, needing none, holds up---at $n{=}10$, completion is $0.153$
+versus \PKPS's $0.127$ (Figure~\ref{fig:completion}, dashed). At full cohort ($n{=}93$,
+solid) the two essentially tie ($0.107$ vs.\ $0.107$) and the ensemble is marginally best
 ($0.103$). So on its own turf---a low-rank, dense leaderboard---completion is matched, not
 beaten; the embedding's value is in the sparse-cohort corner completion cannot reach.
 
@@ -444,12 +474,12 @@ a cell that was never run (the observed-cell regimes). \PKPS is the throughline.
  & \textbf{Unpaired} & \textbf{Query-efficient} & \textbf{Completion} \\
 Method & ($\rho{=}0$) & ($m{=}1$/cell) & (missing, $n{=}10$) \\
 \midrule
-sample mean        & $0.136$ & $0.293$ & --- \\
-IRT                & $0.337$ & $0.359$ & --- \\
-matrix completion  & ---     & ---     & $0.163$ \\
-DKPS               & $0.176$ & $0.172$ & --- \\
-\PKPS              & $0.122$ & $0.143$ & $\mathbf{0.137}$ \\
-ensemble           & $\mathbf{0.094}$ & $\mathbf{0.130}$ & $\mathbf{0.137}$ \\
+sample mean        & $0.136$ & $0.292$ & --- \\
+IRT                & $0.330$ & $0.348$ & --- \\
+matrix completion  & ---     & ---     & $0.153$ \\
+DKPS               & $0.175$ & $0.171$ & --- \\
+\PKPS              & $0.123$ & $0.143$ & $\mathbf{0.127}$ \\
+ensemble           & $\mathbf{0.094}$ & $\mathbf{0.129}$ & $\mathbf{0.127}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
