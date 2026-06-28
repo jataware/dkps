@@ -132,7 +132,7 @@ for k, col, sz, z in [(3, GRAY, 42, 1), (0, RED, 105, 3), (1, BLUE, 105, 3), (2,
     m = lab == k
     axEmb.scatter(P[m, 0], P[m, 1], s=sz, c=col, edgecolors='white', lw=1.2, zorder=z)
 axEmb.set_aspect('equal'); axEmb.axis('off')
-axEmb.set_title('query embedding  (nearby = similar)', fontsize=10.5, pad=8)
+axEmb.set_title('query embedding\n(nearby = similar)', fontsize=10.5, pad=6, linespacing=0.95)
 
 # ---- LEFT BOTTOM: same queries as a row of answered blocks --------------------
 for j in range(N):
@@ -231,9 +231,11 @@ for ax, t in [(axBlk, r'$\bf{(a)}$  answered queries'),
 # block column headers (embedding | prediction) just above the top row, and DKPS/PKPS row
 # labels in brand colours
 pe2, pp2 = axDKe.get_position(), axDKp.get_position()
-hY = pe2.y1 + 0.014
-fig.text((pe2.x0 + pe2.x1) / 2, hY, 'embedding', ha='center', va='bottom', fontsize=10.5)
-fig.text((pp2.x0 + pp2.x1) / 2, hY, 'prediction', ha='center', va='bottom', fontsize=10.5)
+hY = pe2.y1 + 0.016
+fig.text((pe2.x0 + pe2.x1) / 2, hY, 'model\nembedding', ha='center', va='bottom',
+         fontsize=9.5, linespacing=0.95)
+fig.text((pp2.x0 + pp2.x1) / 2, hY, 'predicted vs true\nbenchmark score', ha='center',
+         va='bottom', fontsize=9.5, linespacing=0.95)
 for ax, lab, col in [(axDKe, 'DKPS', '#8EBA42'), (axPKe, 'PKPS', '#E24A33')]:
     p = ax.get_position()
     fig.text(p.x0 - 0.009, (p.y0 + p.y1) / 2, lab, ha='right', va='center', fontsize=11,
