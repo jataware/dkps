@@ -428,7 +428,7 @@ MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff
 cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
 this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
 score (Figure~\ref{fig:qe}). At a tiny budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS and the ensemble both score $0.136$ versus the sample's
+raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.133$ versus the sample's
 $0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
 $0.088$ at $m{=}32$); the leak-free ensemble tracks the better channel to within a few
@@ -491,8 +491,8 @@ sample mean        & $0.136$ & $0.292$ & --- \\
 IRT                & $0.330$ & $0.348$ & --- \\
 matrix completion  & ---     & ---     & $0.153$ \\
 DKPS               & $0.175$ & $0.171$ & --- \\
-\PKPS              & $0.119$ & $\mathbf{0.136}$ & $\mathbf{0.127}$ \\
-ensemble           & $\mathbf{0.104}$ & $\mathbf{0.136}$ & $\mathbf{0.127}$ \\
+\PKPS              & $0.119$ & $0.136$ & $\mathbf{0.127}$ \\
+ensemble           & $\mathbf{0.096}$ & $\mathbf{0.133}$ & $\mathbf{0.127}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
