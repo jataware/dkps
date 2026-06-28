@@ -82,32 +82,17 @@ def _sample_baseline(scores, observed):
 
 
 def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
-    """Fit DoubleKernelDKPS, embed models via ClassicalMDS(n_elbows=2), predict.
-
+    """Embed models in the perspective space and predict held-out scores by kNN.
+    PKPS (rbf) selects its query bandwidth by leak-free CV; DKPS (delta) is the fixed limit.
     `data` is assumed already PCA-reduced (see _reduce_df).
     """
-    est = DoubleKernelDKPS(**dkps_kwargs)
-    est.fit(data)
-
-    dist = est.dist_matrix_.copy()
-    if np.any(np.isnan(dist)):
-        max_dist = np.nanmax(dist)
-        if not np.isfinite(max_dist):
-            return np.nan
-        dist = np.nan_to_num(dist, nan=max_dist)
-
-    from graspologic.embed import ClassicalMDS
-    try:
-        if not np.any(dist > 0):
-            raise ValueError('degenerate (all-zero) distances')
-        embeddings = ClassicalMDS(
-            n_components=None, n_elbows=2, dissimilarity='precomputed',
-        ).fit_transform(dist)
-    except Exception:
-        # degenerate perspective (e.g. DKPS with no shared queries to match on): all models
-        # collapse to one point, so the embedding carries no signal -> task-mean baseline.
-        embeddings = np.zeros((dist.shape[0], 1))
-
+    if dkps_kwargs.get('query_kernel') == 'rbf':
+        embeddings = _embed_cv_rbf(data, scores, observed,
+                                   dkps_kwargs.get('response_kernel', RESPONSE_KERNEL), k=k_neighbors)
+    else:
+        embeddings = _embed(data, **dkps_kwargs)
+    if embeddings is None:
+        return np.nan
     predictions = predict_scores_knn(embeddings, scores, observed, k=k_neighbors)
     return evaluate_predictions(predictions, scores, observed)
 
@@ -131,6 +116,46 @@ def _embed(data, **dkps_kwargs):
                             dissimilarity='precomputed').fit_transform(dist)
     except Exception:
         return np.zeros((dist.shape[0], 1))
+
+
+def _cv_loo_obs(Z, target, mask, k=8):
+    """Mean leave-one-model-out kNN error predicting the OBSERVED target from the other models
+    in the perspective Z (per task). Leak-free criterion for bandwidth selection -- uses only
+    observed scores, never the held-out cells we report."""
+    import numpy as np
+    errs = []
+    for t in range(target.shape[1]):
+        idx = np.where(mask[:, t] & np.isfinite(target[:, t]))[0]
+        if len(idx) < k + 1:
+            continue
+        Zt, yt = Z[idx], target[idx, t]
+        D2 = ((Zt[:, None] - Zt[None]) ** 2).sum(-1)
+        np.fill_diagonal(D2, np.inf)
+        for a in range(len(idx)):
+            nbr = np.argsort(D2[a])[:k]
+            w = 1.0 / (np.sqrt(D2[a][nbr]) + 1e-9)
+            errs.append(abs(np.average(yt[nbr], weights=w) - yt[a]))
+    return float(np.mean(errs)) if errs else None
+
+
+def _embed_cv_rbf(data, target, mask, response_kernel, k=8):
+    """PKPS at full strength: select the RBF query bandwidth by cross-validation over a
+    median-scaled grid (the bandwidth whose perspective best predicts the observed target under
+    leave-one-model-out kNN). CV recovers the delta limit when overlap is high and bridges when
+    it is low -- the same selection used on real data."""
+    from scipy.spatial.distance import pdist
+    qsub = data.drop_duplicates('query_id')
+    Q = np.stack(qsub['query_embedding'].values)
+    med = float(np.median(pdist(Q))) if len(Q) > 1 else 1.0
+    best, best_err = None, np.inf
+    for c in (0.03, 0.1, 0.3, 1.0, 3.0):
+        Z = _embed(data, query_kernel='rbf', response_kernel=response_kernel, query_bandwidth=med * c)
+        if Z is None or Z.shape[1] < 1:
+            continue
+        e = _cv_loo_obs(Z, target, mask, k)
+        if e is not None and e < best_err:
+            best_err, best = e, Z
+    return best if best is not None else _embed(data, query_kernel='rbf', response_kernel=response_kernel)
 
 
 def _denoise_mae(embeddings, noisy, true, k=8):
@@ -268,7 +293,11 @@ def run_exp_query_efficiency(budgets=(1, 2, 4, 8, 16, 32), rhos=(0.0, 1.0), n_mo
                 'budget': budget, 'rho': rho, 'mae': float(np.mean(np.abs(noisy - true)))}]
         d = _reduce_df(data)
         for name, ek in ests.items():
-            emb = _embed(d, **ek)
+            if ek['query_kernel'] == 'rbf':                    # PKPS: leak-free CV bandwidth
+                emb = _embed_cv_rbf(d, noisy, np.ones_like(noisy, dtype=bool),
+                                    ek['response_kernel'], k=k_neighbors)
+            else:
+                emb = _embed(d, **ek)
             mae = _denoise_mae(emb, noisy, true, k=k_neighbors) if emb is not None else np.nan
             out.append({'experiment': 'query_efficiency', 'estimator': name, 'seed': seed,
                         'budget': budget, 'rho': rho, 'mae': mae})
