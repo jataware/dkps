@@ -5,11 +5,6 @@
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
 
-\bibitem[Anonymous(2026)]{dkps_qeff}
-Anonymous.
-\newblock Query-efficient model evaluation using cached responses.
-\newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
-
 \bibitem[Burnell et~al.(2023)Burnell, Hao, Conway, and
   Hern{\'a}ndez~Orallo]{burnell2023structure}
 Ryan Burnell, Han Hao, Andrew R.~A. Conway, and Jos{\'e} Hern{\'a}ndez~Orallo.
@@ -21,6 +16,11 @@ Emmanuel~J. Cand{\`e}s and Benjamin Recht.
 \newblock Exact matrix completion via convex optimization.
 \newblock \emph{Foundations of Computational Mathematics}, 9\penalty0
   (6):\penalty0 717--772, 2009.
+
+\bibitem[Helm et~al.(2026)Helm, Johnson, and Priebe]{dkps_qeff}
+Hayden Helm, Ben Johnson, and Carey~E. Priebe.
+\newblock Query-efficient model evaluation using cached responses.
+\newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
 
 \bibitem[Kipnis et~al.(2024)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
 Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
