@@ -21,6 +21,7 @@ STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 
 df = pd.read_csv('results-pkps-rd1/rd1_suite_pairing.csv')
+df = df[df['m'] == BUDGET].copy()              # CSV may hold several budgets; the main panel is BUDGET
 df['rho'] = df['n_paired'] / BUDGET
 per_seed = df.groupby(['rho', 'seed', 'method'])['mae'].mean().reset_index()
 g = per_seed.groupby(['rho', 'method'])['mae'].agg(['mean', 'sem'])

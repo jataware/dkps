@@ -79,7 +79,7 @@ def main():
     ap.add_argument('--line_models', type=int, nargs='+', default=[10, 93])  # n_models line family
     ap.add_argument('--fixed_p', type=float, default=0.5)
     ap.add_argument('--fixed_pq', type=float, default=0.5)
-    ap.add_argument('--n_seeds', type=int, default=8)
+    ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-unified')
     args = ap.parse_args()
