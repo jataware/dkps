@@ -208,6 +208,7 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
             if dump_cells:
                 for i in np.where(h)[0]:
                     cells.append(dict(m=m, n_paired=(-1 if n_paired is None else n_paired),
+                                      n_models=len(models), p_task=p_task,
                                       seed=seed, task=tt, dataset=tt.split(':')[0], method=meth,
                                       model=models[i], family=fams[models[i]],
                                       true=float(yfull[i]), pred=float(p[i]),

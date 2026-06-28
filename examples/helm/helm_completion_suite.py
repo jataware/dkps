@@ -56,7 +56,7 @@ def _perspective_cv(rX, Qu, qc, mid, tid, qid, keep, mods, qmed, samp, O, k=5):
         else H._mds_full(Ds[grid[2]], names, mods, 8)
 
 
-def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
+def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8, dump_cells=False):
     rX, Qu, qc, mid, tid, qid, full, mods, tasks, grp, rs = data[:11]
     rng = np.random.default_rng(seed)
     msel = (np.sort(rng.choice(len(mods), min(n_models, len(mods)), replace=False))
@@ -101,6 +101,15 @@ def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
                             for g in grid]))] if oo.sum() >= 5 else 0.5
     ens = np.clip(a * pk + (1 - a) * mc, 0, 1)
     mis = (~O) & fin0
+    if dump_cells:                                         # per-missing-cell errors for ridgelines
+        cells = []
+        for i, t in zip(*np.where(mis)):
+            tn = tasks[tsel[t]]
+            err = lambda P: float(abs(P[i, t] - full_s[i, t])) if np.isfinite(P[i, t]) else np.nan
+            cells.append(dict(n_models=len(mods_s), p_task=p_task, p_query=p_query, seed=seed,
+                              model=mods_s[i], task=tn, dataset=tn.split(':')[0],
+                              mc_err=err(mc), pkps_err=err(pk), ens_err=err(ens)))
+        return cells
     return dict(n_models=len(mods_s), n_tasks=len(tsel), p_task=p_task, p_query=p_query, seed=seed,
                 mc=_mae(mc, mis, full_s), pkps=_mae(pk, mis, full_s), ens=_mae(ens, mis, full_s))
 
