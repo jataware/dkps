@@ -198,9 +198,6 @@ cb.set_ticks([0, 1])
 spacer = make_axes_locatable(axC).append_axes('right', size='4.5%', pad=0.08)
 spacer.axis('off')
 
-fig.suptitle('PKPS can use all available information',
-             fontsize=13.5, fontweight='bold', y=0.90)
-
 # place the (a)/(b)/(c) panel titles at a common figure-y. The panels have different box
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
 # coordinate text over each panel centre does.
