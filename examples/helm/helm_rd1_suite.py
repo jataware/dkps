@@ -93,8 +93,9 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
                 assign[i] = shared | uq
             task_want[tt] = assign
 
-    # sample m queries per OBSERVED (model, task); collect their rows
+    # sample m queries per OBSERVED (model, task); collect their rows and query depth
     keep, sample_mat = [], np.full((len(models), len(tasks)), np.nan)
+    ncnt = np.zeros((len(models), len(tasks)))
     for i, mm in enumerate(models):
         for t, tt in enumerate(tasks):
             if not obs[i, t]:
@@ -110,6 +111,7 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
                 take = idx if len(idx) <= m else rng.choice(idx, m, replace=False)
             keep.append(take)
             sample_mat[i, t] = row_score[take].mean()
+            ncnt[i, t] = len(take)
     keep = np.concatenate(keep)
 
     # joint perspective from the sparse responses
@@ -148,17 +150,22 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
         return out
     pk_mat = _regress(Z)
     dk_mat = _regress(Zd)
-    # ensemble: blend the model's own m-query sample with the cross-model perspective.
-    # Fit one shrinkage weight per seed (grid) -- pkps alone discards the direct estimate.
-    fin = np.isfinite(pk_mat) & np.isfinite(sample_mat) & np.isfinite(score_mat)
-    grid = np.linspace(0, 1, 21)
-    if fin.any():
-        a = grid[int(np.argmin([np.mean(np.abs(np.clip((1 - g) * pk_mat[fin] + g * sample_mat[fin], 0, 1)
-                                                - score_mat[fin])) for g in grid]))]
+    # ensemble: precision blend of the cell's own m-query sample against the PKPS prior, PER
+    # cell by its query depth -- weight on the sample = prior_err/(prior_err + sample_var/m).
+    # Leak-free: the weight uses only observed samples, query counts, and the PKPS/sample
+    # disagreement, never the held-out full scores. Mirrors the unified estimator's shrinkage.
+    nqc = np.maximum(ncnt, 1)
+    pcl = np.clip(np.where(np.isfinite(pk_mat), pk_mat, 0.5), 1e-3, 1 - 1e-3)
+    sig_cell = pcl * (1 - pcl) / nqc                       # per-cell sample noise variance
+    ce = obs & np.isfinite(pk_mat) & np.isfinite(sample_mat)
+    if ce.sum() >= 5:
+        err = (pk_mat[ce] - sample_mat[ce]) ** 2 - sig_cell[ce]
+        prior_err = max(float(np.sum(nqc[ce] * err) / np.sum(nqc[ce])), 1e-6)
     else:
-        a = 1.0
-    ens_mat = np.where(np.isfinite(pk_mat),
-                       np.clip((1 - a) * pk_mat + a * sample_mat, 0, 1), sample_mat)
+        prior_err = 1e-6
+    w_samp = prior_err / (prior_err + sig_cell)            # weight on the own sample
+    ens_mat = np.where(ce, np.clip(w_samp * sample_mat + (1 - w_samp) * pk_mat, 0, 1),
+                       np.where(np.isfinite(pk_mat), pk_mat, sample_mat))
 
     rows, cells = [], []
     for t, tt in enumerate(tasks):
