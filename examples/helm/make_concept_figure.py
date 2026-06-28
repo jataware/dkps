@@ -190,13 +190,7 @@ for axe, axp, Z, pred, mae, le, lp in [(axDKe, axDKp, Zdk, pred_dk, mae_dk, 'd',
         s.set_edgecolor('#d7dde6')
 axPKp.set_xlabel('true score', fontsize=8.5, color='#475569', labelpad=1)
 
-cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
-cb = fig.colorbar(im, cax=cax)
-cb.set_label('$k_Q(q_j,q_l)$', fontsize=9.5)
-cb.set_ticks([0, 1])
-# steal the same sliver from the DKPS axes so both matrices render at identical size
-spacer = make_axes_locatable(axC).append_axes('right', size='4.5%', pad=0.08)
-spacer.axis('off')
+# (the matrix colour key is added after layout, once (c) is moved next to (b))
 
 # place the (a)/(b)/(c) panel titles at a common figure-y. The panels have different box
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
@@ -207,6 +201,13 @@ fig.canvas.draw()
 mt = axC.get_position().y1
 pb = axBlk.get_position()
 axBlk.set_position([pb.x0, mt - pb.height, pb.width, pb.height])
+# bring the PKPS matrix (c) tight next to the DKPS matrix (b) for side-by-side comparison,
+# then place the query-kernel colour key just to (c)'s right
+pc = axC.get_position()
+axR.set_position([pc.x1 + 0.022, pc.y0, pc.width, pc.height])
+mcax = fig.add_axes([axR.get_position().x1 + 0.012, pc.y0, 0.008, pc.height])
+mcb = fig.colorbar(im, cax=mcax); mcb.set_label('$k_Q(q_j,q_l)$', fontsize=9.5, labelpad=-2)
+mcb.set_ticks([0, 1])
 # arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
 # packed tight to save space
 pr = axR.get_position()
@@ -221,7 +222,7 @@ for axe, axp, ytop in [(axDKe, axDKp, pr.y1), (axPKe, axPKp, pr.y0 + h)]:
 
 # slim colour key (true benchmark score) for the embedding + prediction dots
 scax = fig.add_axes([x0 + 2 * side + hgap + 0.012, pr.y0, 0.006, pr.height])
-scb = fig.colorbar(sc, cax=scax); scb.set_label('true score', fontsize=8.5)
+scb = fig.colorbar(sc, cax=scax); scb.set_label('true score', fontsize=8.5, labelpad=-2)
 scb.set_ticks([0, 1]); scb.ax.tick_params(labelsize=7)
 
 Y = max(ax.get_position().y1 for ax in (axBlk, axC, axR)) + 0.012
