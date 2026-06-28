@@ -25,6 +25,32 @@ from helm_qselect import family, _lofo_regress, max_dense_block
 from baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
 
 
+def _cv_bandwidth(Zs, sample_mat, obs, k=8):
+    """Choose the query bandwidth whose perspective best predicts the OBSERVED (noisy) scores
+    under leave-one-model-out kNN. Leakage-free: it only uses observed sample means, never the
+    held-out full-eval scores we report, so it is not circular with the evaluation metric."""
+    best_sg, best_err = None, np.inf
+    for sg, Z in Zs.items():
+        if Z is None:
+            continue
+        errs = []
+        for t in range(sample_mat.shape[1]):
+            idx = np.where(obs[:, t] & np.isfinite(sample_mat[:, t]))[0]
+            if len(idx) < k + 1:
+                continue
+            Zt, yt = Z[idx], sample_mat[idx, t]
+            D2 = ((Zt[:, None] - Zt[None]) ** 2).sum(-1)
+            np.fill_diagonal(D2, np.inf)
+            for a in range(len(idx)):
+                nbr = np.argsort(D2[a])[:k]
+                w = 1.0 / (np.sqrt(D2[a][nbr]) + 1e-9)
+                errs.append(abs(np.average(yt[nbr], weights=w) - yt[a]))
+        e = float(np.mean(errs)) if errs else np.inf
+        if e < best_err:
+            best_err, best_sg = e, sg
+    return best_sg
+
+
 def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12, predictor='knn',
              dump_cells=False):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
@@ -97,10 +123,18 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
     # PKPS uses the RBF query kernel at the median bandwidth; DKPS is its delta limit, which
     # dist_matrices reaches as the bandwidth -> 0 (distinct queries stop bridging, so only
     # exact query matches contribute -- standard paired DKPS). One call returns both.
+    # PKPS picks its RBF query bandwidth by cross-validation over a grid (best at predicting the
+    # OBSERVED scores, leave-one-model-out); DKPS is the fixed delta limit. The grid spans
+    # near-delta to broad, so CV can shrink toward DKPS when pairing is abundant.
     SIG_DELTA = qmed * 1e-2
-    names, Ds = est.dist_matrices(df, [qmed, SIG_DELTA])
-    Z = H._mds_full(Ds[qmed], names, models, mds_dim)         # PKPS
-    Zd = H._mds_full(Ds[SIG_DELTA], names, models, mds_dim)   # DKPS
+    SIG_GRID = list(qmed * np.array([0.03, 0.1, 0.3, 1.0, 3.0]))
+    names, Ds = est.dist_matrices(df, SIG_GRID + [SIG_DELTA])
+    Zs = {sg: H._mds_full(Ds[sg], names, models, mds_dim) for sg in SIG_GRID}
+    sig_star = _cv_bandwidth(Zs, sample_mat, obs)
+    Z = Zs.get(sig_star)                                       # PKPS (CV bandwidth)
+    if Z is None:
+        Z = H._mds_full(Ds[SIG_GRID[2]], names, models, mds_dim)
+    Zd = H._mds_full(Ds[SIG_DELTA], names, models, mds_dim)   # DKPS (delta limit)
     n2r = {mm: i for i, mm in enumerate(models)}
 
     # PKPS / DKPS perspective regression per task (LOFO ignores the model's own samples)

@@ -20,6 +20,42 @@ def _mae(P, mask, full):
     return float(np.mean(np.abs(P[m] - full[m]))) if m.any() else np.nan
 
 
+def _perspective_cv(rX, Qu, qc, mid, tid, qid, keep, mods, qmed, samp, O, k=5):
+    """Suite perspective with a CV-selected RBF query bandwidth: pick the bandwidth whose
+    embedding best predicts the OBSERVED scores under leave-one-model-out kNN (leakage-free --
+    never the held-out missing cells we report)."""
+    codes = qc[keep]
+    df = pd.DataFrame({'model_id': mid[keep], 'task_id': tid[keep], 'query_id': qid[keep],
+                       'embedding': list(rX[keep]), 'query_embedding': list(Qu[codes])})
+    bw = H.SubsampleMedianBandwidth()
+    est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='linear',
+                                          query_bandwidth=bw, response_bandwidth=bw)
+    grid = list(qmed * np.array([0.03, 0.1, 0.3, 1.0, 3.0]))
+    names, Ds = est.dist_matrices(df, grid)
+    Zs = {sg: H._mds_full(Ds[sg], names, mods, 8) for sg in grid}
+    best_sg, best_err = None, np.inf
+    for sg, Z in Zs.items():
+        if Z is None:
+            continue
+        errs = []
+        for t in range(samp.shape[1]):
+            idx = np.where(O[:, t] & np.isfinite(samp[:, t]))[0]
+            if len(idx) < k + 1:
+                continue
+            Zt, yt = Z[idx], samp[idx, t]
+            D2 = ((Zt[:, None] - Zt[None]) ** 2).sum(-1)
+            np.fill_diagonal(D2, np.inf)
+            for a in range(len(idx)):
+                nbr = np.argsort(D2[a])[:k]
+                w = 1.0 / (np.sqrt(D2[a][nbr]) + 1e-9)
+                errs.append(abs(np.average(yt[nbr], weights=w) - yt[a]))
+        e = float(np.mean(errs)) if errs else np.inf
+        if e < best_err:
+            best_err, best_sg = e, sg
+    return Zs.get(best_sg) if best_sg is not None and Zs.get(best_sg) is not None \
+        else H._mds_full(Ds[grid[2]], names, mods, 8)
+
+
 def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
     rX, Qu, qc, mid, tid, qid, full, mods, tasks, grp, rs = data[:11]
     rng = np.random.default_rng(seed)
@@ -53,7 +89,7 @@ def trial(data, qmed, n_models, n_tasks, p_task, seed, p_query=0.8):
     if not keep:
         return None
     keep = np.concatenate(keep)
-    Z = _perspective(rX, Qu, qc, mid, tid, qid, keep, mods_s, True, qmed)
+    Z = _perspective_cv(rX, Qu, qc, mid, tid, qid, keep, mods_s, qmed, samp, O)
     if Z is None:
         return None
     pk = H.predict_from_embedding_all(Z, samp, O, predictor='knn', k=5)
