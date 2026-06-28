@@ -20,34 +20,21 @@
 \maketitle
 
 \begin{abstract}
-Evaluating language models is expensive, and in practice benchmark coverage is
-\emph{doubly sparse and noisy}: a model is run on only a subset of tasks, within a
-task on only a subset of queries, and the resulting per-cell score is a noisy
-average over those few queries. Methods that complete the (model $\times$ task)
-score matrix---low-rank matrix completion, item-response theory---use only the
-\emph{aggregate} score of each cell. We argue that the cheapest way to evaluate
-better is to use \emph{item-level} information: not just a cell's score but its
-individual responses. We introduce the \textbf{Product Kernel Perspective Space
-(\PKPS)}, which embeds each model from its responses through a product kernel
-$k_Q\cdot k_R$ that compares responses to \emph{similar} queries (not only identical
-ones), recovering the Data Kernel Perspective Space as the bandwidth $\sigma\!\to\!0$
-and degrading gracefully when models answer different queries. \PKPS supplies an
-item-level \emph{embedding} signal; ensembling it with the available item-level
-\emph{score} signal---a cell's own sample mean where it was measured, matrix
-completion where it was not---recovers the full score matrix from observations where
-each cell has any number of queries (efficient benchmarking and benchmark completion
-become the two ends of one problem). We characterize \emph{when} the embedding helps:
-given the same preprocessing as matrix completion, an effective-rank analysis shows the
-embedding \emph{matches} completion at every rank on low-rank matrices and \emph{beats}
-it when the matrix is high-rank (as on MATH), so effective rank sets the size of its
-advantage; it also survives unpaired queries where DKPS and IRT collapse, and rescues
-the small-cohort regime where low-rank completion fails for lack of rows. Across three
-observation levers---task coverage, queries per cell (noise), and cohort size---the
-single embedding ensemble beats the best score-only predictor on a heterogeneous
-$18$-task, $93$-model suite spanning math, translation, medical QA and legal
-classification, by a margin that grows as evaluation gets sparser, noisier, or
-smaller-cohort. Item-level information pays wherever real evaluation is incomplete,
-which is everywhere that matters.
+Evaluating language models is expensive, so benchmark coverage is sparse and noisy: each
+model is run on only some tasks, only some queries within a task, and each score is a noisy
+average over those queries. Methods that complete the (model $\times$ task) score
+matrix---matrix completion, item-response theory---use only each cell's \emph{aggregate}
+score. We use \emph{item-level} information instead: a cell's individual responses, not just
+its score. We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, which embeds
+each model from its responses through a product kernel $k_Q\cdot k_R$ that compares responses
+to \emph{similar} queries, not only identical ones; it recovers the Data Kernel Perspective
+Space as the bandwidth $\sigma\!\to\!0$ and stays defined when models answer different
+queries. Ensembling this embedding with the available score signal---a cell's own sample mean
+where measured, matrix completion where not---makes efficient benchmarking and benchmark
+completion two ends of one problem. On a heterogeneous $18$-task, $93$-model suite, the
+ensemble beats the best score-only predictor across task coverage, queries per cell, and
+cohort size; the embedding survives unpaired queries where DKPS and IRT collapse, and rescues
+small cohorts where low-rank completion fails for lack of rows.
 \end{abstract}
 
 \section{Introduction}
