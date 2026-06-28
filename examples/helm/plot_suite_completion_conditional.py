@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """SECONDARY matrix-completion conditional figure (4 ridgeline panels). Per-missing-cell win
 Delta = MC MAE - ensemble MAE (>0 = the embedding-augmented ensemble beats low-rank completion),
-stacked by dataset, by cohort, by task coverage, and by query depth. The win is modest and
-TAIL-driven (completion is MC's home turf on this low-rank suite), so the mean marker (v) is the
-honest aggregate. Reads the per-cell dumps from _dump_comp_cells.py / _cov.py / _pq.py."""
-from pathlib import Path
+stacked by dataset, by cohort, by task coverage, and by query depth. Each panel varies one lever
+and holds the others at the MEDIAN of their sweep (n=40, p_task=0.5, p_query=0.5). The win is
+modest and TAIL-driven (completion is MC's home turf on this low-rank suite), so the mean marker
+(v) is the honest aggregate. Reads the consistent per-cell dump from _dump_comp_cond.py."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -39,23 +39,20 @@ def ridge(ax, groups, title):
     ax.set_title(title, fontsize=10.5)
 
 
-def load(path):
-    d = pd.read_csv(path); d['d'] = d['mc_err'] - d['ens_err']; return d
-
-
-base = load('results-pkps-unified/completion_cells.csv')        # cohort + dataset (p_task=0.5, p_q=0.5)
-cov = load('results-pkps-unified/completion_cells_cov.csv')     # coverage (n=93, p_q=0.5)
-pq = load('results-pkps-unified/completion_cells_pq.csv')       # query depth (n=93, p_task=0.5)
+d = pd.read_csv('results-pkps-unified/comp_cond_cells.csv')
+d['d'] = d['mc_err'] - d['ens_err']
+cen = d[(d.sweep == 'cohort') & (d.n_models == 40)]             # median center (n=40, p_task=0.5, p_q=0.5)
+coh, cov, pq = d[d.sweep == 'cohort'], d[d.sweep == 'coverage'], d[d.sweep == 'querydepth']
 
 fig, ax = plt.subplots(1, 4, figsize=(15, 3.5))
-ridge(ax[0], [(n, base[(base.n_models == 10) & (base.dataset == d)]['d'].values) for n, d in DS],
-      '(a) by dataset\n$n{=}10,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
-ridge(ax[1], [(f'$n{{=}}{n}$', base[base.n_models == n]['d'].values) for n in [10, 40, 93]],
+ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
+      '(a) by dataset\n$n{=}40,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
+ridge(ax[1], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10, 40, 93]],
       '(b) by cohort\n$p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
-ridge(ax[2], [(f'$p_\\mathrm{{task}}{{=}}{p}$', cov[cov.p_task == p]['d'].values) for p in [0.2, 0.5, 0.9]],
-      '(c) by task coverage\n$n{=}93,\\ p_\\mathrm{query}{=}0.5$')
+ridge(ax[2], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values) for q in [0.2, 0.5, 0.9]],
+      '(c) by task coverage\n$n{=}40,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{query}}{{=}}{q}$', pq[pq.p_query == q]['d'].values) for q in [0.25, 0.5, 1.0]],
-      '(d) by query depth\n$n{=}93,\\ p_\\mathrm{task}{=}0.5$')
+      '(d) by query depth\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
 fig.suptitle('Matrix completion: where the win comes from (mean $\\blacktriangledown$; modest, tail-driven)',
              fontsize=13.5, fontweight='bold', y=1.0)
 fig.tight_layout(rect=[0, 0, 1, 0.92])

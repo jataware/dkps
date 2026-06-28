@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """SECONDARY query-efficiency conditional figure (4 ridgeline panels). Per-cell denoising win
 Delta = sample MAE - ensemble MAE (>0 = the embedding-augmented ensemble beats the raw sample),
-stacked by dataset, by budget, by cohort, and by task coverage. Mean marker per row. Reads the
-per-cell dumps from _dump_qe_cells.py (budget/dataset) and _dump_qe_levers.py (cohort/coverage)."""
-from pathlib import Path
+stacked by dataset, by budget, by cohort, and by task coverage. Each panel varies one lever and
+holds the others at the MEDIAN of their sweep (m=4, n=40, p_task=0.5). Mean marker per row.
+Reads the consistent per-cell dump from _dump_qe_cond.py."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -38,25 +38,22 @@ def ridge(ax, groups, title):
     ax.set_title(title, fontsize=10.5)
 
 
-def piv(path, idx):
-    d = pd.read_csv(path)
-    p = d.pivot_table(index=idx, columns='method', values='abs_err').reset_index()
-    p['d'] = p['sample'] - p['ens']
-    return p
-
-
-qb = piv('results-pkps-rd1/qe_cells.csv', ['m', 'seed', 'model', 'task', 'dataset'])
-ql = piv('results-pkps-rd1/qe_cells_levers.csv', ['n_models', 'p_task', 'seed', 'model', 'task', 'dataset'])
+d = pd.read_csv('results-pkps-rd1/qe_cond_cells.csv')
+p = d.pivot_table(index=['sweep', 'm', 'n_models', 'p_task', 'seed', 'model', 'task', 'dataset'],
+                  columns='method', values='abs_err').reset_index()
+p['d'] = p['sample'] - p['ens']
+cen = p[(p.sweep == 'cohort') & (p.n_models == 40)]              # median center (m=4, n=40, p_task=0.5)
+bud, coh, cov = p[p.sweep == 'budget'], p[p.sweep == 'cohort'], p[p.sweep == 'coverage']
 
 fig, ax = plt.subplots(1, 4, figsize=(15, 3.5))
-ridge(ax[0], [(n, qb[(qb.m == 2) & (qb.dataset == d)]['d'].values) for n, d in DS],
-      '(a) by dataset\n$m{=}2,\\ n{=}93,\\ p_\\mathrm{task}{=}1$')
-ridge(ax[1], [(f'$m{{=}}{m}$', qb[qb.m == m]['d'].values) for m in [1, 2, 4, 8]],
-      '(b) by budget\n$n{=}93,\\ p_\\mathrm{task}{=}1$')
-ridge(ax[2], [(f'$n{{=}}{n}$', ql[(ql.p_task == 1.0) & (ql.n_models == n)]['d'].values) for n in [10, 40, 93]],
-      '(c) by cohort\n$m{=}2,\\ p_\\mathrm{task}{=}1$')
-ridge(ax[3], [(f'$p_\\mathrm{{task}}{{=}}{p}$', ql[(ql.n_models == 93) & (ql.p_task == p)]['d'].values) for p in [0.2, 0.5, 0.9]],
-      '(d) by task coverage\n$m{=}2,\\ n{=}93$')
+ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
+      '(a) by dataset\n$m{=}4,\\ n{=}40,\\ p_\\mathrm{task}{=}0.5$')
+ridge(ax[1], [(f'$m{{=}}{m}$', bud[bud.m == m]['d'].values) for m in [1, 2, 4, 8, 16]],
+      '(b) by budget\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
+ridge(ax[2], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10, 40, 93]],
+      '(c) by cohort\n$m{=}4,\\ p_\\mathrm{task}{=}0.5$')
+ridge(ax[3], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values) for q in [0.2, 0.5, 0.9]],
+      '(d) by task coverage\n$m{=}4,\\ n{=}40$')
 fig.suptitle('Query efficiency: where the denoising win comes from ($\\Delta>0\\to$ win)',
              fontsize=13.5, fontweight='bold', y=1.0)
 fig.tight_layout(rect=[0, 0, 1, 0.92])
