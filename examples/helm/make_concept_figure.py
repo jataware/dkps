@@ -119,7 +119,7 @@ mae_dk, mae_pk = np.mean(np.abs(pred_dk - yE)), np.mean(np.abs(pred_pk - yE))
 
 fig = plt.figure(figsize=(15.5, 4.7))
 gs = GridSpec(2, 5, width_ratios=[0.82, 1, 1, 0.5, 0.5], height_ratios=[0.58, 1.42],
-              wspace=0.28, hspace=0.05)
+              wspace=0.22, hspace=0.05, top=0.92, bottom=0.10)
 axBlk = fig.add_subplot(gs[0, 0])
 axEmb = fig.add_subplot(gs[1, 0])
 axC = fig.add_subplot(gs[:, 1])
@@ -192,14 +192,14 @@ axPKp.set_xlabel('true score', fontsize=8.5, color='#475569', labelpad=1)
 
 cax = make_axes_locatable(axR).append_axes('right', size='4.5%', pad=0.08)
 cb = fig.colorbar(im, cax=cax)
-cb.set_label('query-kernel weight  $k_Q(q_j,q_l)$', fontsize=9.5)
+cb.set_label('$k_Q(q_j,q_l)$', fontsize=9.5)
 cb.set_ticks([0, 1])
 # steal the same sliver from the DKPS axes so both matrices render at identical size
 spacer = make_axes_locatable(axC).append_axes('right', size='4.5%', pad=0.08)
 spacer.axis('off')
 
 fig.suptitle('PKPS can use all available information',
-             fontsize=13.5, fontweight='bold', y=0.965)
+             fontsize=13.5, fontweight='bold', y=0.985)
 
 # place the (a)/(b)/(c) panel titles at a common figure-y. The panels have different box
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
@@ -208,10 +208,10 @@ fig.canvas.draw()
 # arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
 # packed tight to save space
 pr = axR.get_position()
-gap_v = 0.11
+gap_v = 0.09
 h = (pr.height - gap_v) / 2
 side = h * (fig.get_figheight() / fig.get_figwidth())   # fig-fraction width of a square of height h
-x0 = pr.x1 + 0.105                                       # clear the matrix colour key
+x0 = pr.x1 + 0.058                                       # clear the (now-compact) matrix colour key
 hgap = 0.014
 for axe, axp, ytop in [(axDKe, axDKp, pr.y1), (axPKe, axPKp, pr.y0 + h)]:
     axe.set_position([x0, ytop - h, side, h])
