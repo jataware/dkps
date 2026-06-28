@@ -36,7 +36,7 @@ def ridge(ax, groups, title):
     ax.axvline(0, color='#888', lw=0.9); ax.set_yticks([]); ax.set_xlim(*XL)
     ax.set_xticks([0.0, 0.2]); ax.tick_params(labelsize=13)
     ax.spines['left'].set_visible(False)
-    ax.set_title(title, fontsize=15)
+    ax.set_title(title, fontsize=12.8)   # match the completion-conditional sibling
 
 
 d = pd.read_csv('results-pkps-rd1/qe_cond_cells.csv')
@@ -46,7 +46,7 @@ p['d'] = p['sample'] - p['ens']
 cen = p[(p.sweep == 'cohort') & (p.n_models == 40)]              # median center (m=4, n=40, p_task=0.5)
 bud, coh, cov = p[p.sweep == 'budget'], p[p.sweep == 'cohort'], p[p.sweep == 'coverage']
 
-fig, ax = plt.subplots(1, 4, figsize=(11, 4.4))
+fig, ax = plt.subplots(1, 4, figsize=(11.5, 4.4))
 ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
       '(a) by dataset\n$m{=}4,\\ n{=}40,\\ p_\\mathrm{task}{=}0.5$')
 ridge(ax[1], [(f'$m{{=}}{m}$', bud[bud.m == m]['d'].values) for m in [1, 2, 4, 8, 16]],
@@ -55,10 +55,8 @@ ridge(ax[2], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10,
       '(c) by cohort\n$m{=}4,\\ p_\\mathrm{task}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values) for q in [0.2, 0.5, 0.9]],
       '(d) by task coverage\n$m{=}4,\\ n{=}40$')
-fig.supxlabel(XLAB, fontsize=15, y=0.01)
-fig.suptitle('Query efficiency: where the denoising win comes from ($\\Delta>0\\to$ win)',
-             fontsize=18, fontweight='bold', y=1.0)
-fig.tight_layout(rect=[0, 0.05, 1, 0.92])
+fig.supxlabel(XLAB, fontsize=15, y=0.085)
+fig.tight_layout(rect=[0, 0.10, 1, 0.99])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_qe_conditional.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-rd1/fig_qe_conditional.png')

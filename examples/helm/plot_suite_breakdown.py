@@ -32,7 +32,7 @@ df = pd.read_csv(CSV)
 un = df[df['n_paired'] == 0]
 pa = df[df['n_paired'] == BUDGET]
 
-fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
+fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4))
 
 # (a) per-dataset MAE, unpaired ------------------------------------------------
 order = ['sample', 'irt', 'dkps', 'pkps', 'ens']
@@ -49,11 +49,11 @@ for k, meth in enumerate(order):
             ms.append(g.loc[(d, meth), 'mean']); es.append(g.loc[(d, meth), 'sem'])
     ax.bar(xs, ms, width=w, yerr=es, color=COL[meth], label=LBL[meth], capsize=2,
            error_kw=dict(elinewidth=0.7))
-ax.set_xticks(range(len(datasets))); ax.set_xticklabels(datasets, rotation=20, ha='right', fontsize=10.5)
-ax.tick_params(axis='y', labelsize=10.5)
-ax.set_ylabel('MAE vs. full-eval score', fontsize=12.5)
-ax.set_title('(a) per dataset, unpaired ($\\rho{=}0$)', fontsize=12.5)
-ax.legend(frameon=False, fontsize=10, ncol=2)
+ax.set_xticks(range(len(datasets))); ax.set_xticklabels(datasets, rotation=20, ha='right', fontsize=13.1)
+ax.tick_params(axis='y', labelsize=13.1)
+ax.set_ylabel('MAE vs. full-eval score', fontsize=15.6)
+ax.set_title('(a) per dataset, unpaired ($\\rho{=}0$)', fontsize=15.6)
+ax.legend(frameon=False, fontsize=12.5, ncol=2)
 
 # (b) per-model cliff depth: unpaired - paired MAE -----------------------------
 def gap(d):
@@ -68,12 +68,12 @@ for x, meth in [(0, 'dkps'), (1, 'pkps')]:
                s=24, c=COL[meth], edgecolors='white', lw=0.4, alpha=0.85, zorder=3)
     ax.hlines(vals.mean(), x - 0.26, x + 0.26, color=COL[meth], lw=3, zorder=4)
     ax.text(x + 0.30, vals.mean(), f'mean {vals.mean():+.2f}', ha='left', va='center',
-            fontsize=9, color=COL[meth], fontweight='bold', zorder=5)
+            fontsize=11.2, color=COL[meth], fontweight='bold', zorder=5)
 ax.axhline(0, color='#bbb', lw=0.9)
-ax.set_xlim(-0.5, 1.5); ax.set_xticks([0, 1]); ax.set_xticklabels(['DKPS', 'PKPS'], fontsize=11.5)
-ax.tick_params(axis='y', labelsize=10.5)
-ax.set_ylabel('MAE increase when unpaired\n(unpaired $-$ paired, per model)', fontsize=12)
-ax.set_title('(b) per-model cliff depth (lower = robust)', fontsize=12.5)
+ax.set_xlim(-0.5, 1.5); ax.set_xticks([0, 1]); ax.set_xticklabels(['DKPS', 'PKPS'], fontsize=14.4)
+ax.tick_params(axis='y', labelsize=13.1)
+ax.set_ylabel('MAE increase when unpaired\n(unpaired $-$ paired, per model)', fontsize=15.0)
+ax.set_title('(b) per-model cliff depth (lower = robust)', fontsize=15.6)
 
 fig.tight_layout()
 for ext in ('png', 'pdf'):

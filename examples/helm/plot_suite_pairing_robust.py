@@ -26,7 +26,7 @@ ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 BUDGETS = [2, 4, 8]
 
 df = pd.read_csv('results-pkps-rd1/rd1_suite_pairing.csv')
-fig, axes = plt.subplots(1, len(BUDGETS), figsize=(13, 4.2), sharey=True)
+fig, axes = plt.subplots(1, len(BUDGETS), figsize=(11.5, 4.2), sharey=True)
 for ax, b in zip(axes, BUDGETS):
     sub = df[df['m'] == b].copy(); sub['rho'] = sub['n_paired'] / b
     per_seed = sub.groupby(['rho', 'seed', 'method'])['mae'].mean().reset_index()
@@ -37,14 +37,14 @@ for ax, b in zip(axes, BUDGETS):
         st = STYLE[m]; s = g.xs(m, level='method').sort_index()
         ax.errorbar(s.index.values, s['mean'], yerr=s['sem'], marker='o', ms=4,
                     lw=st.get('lw', 2.6), color=st['color'], ls=st['ls'], capsize=3, elinewidth=0.9)
-    ax.set_xlabel(r"fraction paired  $\rho = m_{ii'}/M_{ij}$", fontsize=12.5)
-    ax.set_title(f'budget $M_{{ij}}{{=}}{b}$ queries/cell', fontsize=11.5)
-    ax.tick_params(labelsize=10.5)
-axes[0].set_ylabel('MAE vs. full-eval score', fontsize=12.5)
+    ax.set_xlabel(r"fraction paired  $\rho = m_{ii'}/M_{ij}$", fontsize=15.6)
+    ax.set_title(f'budget $M_{{ij}}{{=}}{b}$ queries/cell', fontsize=14.4)
+    ax.tick_params(labelsize=13.1)
+axes[0].set_ylabel('MAE vs. full-eval score', fontsize=15.6)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'], lw=STYLE[m].get('lw', 2.6),
                   marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
-fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False, bbox_to_anchor=(0.5, 0.95), fontsize=11)
-fig.suptitle('Robustness to the per-cell budget', fontsize=14, fontweight='bold', y=1.02)
+fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False, bbox_to_anchor=(0.5, 0.95), fontsize=13.8)
+fig.suptitle('Robustness to the per-cell budget', fontsize=17.5, fontweight='bold', y=1.02)
 fig.tight_layout(rect=[0, 0, 1, 0.87])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_suite_pairing_robust.{ext}', dpi=200, bbox_inches='tight')

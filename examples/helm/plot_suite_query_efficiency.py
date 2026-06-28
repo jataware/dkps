@@ -48,21 +48,21 @@ def panel(ax, sweep, xcol, xlabel, fixed, logx):
                     capsize=2, elinewidth=0.8)
     if logx:
         ax.set_xscale('log', base=2)
-    ax.set_xlabel(xlabel, fontsize=12.5)
-    ax.set_title(fixed, fontsize=11)
+    ax.set_xlabel(xlabel, fontsize=15.6)
+    ax.set_title(fixed, fontsize=13.8)
 
 
-fig, axes = plt.subplots(1, 3, figsize=(13, 4.0), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(11.5, 4.0), sharey=True)
 for ax, (sweep, xcol, xlabel, fixed, logx), letter in zip(axes, PANELS, 'abc'):
     panel(ax, sweep, xcol, xlabel, fixed, logx)
-    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=13)
-    ax.tick_params(labelsize=10.5)
-axes[0].set_ylabel('MAE vs. true score', fontsize=12.5)
+    ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=16.2)
+    ax.tick_params(labelsize=13.1)
+axes[0].set_ylabel('MAE vs. true score', fontsize=15.6)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
                   lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
 fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False,
-           bbox_to_anchor=(0.5, 0.95), fontsize=11)
-fig.suptitle('Query efficiency', fontsize=14, fontweight='bold', y=1.02)
+           bbox_to_anchor=(0.5, 0.95), fontsize=13.8)
+fig.suptitle('Query efficiency', fontsize=17.5, fontweight='bold', y=1.02)
 fig.tight_layout(rect=[0, 0, 1, 0.87])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_suite_query_efficiency.{ext}', dpi=200, bbox_inches='tight')

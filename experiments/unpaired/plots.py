@@ -83,7 +83,7 @@ def _plot_query_efficiency(ax, df, xlabel):
     ax.set_xlabel(xlabel)
     ax.set_xscale('log', base=2)
     ax.text(0.97, 0.97, 'solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
-            transform=ax.transAxes, ha='right', va='top', fontsize=7, color='#444')
+            transform=ax.transAxes, ha='right', va='top', fontsize=9.8, color='#444')
     ax.grid(alpha=0.25, lw=0.6)
 
 
@@ -104,7 +104,7 @@ PANELS = [
 ]
 
 
-def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
+def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 6.6)):
     """Create the main 2x3 figure with one shared legend and per-panel fixed-parameter titles."""
     from matplotlib.lines import Line2D
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False, sharey=True)
@@ -120,18 +120,19 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(14, 7.6)):
         else:
             _plot_standard_panel(ax, df, x_col, xlabel)
         if idx % ncols == 0:
-            ax.set_ylabel('score MAE', fontsize=12.5)
-        ax.set_xlabel(ax.get_xlabel(), fontsize=12.5)
-        ax.tick_params(labelsize=10)
-        ax.set_title(fixed, fontsize=9.5)
-        ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=12.5)
+            ax.set_ylabel('score MAE', fontsize=17.5)
+        ax.set_xlabel(ax.get_xlabel(), fontsize=17.5)
+        ax.tick_params(labelsize=14.0)
+        # single left-aligned title (bold letter + fixed params): the 4-parameter
+        # subtitles are too wide to sit under a corner letter without colliding
+        ax.set_title(f'$\\bf{{({chr(97 + idx)})}}$  {fixed}', loc='left', fontsize=11.0)
 
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
     fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
-               bbox_to_anchor=(0.5, 0.97), fontsize=12)
-    fig.suptitle('Synthetic study', fontsize=15, fontweight='bold', y=1.005)
+               bbox_to_anchor=(0.5, 0.97), fontsize=16.8)
+    fig.suptitle('Synthetic study', fontsize=21.0, fontweight='bold', y=1.005)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     return fig
 
