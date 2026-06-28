@@ -199,12 +199,17 @@ spacer = make_axes_locatable(axC).append_axes('right', size='4.5%', pad=0.08)
 spacer.axis('off')
 
 fig.suptitle('PKPS can use all available information',
-             fontsize=13.5, fontweight='bold', y=0.985)
+             fontsize=13.5, fontweight='bold', y=0.90)
 
 # place the (a)/(b)/(c) panel titles at a common figure-y. The panels have different box
 # tops (the matrices are letterbox-centered), so per-axes titles can't line up -- figure-
 # coordinate text over each panel centre does.
 fig.canvas.draw()
+# pull the answered-query blocks down so their top aligns with the matrices' top: this
+# tightens the tall gap to the query embedding below and lets the (a)/(b)/(c) titles drop
+mt = axC.get_position().y1
+pb = axBlk.get_position()
+axBlk.set_position([pb.x0, mt - pb.height, pb.width, pb.height])
 # arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
 # packed tight to save space
 pr = axR.get_position()
