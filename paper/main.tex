@@ -260,8 +260,10 @@ own sample mean is the score signal (matrix completion merely echoes it there); 
 shrink it toward the \PKPS estimate by a precision weight $\sigma_q^2/(\sigma_q^2+
 e_{\PKPS}^2)$---the sample's noise variance over its total disagreement with \PKPS---so
 the own sample dominates as queries grow and the embedding dominates as noise grows.
-Both quantities are read off the observed queries (the noise variance from a half-split
-of each cell's queries), so the score baselines see exactly the same information.
+Both quantities are read off the observed queries---the sample noise variance estimated as
+$\hat p(1-\hat p)/m$ and the prior error from its depth-weighted disagreement with the
+sample---so the weight never touches the held-out full scores and the score baselines see
+exactly the same information.
 
 \subsection{Query efficiency}
 \PKPS is designed to reach a target prediction accuracy from fewer evaluated queries than
@@ -301,12 +303,14 @@ scores and compare DKPS (identity query kernel) against \PKPS (RBF), with the sc
 sample baseline (predict a held-out cell by its task's observed mean) as a floor
 (Figure~\ref{fig:synthetic}).
 
-\PKPS is at least as good as DKPS across every lever, and both beat the sample floor. The
-gap is modest where queries are \emph{mostly paired}---sweeping the cohort $n$, the task
-count $T$, and task coverage $p_{\mathrm{task}}$ at $p_{\mathrm{query}}{=}0.8$ (panels
-a--c)---and widens as queries become \emph{unpaired or sparse}. As query coverage $p_{\mathrm{query}}$ drops (d) the two diverge; sweeping the
-overlap $\rho$ directly (e), DKPS collapses to the sample floor as $\rho\!\to\!0$ while
-\PKPS is essentially flat---it never needed pairing.
+\PKPS---selecting its query bandwidth by the same leak-free cross-validation we use on real
+data---beats DKPS across \emph{every} lever, and both beat the sample floor: bridging
+responses to similar queries (across tasks as well as within) supplies model-similarity signal
+that exact-match DKPS cannot reach, so the margin is wide even where queries are mostly paired
+(panels a--c). The gap is largest where pairing is scarce: as query coverage
+$p_{\mathrm{query}}$ drops (d) DKPS degrades while \PKPS stays flat, and sweeping the overlap
+$\rho$ directly (e), DKPS collapses toward the sample floor as $\rho\!\to\!0$ while \PKPS is
+essentially flat---it never needed pairing.
 
 Panel (f) is the \emph{denoising} face of the same problem: each cell is now \emph{observed}
 with $M_{ij}$ noisy queries (sample noise $\propto1/\sqrt{M_{ij}}$) and we predict its true
@@ -326,9 +330,10 @@ green) vs.\ \PKPS (RBF, red), with the score-only sample baseline (gray); each p
 one parameter with the rest fixed (shown in its title). \textbf{(a)--(e) complete held-out
 cells} from observed responses---cohort $n$, tasks $T$, task coverage $p_{\mathrm{task}}$,
 query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$. \PKPS
-$\le$ DKPS throughout and both beat the sample floor; the gap is modest when queries are
-mostly paired (a--c) and large when unpaired or sparse (d, e), and in (e) DKPS collapses to
-the floor as $\rho\!\to\!0$ while \PKPS stays flat. \textbf{(f) denoises observed cells}:
+(CV-selected bandwidth) beats DKPS throughout---by a wide margin even when mostly paired
+(a--c), since it bridges across tasks as well as within---and the gap is largest when unpaired
+or sparse (d, e), where in (e) DKPS collapses toward the floor as $\rho\!\to\!0$ while \PKPS
+stays flat. \textbf{(f) denoises observed cells}:
 each cell is measured with $M_{ij}$ noisy queries and we predict its true score, at paired
 ($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). The raw sample falls
 $\propto1/\sqrt{M_{ij}}$; smoothing over the perspective denoises well below it at small
@@ -423,11 +428,11 @@ MedQA), \PKPS and the ensemble stay low everywhere. \textbf{(b)} Per-model cliff
 cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
 this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
 score (Figure~\ref{fig:qe}). At a tiny budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.125$ versus the sample's
+raw mean: at $m{=}1$, \PKPS and the ensemble both score $0.136$ versus the sample's
 $0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
-$0.088$ at $m{=}32$), but the ensemble tracks whichever is better and is never worse than
-either. The advantage is robust across cohort size and task coverage (panels b, c).
+$0.088$ at $m{=}32$); the leak-free ensemble tracks the better channel to within a few
+thousandths. The advantage is robust across cohort size and task coverage (panels b, c).
 
 \begin{figure}[t]
 \centering
@@ -486,8 +491,8 @@ sample mean        & $0.136$ & $0.292$ & --- \\
 IRT                & $0.330$ & $0.348$ & --- \\
 matrix completion  & ---     & ---     & $0.153$ \\
 DKPS               & $0.175$ & $0.171$ & --- \\
-\PKPS              & $0.119$ & $0.136$ & $\mathbf{0.127}$ \\
-ensemble           & $\mathbf{0.092}$ & $\mathbf{0.125}$ & $\mathbf{0.127}$ \\
+\PKPS              & $0.119$ & $\mathbf{0.136}$ & $\mathbf{0.127}$ \\
+ensemble           & $\mathbf{0.104}$ & $\mathbf{0.136}$ & $\mathbf{0.127}$ \\
 \bottomrule
 \end{tabular}
 \end{table}

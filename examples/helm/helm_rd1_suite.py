@@ -223,7 +223,7 @@ def main():
                     help='pairing-cliff robustness: one full rho-curve per budget')
     ap.add_argument('--n_paired_values', type=int, nargs='+', default=[0, 4],
                     help='breakdown: which pairing levels to dump per-cell (default unpaired/paired)')
-    ap.add_argument('--fixed_m', type=int, default=8)
+    ap.add_argument('--fixed_m', type=int, default=2)  # few-query regime for the n/coverage QE panels
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--outdir', default='results-pkps-rd1')
