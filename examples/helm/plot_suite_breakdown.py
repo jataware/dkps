@@ -12,7 +12,14 @@ from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.style.use('ggplot')
+plt.rcParams.update({                              # clean modern style: white, subtle grid, despined
+    'figure.facecolor': 'white', 'axes.facecolor': 'white',
+    'axes.edgecolor': '#b8b8b8', 'axes.linewidth': 0.9,
+    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e9e9e9', 'grid.linewidth': 0.8,
+    'axes.spines.top': False, 'axes.spines.right': False,
+    'xtick.color': '#555', 'ytick.color': '#555',
+    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11,
+})
 import numpy as np
 import pandas as pd
 
