@@ -33,10 +33,11 @@ def ridge(ax, groups, title):
             ax.fill_between(xs, off, off + dd, where=xs < 0, color='#bbb', alpha=0.55, lw=0)
             ax.plot(xs, off + dd, color='#444', lw=0.7)
             ax.plot([v.mean()], [off + 0.02], 'v', color='#111', ms=5)
-        ax.text(XL[0] - 0.02 * (XL[1] - XL[0]), off + 0.12, lab, fontsize=9, ha='right', va='bottom')
-    ax.axvline(0, color='#888', lw=0.7); ax.set_yticks([]); ax.set_xlim(*XL)
-    ax.spines['left'].set_visible(False); ax.set_xlabel(XLAB, fontsize=10)
-    ax.set_title(title, fontsize=10.5)
+        ax.text(XL[0] - 0.02 * (XL[1] - XL[0]), off + 0.12, lab, fontsize=14, ha='right', va='bottom')
+    ax.axvline(0, color='#888', lw=0.9); ax.set_yticks([]); ax.set_xlim(*XL)
+    ax.set_xticks([-0.2, 0.0, 0.2]); ax.tick_params(labelsize=13)
+    ax.spines['left'].set_visible(False)
+    ax.set_title(title, fontsize=15)
 
 
 d = pd.read_csv('results-pkps-unified/comp_cond_cells.csv')
@@ -44,7 +45,7 @@ d['d'] = d['mc_err'] - d['ens_err']
 cen = d[(d.sweep == 'cohort') & (d.n_models == 40)]             # median center (n=40, p_task=0.5, p_q=0.5)
 coh, cov, pq = d[d.sweep == 'cohort'], d[d.sweep == 'coverage'], d[d.sweep == 'querydepth']
 
-fig, ax = plt.subplots(1, 4, figsize=(15, 3.5))
+fig, ax = plt.subplots(1, 4, figsize=(11, 4.4))
 ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
       '(a) by dataset\n$n{=}40,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[1], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10, 40, 93]],
@@ -53,9 +54,10 @@ ridge(ax[2], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values
       '(c) by task coverage\n$n{=}40,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{query}}{{=}}{q}$', pq[pq.p_query == q]['d'].values) for q in [0.25, 0.5, 1.0]],
       '(d) by query depth\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
+fig.supxlabel(XLAB, fontsize=15, y=0.01)
 fig.suptitle('Matrix completion: where the win comes from (mean $\\blacktriangledown$; modest, tail-driven)',
-             fontsize=13.5, fontweight='bold', y=1.0)
-fig.tight_layout(rect=[0, 0, 1, 0.92])
+             fontsize=18, fontweight='bold', y=1.0)
+fig.tight_layout(rect=[0, 0.05, 1, 0.92])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-unified/fig_completion_conditional.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-unified/fig_completion_conditional.png')
