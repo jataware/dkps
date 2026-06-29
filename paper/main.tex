@@ -52,7 +52,7 @@ The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} is a black-box approa
 it embeds each model from its query responses, places models in a low-dimensional
 Euclidean space via classical multidimensional scaling, and regresses benchmark
 scores in that space. DKPS is query-efficient and competitive with item-response
-theory. But it has a structural limitation: the distance between two models is the
+theory. However, it has a structural limitation: the distance between two models is the
 average squared difference of their responses \emph{to the same queries}, so DKPS
 requires a \emph{paired} design. When models answer different queries---the common
 case in real, organically-assembled leaderboards---DKPS has nothing to compare and
@@ -77,12 +77,9 @@ matrix from observations where each cell has $m\ge 0$ queries, with one ensemble
 the own sample ($m{>}0$), matrix completion ($m{=}0$), and the \PKPS embedding
 (everywhere), structured by three levers---task coverage, queries per cell (noise), and
 cohort size (Section~\ref{sec:synthetic}).
-\item \textbf{Where the embedding helps.} With the same preprocessing as matrix
-completion, an effective-rank analysis shows the embedding \emph{matches} completion at
-every rank on low-rank matrices and \emph{beats} it where the matrix is high-rank
-(MATH), so rank sets the size of its advantage; it survives unpaired queries where DKPS
-and IRT collapse; and it rescues the small-cohort regime where rank-$2$ completion
-fails for lack of rows (Section~\ref{sec:real}).
+\item \textbf{When the embedding helps.} The response embedding survives unpaired
+queries where DKPS and IRT collapse, and recovers the small-cohort regime where low-rank
+completion fails for lack of rows (Section~\ref{sec:real}).
 \item \textbf{One ensemble, every lever.} On a heterogeneous $18$-task, $93$-model
 suite spanning math, translation, medical QA and legal classification, the embedding
 already beats matrix completion on its own across coverage and cohort, and the single
@@ -244,7 +241,7 @@ the \emph{observed} scores under leave-one-model-out $k$-NN. The criterion never
 held-out scores we report, so the choice is not circular with the evaluation; and because the
 grid spans down to near-delta, cross-validation \emph{recovers DKPS} when query overlap is
 high and bridges only when it must. One response-kernel pass produces the entire
-$\sigma$-grid, so tuning is nearly free. We use a single regressor (distance-weighted $k$-NN)
+$\sigma$-grid, so tuning adds negligible cost. We use a single regressor (distance-weighted $k$-NN)
 and a logit-space, bias-decomposed head throughout.
 
 \paragraph{Estimation pipeline.} For each replicate we (i) reduce response and query
@@ -256,7 +253,7 @@ and a two-way (model $+$ task) additive bias---then a $k$-NN regression of the r
 on the embedding (replacing completion's low-rank factor), predicting every cell
 (held-out cells directly, observed cells leave-one-out so the estimate never sees its
 own target). Matching the per-task standardization is important: without it the model
-offset is dominated by the highest-logit-variance tasks, which silently handicaps the
+offset is dominated by the highest-logit-variance tasks, which systematically biases the
 embedding on heterogeneous, multi-scale suites.
 
 \paragraph{The embedding-$\oplus$-score ensemble.} For each cell we combine the
@@ -264,7 +261,7 @@ embedding with whichever score signal carries independent information. On a
 \emph{missing} cell, that is matrix completion of the (noisy) score matrix
 \citep{benchpress}; we blend it with \PKPS using a weight fit by held-out
 cross-validation against the observed scores. On an \emph{observed} cell, the cell's
-own sample mean is the score signal (matrix completion merely echoes it there); we
+own sample mean is the score signal (matrix completion coincides with it there); we
 shrink it toward the \PKPS estimate by a precision weight $\sigma_q^2/(\sigma_q^2+
 e_{\PKPS}^2)$---the sample's noise variance over its total disagreement with \PKPS---so
 the own sample dominates as queries grow and the embedding dominates as noise grows.
@@ -317,16 +314,16 @@ that exact-match DKPS cannot reach, so the margin is wide even where queries are
 (panels a--c). The gap is largest where pairing is scarce: as query coverage
 $p_{\mathrm{query}}$ drops (d) DKPS degrades while \PKPS stays flat, and sweeping the overlap
 $\rho$ directly (e), DKPS collapses toward the sample floor as $\rho\!\to\!0$ while \PKPS is
-essentially flat---it never needed pairing.
+essentially flat---it does not rely on pairing.
 
-Panel (f) is the \emph{denoising} face of the same problem: each cell is now \emph{observed}
+Panel (f) is the \emph{denoising} form of the same problem: each cell is now \emph{observed}
 with $M_{ij}$ noisy queries (sample noise $\propto1/\sqrt{M_{ij}}$) and we predict its true
 score. The raw sample mean (gray) falls like $1/\sqrt{M_{ij}}$; smoothing those noisy scores
 over the perspective denoises well below it while measurement noise dominates---\PKPS reaches
 at a single query the accuracy the raw sample needs roughly five queries to match, and does
 so whether queries are paired or not, while DKPS denoises only when paired (unpaired DKPS,
 dashed, barely improves). Only once the budget is large is the raw sample precise enough to
-overtake the embedding's residual bias. This is the empirical face of
+overtake the embedding's residual bias. This is the empirical counterpart of
 Conjecture~\ref{conj:qeff}.
 
 \begin{figure}[t]
@@ -352,7 +349,7 @@ the full budget.}
 \subsection{Real data}
 \label{sec:real}
 We evaluate on one realistic, heterogeneous benchmark, studying the two applications the
-unpaired embedding buys: making evaluation more \emph{query-efficient} (denoising cheap,
+unpaired embedding enables: making evaluation more \emph{query-efficient} (denoising cheap,
 few-query runs) and completing \emph{missing} cells. Both are \emph{unpaired} regimes---each
 model answers its own queries, so DKPS's identity matching and IRT's shared-anchor fit
 degrade while \PKPS bridges similar queries. All real-data numbers are means over $16$ seeds,
@@ -367,11 +364,11 @@ this makes cross-dataset response similarity exactly zero, and a single shared q
 embedding with a within-domain bandwidth keeps $k_Q$ near zero across domains: the
 product kernel factorizes by domain, never comparing a proof to a legal label.
 
-\paragraph{Application 1: query efficiency.} Because the embedding reads response
+\paragraph{Application 1: query efficiency.} Because the embedding captures response
 \emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
 cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
 this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
-score (Figure~\ref{fig:qe}). At a tiny budget the embedding is far more accurate than the
+score (Figure~\ref{fig:qe}). At a small budget the embedding is far more accurate than the
 raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.133$ versus the sample's
 $0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
@@ -395,7 +392,7 @@ IRT (purple) cannot fit at all.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
-\caption{\textbf{Query efficiency, conditionally: where the denoising win comes from.}
+\caption{\textbf{Conditional breakdown of the query-efficiency win.}
 Per-cell improvement $\Delta=$ sample $-$ ensemble MAE ($\Delta\!>\!0$, red, the ensemble
 wins) stacked by dataset, by per-cell budget $m$, by cohort $n$, and by task coverage
 $p_{\mathrm{task}}$, holding the other levers at their sweep median ($m{=}4$, $n{=}40$,
@@ -410,12 +407,12 @@ were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each 
 $p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
 baseline (the sample does not apply---a missing cell has no sample). The contrast is the
 cohort: low-rank completion needs many rows, so when models are scarce it fails for lack
-of them while the embedding, needing none, holds up---at $n{=}10$, completion is $0.153$
+of them while the embedding, which needs none, remains accurate---at $n{=}10$, completion is $0.153$
 versus \PKPS's $0.127$ (Figure~\ref{fig:completion}, dashed). At full cohort ($n{=}93$,
 solid) \PKPS slightly edges completion ($0.104$ vs.\ $0.107$) and the ensemble is best
-($0.100$). So even on its own turf---a low-rank, dense leaderboard---completion is matched
-or slightly beaten; the embedding's decisive advantage is the sparse-cohort corner completion
-cannot reach. The per-cell win over completion is modest and tail-driven---completion is
+($0.100$). Even in the regime most favorable to it---a dense, low-rank matrix---completion is
+matched or slightly beaten; the embedding's clear advantage is the sparse-cohort regime
+completion cannot reach. The per-cell win over completion is modest and tail-driven---completion is
 strong on this low-rank suite---but stays positive in the mean across datasets, cohorts,
 coverage, and query depth (Figure~\ref{fig:mccond}).
 
@@ -433,12 +430,12 @@ collapses for lack of rows, and ties it at full cohort.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{\textbf{Matrix completion, conditionally: where the win comes from.} Per-missing-cell
+\caption{\textbf{Conditional breakdown of the completion win.} Per-missing-cell
 improvement $\Delta=$ matrix-completion $-$ ensemble MAE ($\Delta\!>\!0$, red, the ensemble
 wins) stacked by dataset, by cohort $n$, by task coverage $p_{\mathrm{task}}$, and by query
 depth $p_{\mathrm{query}}$, holding the other levers at their sweep median ($n{=}40$,
 $p_{\mathrm{task}}{=}0.5$, $p_{\mathrm{query}}{=}0.5$). The win is modest and tail-driven on
-this low-rank suite---completion's home turf---but the per-row mean
+this low-rank suite---the regime most favorable to completion---but the per-row mean
 (\textcolor{black}{$\blacktriangledown$}) stays positive across conditions.}
 \label{fig:mccond}
 \end{figure}
@@ -454,7 +451,7 @@ that sample exists.
 \caption{Suite MAE vs.\ the full-eval score at one hard operating point per regime (lower
 is better; best in bold). ``---'' marks a baseline that does not apply to that regime: the
 sample mean and IRT need a query a cell never ran (completion), and matrix completion needs
-a cell that was never run (the observed-cell regimes). \PKPS is the throughline.}
+a cell that was never run (the observed-cell regimes). \PKPS applies in every regime.}
 \label{tab:suite}
 \small
 \begin{tabular}{lcc}
@@ -479,9 +476,9 @@ their authors chose, so the responses that benchmark estimation must compare are
 and collapse without it. \PKPS removes that requirement with a product kernel
 $k_Q\!\cdot\!k_R$ that compares responses to \emph{similar} queries, recovering paired
 DKPS exactly in its $\sigma\!\to\!0$ limit and scaling to a heterogeneous $18$-task suite
-through a block-diagonal kernel. The central result is that evaluation survives unpairing:
-as the shared fraction $\rho\!\to\!0$, DKPS and IRT fall off a cliff while \PKPS holds.
-That capability buys two practical applications from the same embedding---it denoises
+through a block-diagonal kernel. Our central finding is that benchmark estimation remains accurate under unpaired
+evaluation: as the shared fraction $\rho\!\to\!0$, DKPS and IRT degrade sharply while \PKPS holds.
+That capability yields two practical applications from the same embedding---it denoises
 cheap, few-query evaluations (query efficiency) and predicts cells that were never run
 (matrix completion), and ensembled with a cell's own sample where one exists it is never
 the worse choice. None of this assumes pairing or exhaustive per-cell evaluation, which is
