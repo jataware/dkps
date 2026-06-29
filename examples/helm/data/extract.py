@@ -10,7 +10,9 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 
-from parsers import parsers
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from data.parsers import parsers
 
 # --
 # Parse args

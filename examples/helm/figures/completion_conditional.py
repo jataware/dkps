@@ -4,7 +4,7 @@ Delta = MC MAE - ensemble MAE (>0 = the embedding-augmented ensemble beats low-r
 stacked by dataset, by cohort, by task coverage, and by query depth. Each panel varies one lever
 and holds the others at the MEDIAN of their sweep (n=40, p_task=0.5, p_query=0.5). The win is
 modest and TAIL-driven (completion is MC's home turf on this low-rank suite), so the mean marker
-(v) is the honest aggregate. Reads the consistent per-cell dump from _dump_comp_cond.py."""
+(v) is the honest aggregate. Reads the consistent per-cell dump from experiments/dump_completion_conditional.py."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

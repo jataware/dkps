@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-helm_rd2_cv.py  --  RD2 missing tasks under the joint observation model.
+pipeline/crossval.py  --  RD2 missing tasks under the joint observation model.
 
 Three levers: task observation probability (task_parity), cohort size (n_models),
 and queries-per-observed-cell (query_obs, i.e. evaluation noise). When query_obs is
@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from dkps.unpaired_dkps import pca_reduce_elbow
-import helm_doublekernel as H
+from pipeline import loaders as H
 
 
 def one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups, row_score, score_mat,

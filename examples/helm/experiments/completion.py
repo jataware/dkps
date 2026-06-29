@@ -10,9 +10,11 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-import helm_doublekernel as H
-from helm_rd2_cv import load
-from helm_unified import _perspective, mc_crossfit
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from pipeline import loaders as H
+from pipeline.crossval import load
+from pipeline.perspective import _perspective, mc_crossfit
 
 
 def _mae(P, mask, full):

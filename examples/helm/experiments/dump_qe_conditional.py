@@ -1,7 +1,9 @@
-import sys; sys.path.insert(0, '/home/paperspace/projects/dkps/examples/helm')
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from joblib import Parallel, delayed
-import helm_doublekernel as H, pandas as pd
-from helm_rd1_suite import run_seed
+import pandas as pd
+from pipeline import loaders as H
+from experiments.query_efficiency import run_seed
 data = H.load_suite()
 # each sweep varies one lever; the others held at the MEDIAN (m=4, n=40, p_task=0.5)
 specs = ([(m,40,0.5,'budget') for m in [1,2,4,8,16]]

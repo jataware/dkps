@@ -12,8 +12,8 @@ import os
 import collections
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
-import helm_doublekernel as H
-from helm_rd1_suite import run_seed
+from pipeline import loaders as H
+from experiments.query_efficiency import run_seed
 
 TOL = 1e-9
 

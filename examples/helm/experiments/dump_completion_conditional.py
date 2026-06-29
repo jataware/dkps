@@ -1,8 +1,9 @@
-import sys; sys.path.insert(0, '/home/paperspace/projects/dkps/examples/helm')
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from joblib import Parallel, delayed
 import pandas as pd
-from helm_rd2_cv import load
-from helm_completion_suite import trial
+from pipeline.crossval import load
+from experiments.completion import trial
 data, qmed, suite = load('suite')
 # levers vary one at a time; others held at MEDIAN (n=40, p_task=0.5, p_query=0.5)
 specs = ([(n,0.5,0.5,'cohort') for n in [10,40,93]]

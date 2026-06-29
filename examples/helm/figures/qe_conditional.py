@@ -3,7 +3,7 @@
 Delta = sample MAE - ensemble MAE (>0 = the embedding-augmented ensemble beats the raw sample),
 stacked by dataset, by budget, by cohort, and by task coverage. Each panel varies one lever and
 holds the others at the MEDIAN of their sweep (m=4, n=40, p_task=0.5). Mean marker per row.
-Reads the consistent per-cell dump from _dump_qe_cond.py."""
+Reads the consistent per-cell dump from experiments/dump_qe_conditional.py."""
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

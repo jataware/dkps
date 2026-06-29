@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-helm_qselect.py  --  RD1: query-efficient evaluation (missing queries).
+pipeline/query_select.py  --  RD1: query-efficient evaluation (missing queries).
 
 Reproduces & extends "Query-Efficient Model Evaluation Using Cached Responses"
 (arXiv:2605.07096). Predict each model's full *benchmark* score (mean over all
@@ -32,8 +32,8 @@ from sklearn.neighbors import KNeighborsRegressor
 from graspologic.embed import ClassicalMDS
 
 from dkps.unpaired_dkps import ProductKernelPerspectiveSpace, pca_reduce_elbow
-import helm_doublekernel as H
-from baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
+from pipeline import loaders as H
+from pipeline.baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
 
 
 def family(model):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-helm_unified.py  --  one problem: estimate the full (model x task) score matrix from
+pipeline/perspective.py  --  one problem: estimate the full (model x task) score matrix from
 observations where each cell has m >= 0 queries. RD1 is the m>0 (denoise) face, RD2
 the m=0 (complete) face; here they are unified. Per cell the score channel is the
 own noisy sample (observed) or matrix completion (missing); PKPS adds the item-level
@@ -18,8 +18,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 from dkps.unpaired_dkps import pca_reduce_elbow
 from dkps.baselines import matrix_completion_predict
-import helm_doublekernel as H
-from helm_rd2_cv import load
+from pipeline import loaders as H
+from pipeline.crossval import load
 
 GRID = np.linspace(0, 1, 21)
 

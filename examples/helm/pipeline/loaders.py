@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-helm_doublekernel.py
+pipeline/loaders.py
 
 Investigate DoubleKernelDKPS on real HELM data (MATH benchmark).
 

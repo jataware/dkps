@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-helm_rd1_suite.py  --  joint RD1: query-efficient evaluation across the whole
+experiments/query_efficiency.py  --  joint RD1: query-efficient evaluation across the whole
 heterogeneous suite (MATH + WMT + med_qa + legalbench).
 
 Every model answers only m queries per task; we estimate every (model, task)
@@ -20,9 +20,11 @@ import pandas as pd
 from joblib import Parallel, delayed
 from graspologic.embed import ClassicalMDS
 
-import helm_doublekernel as H
-from helm_qselect import family, _lofo_regress, max_dense_block
-from baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from pipeline import loaders as H
+from pipeline.query_select import family, _lofo_regress, max_dense_block
+from pipeline.baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
 
 
 def _cv_bandwidth(Zs, sample_mat, obs, k=8):
