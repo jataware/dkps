@@ -67,25 +67,23 @@ query kernel is the identity. The broader thesis is that \PKPS supplies an
 combining it with the available \emph{item-level score} signal predicts benchmark
 performance more efficiently than either alone. Our contributions:
 \begin{itemize}
-\item \textbf{Method.} A product-kernel distance $k_Q\cdot k_R$ that generalizes
-DKPS, reduces to it as the query-kernel bandwidth $\sigma\!\to\!0$, and whose
-bandwidth is chosen per run by a cheap median-scaled cross-validation
-(Section~\ref{sec:method}). We treat it as the embedding term of an
-embedding-$\oplus$-score ensemble.
-\item \textbf{Unified estimation problem.} We recover the full (model $\times$ task)
-matrix from observations where each cell has $m\ge 0$ queries, with one ensemble of
-the own sample ($m{>}0$), matrix completion ($m{=}0$), and the \PKPS embedding
-(everywhere), structured by three levers---task coverage, queries per cell (noise), and
-cohort size (Section~\ref{sec:synthetic}).
-\item \textbf{When the embedding helps.} The response embedding survives unpaired
-queries where DKPS and IRT collapse, and recovers the small-cohort regime where low-rank
-completion fails for lack of rows (Section~\ref{sec:real}).
-\item \textbf{One ensemble, every lever.} On a heterogeneous $18$-task, $93$-model
-suite spanning math, translation, medical QA and legal classification, the embedding
-already beats matrix completion on its own across coverage and cohort, and the single
-ensemble beats the best score-only predictor across noise, coverage, and cohort---by a
-margin that grows as evaluation gets sparser, noisier, or smaller-cohort
-(Section~\ref{sec:real}).
+\item \textbf{Methodological and theoretical.} We extend DKPS to the unpaired regime with a
+product-kernel affinity $k_Q\cdot k_R$ that compares responses to similar queries
+(Section~\ref{sec:method}). We show the construction is a strict generalization: it contains
+paired DKPS as the special case $k_Q=\delta$ and recovers it as the bandwidth
+$\sigma\!\to\!0$, stays defined when models answer disjoint queries (where paired DKPS is
+undefined), and interpolates between the two with a single bandwidth, which we select per run
+by a leak-free cross-validation. We state the expected query-efficiency gain as a conjecture,
+and treat the embedding as one term of an embedding-$\oplus$-score ensemble.
+\item \textbf{Empirical.} We demonstrate the method's utility and robustness to missing
+responses on the two ends of one estimation problem---query-efficient evaluation ($m{>}0$
+queries per cell) and matrix completion ($m{=}0$)---over a heterogeneous $18$-task, $93$-model
+suite spanning math, translation, medical QA, and legal classification
+(Sections~\ref{sec:synthetic}--\ref{sec:real}). The embedding survives unpaired queries where
+DKPS and IRT collapse and recovers the small-cohort regime where low-rank completion fails for
+lack of rows; the ensemble beats the best score-only predictor across task coverage, queries
+per cell, and cohort size, by a margin that grows as evaluation gets sparser, noisier, or
+smaller-cohort.
 \end{itemize}
 
 \section{Related work}
