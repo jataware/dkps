@@ -33,7 +33,7 @@ from graspologic.embed import ClassicalMDS
 
 from dkps.unpaired_dkps import ProductKernelPerspectiveSpace, pca_reduce_elbow
 from pipeline import loaders as H
-from pipeline.baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
+from dkps.baselines import irt_fit_difficulties, irt_estimate_ability, irt_predict
 
 
 def family(model):

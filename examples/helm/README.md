@@ -4,8 +4,9 @@ Real-data experiments for **Product Kernel Perspective Spaces (PKPS)** on a
 heterogeneous 18-task, 93-model suite (MATH, WMT-14, MedQA, LegalBench). This
 directory reproduces the two real-data results in the paper: query-efficient
 evaluation and matrix completion. The PKPS method itself lives in the top-level
-`dkps/` package (`dkps.unpaired_dkps.ProductKernelPerspectiveSpace`); this is its
-application to HELM.
+`dkps/` package (`dkps.unpaired_dkps.ProductKernelPerspectiveSpace`), with the
+baselines (`matrix_completion_predict`, IRT) in `dkps.baselines`; this directory
+is their application to HELM.
 
 ## Layout
 
@@ -21,7 +22,7 @@ pipeline/      core library (imported, not run directly)
   perspective.py   PKPS embedding + matrix-completion crossfit
   crossval.py      leak-free joint-observation CV loader
   query_select.py  query-efficiency helpers (dense block, leave-one-out regression)
-  baselines.py     IRT (1PL Rasch) and APW baselines
+  baselines.py     APW baseline (IRT and matrix completion live in the dkps package)
 experiments/   runnable drivers
   query_efficiency.py          Result 1: predict the full score from m queries/cell
   completion.py                Result 2: predict never-run (model, task) cells

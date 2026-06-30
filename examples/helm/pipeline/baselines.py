@@ -1,83 +1,12 @@
-"""
-IRT (1PL Rasch) and APW (Anchor Point Weighted) baselines.
+"""APW (Anchor Point Weighted) baseline -- Vivek et al., 2024 (EACL).
 
-IRT:  Polo et al., 2024
-APW:  Vivek et al., 2024 (EACL)
+The IRT baseline (Polo et al., 2024) lives in ``dkps.baselines``
+(``irt_fit_difficulties`` / ``irt_estimate_ability`` / ``irt_predict``).
 """
 
 import kmedoids as _kmedoids_lib
 import numba
 import numpy as np
-from scipy.special import expit
-from scipy.optimize import minimize, minimize_scalar
-
-
-# ==========================================================================
-# IRT  (1-Parameter Logistic / Rasch)
-# ==========================================================================
-
-def irt_fit_difficulties(S_ref):
-    """
-    Fit item difficulties beta from reference model binary scores.
-
-    Parameters
-    ----------
-    S_ref : (n_ref, M) binary score matrix
-
-    Returns
-    -------
-    beta  : (M,) item difficulty vector
-    theta : (n_ref,) ability estimates used during fitting
-    """
-    n_ref, M = S_ref.shape
-
-    # closed-form ability proxy
-    row_means = S_ref.mean(axis=1).clip(0.01, 0.99)
-    theta = np.log(row_means / (1 - row_means))
-
-    # initialise beta from column means
-    col_means = S_ref.mean(axis=0).clip(0.01, 0.99)
-    beta_init = -np.log(col_means / (1 - col_means))
-
-    def neg_ll_and_grad(beta):
-        logits = theta[:, None] - beta[None, :]   # (n_ref, M)
-        p = expit(logits)
-        log_p   = np.log(p + 1e-10)
-        log_1mp = np.log(1 - p + 1e-10)
-        loss = -(S_ref * log_p + (1 - S_ref) * log_1mp).sum()
-        grad = (S_ref - p).sum(axis=0)
-        return loss, grad
-
-    result = minimize(neg_ll_and_grad, beta_init, method='L-BFGS-B',
-                      jac=True, options={'maxiter': 500, 'ftol': 1e-9})
-    return result.x, theta
-
-
-def irt_estimate_ability(scores_m, beta_m):
-    """
-    MLE ability estimate from m query scores.
-
-    Parameters
-    ----------
-    scores_m : (m,) binary scores on the m selected queries
-    beta_m   : (m,) item difficulties for those queries
-
-    Returns
-    -------
-    float  theta_hat, capped to [-4, 4]
-    """
-    def neg_ll(theta):
-        logits = theta - beta_m
-        p = expit(logits).clip(1e-8, 1 - 1e-8)
-        return -(scores_m * np.log(p) + (1 - scores_m) * np.log(1 - p)).sum()
-
-    result = minimize_scalar(neg_ll, bounds=(-6, 6), method='bounded')
-    return float(np.clip(result.x, -4.0, 4.0))
-
-
-def irt_predict(theta_hat, beta_all):
-    """Mean predicted probability across all M queries."""
-    return float(np.clip(expit(theta_hat - beta_all).mean(), 0.0, 1.0))
 
 
 # ==========================================================================
