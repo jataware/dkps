@@ -284,15 +284,17 @@ gap is increasing as $\rho\to0$; the two are closest in the fully paired limit $
 \end{conjecture}
 
 \section{Experiments}
-A real evaluation matrix is governed by four observation levers, which structure our
-experiments. The first is the one DKPS cannot handle: (i) \emph{pairing}---the fraction
-$\rho$ of each cell's queries that are shared across models, from fully paired
-($\rho{=}1$) to fully unpaired ($\rho{=}0$). The other three set how sparse and noisy the
-observations are: (ii) \emph{task coverage}---the fraction of (model, task) cells run at
-all; (iii) \emph{queries per cell}---how many queries a run uses, which sets the per-cell
-measurement \emph{noise}; and (iv) \emph{cohort size}---the number of models. The
-all-tasks-covered, few-query limit is efficient benchmarking (denoising) and the
-zero-query limit is benchmark completion---two applications of the same embedding.
+A real evaluation matrix is governed by four observation levers. The defining one is
+(i) \emph{pairing}---the fraction $\rho$ of each cell's queries shared across models, from
+fully paired ($\rho{=}1$) to fully unpaired ($\rho{=}0$); it is the axis DKPS cannot handle,
+and we sweep it directly in the synthetic study (Section~\ref{sec:synthetic}). The other three
+set how sparse and noisy the observations are: (ii) \emph{task coverage}---the fraction of
+(model, task) cells run at all; (iii) \emph{queries per cell}---how many queries a run uses,
+which sets the per-cell measurement \emph{noise}; and (iv) \emph{cohort size}---the number of
+models. On real data (Section~\ref{sec:real}) we turn to the two regimes practitioners actually
+face, both inherently unpaired since each model is run on its own queries: the
+all-tasks-covered, few-query limit is efficient benchmarking (denoising) and the zero-query
+limit is benchmark completion---two applications of the same embedding.
 
 \subsection{Synthetic data}
 \label{sec:synthetic}
@@ -348,10 +350,12 @@ the full budget.}
 \label{sec:real}
 We evaluate on one realistic, heterogeneous benchmark, studying the two applications the
 unpaired embedding enables: making evaluation more \emph{query-efficient} (denoising cheap,
-few-query runs) and completing \emph{missing} cells. Both are \emph{unpaired} regimes---each
-model answers its own queries, so DKPS's identity matching and IRT's shared-anchor fit
-degrade while \PKPS bridges similar queries. All real-data numbers are means over $16$ seeds,
-and \PKPS selects its query bandwidth by cross-validation per run. The suite is
+few-query runs) and completing \emph{missing} cells. Both are inherently \emph{unpaired}---each
+model is run on its own queries, the real-data counterpart of the $\rho\!\to\!0$ limit swept in
+the synthetic study: DKPS's identity matching has little to align and IRT's shared-anchor fit
+cannot be estimated, while \PKPS bridges similar queries. This is where the unpaired capability
+pays off in practice. All real-data numbers are means over $16$ seeds, and \PKPS selects its
+query bandwidth by cross-validation per run. The suite is
 $18$ tasks across four datasets with very different response types---MATH ($7$ math
 subjects), WMT-14 ($5$ translation directions), MedQA (medical multiple-choice), and
 LegalBench ($5$ legal classification subsets)---on the $93$ models evaluated on all four.
