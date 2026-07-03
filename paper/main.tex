@@ -75,14 +75,14 @@ In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)
 collection of low-dimensional representations of models based on their embedded responses.
 \PKPS compares responses to \emph{similar}---rather than only identical---queries, so
 every unpaired response contributes and paired DKPS is recovered as a special case
-(Section~\ref{sec:method}). Theoretically, we extend the query-efficiency guarantee of
-\citet{dkps_qeff} to \PKPS and show that the required query budget is independent of the
-fraction of queries shared across models (Theorem~\ref{thm:qeff}). Empirically, on a
-$93$-model HELM suite and a $45$-model suite of modern models from the Every Eval Ever
-datastore \citep{eee2026}, \PKPS outperforms sample means, item-response theory, and DKPS
-wherever evaluation is sparse, noisy, or unpaired---at a single query per task it matches
-sample means given $8\times$ the budget---and, ensembled with the available score signal,
-reduces low-rank completion's error by up to $28\%$
+(Section~\ref{sec:method}). Theoretically, we show that the query budget \PKPS requires
+to reach a target accuracy does not depend on the fraction of queries shared across models
+(Theorem~\ref{thm:qeff}). Empirically, we demonstrate on two heterogeneous suites---$93$
+models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
+\citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
+theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
+means with an $8\times$ smaller query budget, and that ensembling it with score-based
+methods reduces the error of low-rank completion by up to $28\%$
 (Sections~\ref{sec:synthetic}--\ref{sec:real}).
 
 \section{Related work}
