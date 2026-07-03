@@ -36,9 +36,10 @@ such, models are often evaluated on different subsets of tasks and/or different 
 queries from a given task, and the resulting (model $\times$ task) score matrix is sparse
 and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
 (\PKPS)}---a collection of low-dimensional representations of models based on their
-embedded responses. \PKPS generalizes the Data Kernel Perspective Space (DKPS): it
-compares responses to similar---rather than only identical---queries, and so remains
-defined when models answer different queries. Theoretically, we show that \PKPS is
+embedded responses---that generalizes existing methods to the sparse and noisy evaluation
+regime. \PKPS compares responses to similar---rather than only identical---queries, and
+contains the paired-design Data Kernel Perspective Space (DKPS) as the exact-matching
+special case. Theoretically, we show that \PKPS is
 query-efficient independently of the fraction of queries shared across models.
 Empirically, on two heterogeneous suites, ensembling the \PKPS embedding with the
 available score signal---a cell's own sample mean where measured, matrix completion where
