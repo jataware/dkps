@@ -274,8 +274,7 @@ embeddings on the \emph{observed} rows only (dimension by the second Zhu--Ghodsi
 (ii) form $D$ from Eq.~\ref{eq:A}; (iii) embed models by classical MDS; (iv) map the
 embedding to scores with the \emph{same} head as the matrix-completion baseline up to the
 factor model---logit transform, per-task standardization, two-way (model $+$ task)
-bias---then $k$-NN regression of the residual on the embedding, predicting every cell
-(held-out cells directly, observed cells leave-one-out). Matching the per-task
+bias---then $k$-NN regression of the residual on the embedding, fit leave-one-family-out and predicting every cell. Matching the per-task
 standardization matters: without it the model offset is dominated by the
 highest-logit-variance tasks, biasing the embedding on multi-scale suites.
 
@@ -657,7 +656,10 @@ on synthetic).
 \paragraph{Prediction head.} All embedding methods share one head: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
 bias, and a distance-weighted $k$-NN ($k{=}5$) regression of the residual on the model
-embedding. Held-out cells are predicted directly; observed cells leave-one-out.
+embedding, fit \emph{leave-one-family-out}: all models from the target's developer are
+excluded from its training set, so predictions never lean on near-duplicate siblings
+\citep{dkps_qeff}. Held-out cells are predicted directly; observed cells leave their own
+target out.
 
 \paragraph{Baselines.} Matrix completion follows BenchPress \citep{benchpress}: logit
 space, per-task standardization, two-way bias, rank-$2$ ALS with ridge $\lambda{=}0.1$,
