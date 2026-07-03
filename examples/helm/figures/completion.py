@@ -56,7 +56,7 @@ def panel(ax, sweep, xcol, xlabel, fixed, family):
     ax.set_xlabel(xlabel, fontsize=15)
 
 
-fig, axes = plt.subplots(1, 4, figsize=(11.5, 3.7), sharey=True)
+fig, axes = plt.subplots(1, 4, figsize=(11.5, 3.4), sharey=True)
 for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     panel(ax, *spec)
     # single left-aligned title (bold letter + fixed params) -- avoids the

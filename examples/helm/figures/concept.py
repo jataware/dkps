@@ -117,7 +117,7 @@ pred_dk, pred_pk = _loo_predict(Zdk_raw), _loo_predict(Zpk_raw)
 Zdk, Zpk = _align(Zdk_raw), _align(Zpk_raw)         # rotation is display-only (LOO is rotation-invariant)
 mae_dk, mae_pk = np.mean(np.abs(pred_dk - yE)), np.mean(np.abs(pred_pk - yE))
 
-fig = plt.figure(figsize=(11.5, 3.49))   # aspect preserved (15.5:4.7) so the fig-fraction layout
+fig = plt.figure(figsize=(11.5, 3.3))   # aspect preserved (15.5:4.7) so the fig-fraction layout
                                          # below is unchanged; narrower fig -> fonts render larger
                                          # at \textwidth (squeeze 0.48, matching the other figures)
 gs = GridSpec(2, 5, width_ratios=[0.82, 1, 1, 0.5, 0.5], height_ratios=[0.58, 1.42],
