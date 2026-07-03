@@ -4,6 +4,7 @@ fraction of cells (each with a fraction p_query of its queries), predict the MIS
 Low-rank matrix completion vs the PKPS embedding vs the ensemble; MAE over MISSING cells,
 +/- 1 SEM. Colour = method; line style = cohort size (solid n=93, dashed n=10). Four levers:
 task coverage, query depth p_query, number of tasks T, and cohort n."""
+import argparse
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -20,16 +21,23 @@ import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 
-D = Path('results-pkps-unified')
+ap = argparse.ArgumentParser()
+ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
+args = ap.parse_args()
+# suite-specific: results dir, full cohort n, task count T, output stem
+CFG = {'helm': dict(dir='results-pkps-unified', n=93, T=18, stem='fig_suite_completion'),
+       'eee':  dict(dir='results-eee-unified',  n=45, T=16, stem='fig_eee_completion')}[args.suite]
+D = Path(CFG['dir'])
 COL = {'mc': '#348ABC', 'pkps': '#E24A33', 'ens': '#8C564B'}
 LBL = {'mc': 'matrix completion', 'pkps': 'PKPS', 'ens': 'ensemble'}
 LW = {'mc': 2.6, 'pkps': 2.6, 'ens': 3.6}
-NLS = {93: '-', 10: '--'}                       # cohort -> line style
+NLS = {CFG['n']: '-', 10: '--'}                 # cohort -> line style
+N, T = CFG['n'], CFG['T']
 # (sweep, xcol, xlabel, fixed-title, line-family?)
-PANELS = [('coverage', 'p_task', r'task coverage $p_{\mathrm{task}}$', r'$p_{\mathrm{query}}{=}0.5,\ T{=}18$', True),
-          ('p_query', 'p_query', r'query depth $p_{\mathrm{query}}$',  r'$p_{\mathrm{task}}{=}0.5,\ T{=}18$', True),
+PANELS = [('coverage', 'p_task', r'task coverage $p_{\mathrm{task}}$', rf'$p_{{\mathrm{{query}}}}{{=}}0.5,\ T{{=}}{T}$', True),
+          ('p_query', 'p_query', r'query depth $p_{\mathrm{query}}$',  rf'$p_{{\mathrm{{task}}}}{{=}}0.5,\ T{{=}}{T}$', True),
           ('n_tasks', 'n_tasks', r'number of tasks $T$',              r'$p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.5$', True),
-          ('n_models', 'n_models', r'number of models $n$',           r'$p_{\mathrm{task}}{=}0.5,\ p_{\mathrm{query}}{=}0.5,\ T{=}18$', False)]
+          ('n_models', 'n_models', r'number of models $n$',           rf'$p_{{\mathrm{{task}}}}{{=}}0.5,\ p_{{\mathrm{{query}}}}{{=}}0.5,\ T{{=}}{T}$', False)]
 
 
 def panel(ax, sweep, xcol, xlabel, fixed, family):
@@ -57,12 +65,12 @@ for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     ax.tick_params(labelsize=13)
 axes[0].set_ylabel('MAE on missing cells', fontsize=15)
 meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
-n_h = [Line2D([0], [0], color='#444', ls='-', label='$n{=}93$'),
+n_h = [Line2D([0], [0], color='#444', ls='-', label=rf'$n{{=}}{N}$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
 fig.legend(handles=meth_h + n_h, loc='upper center', ncol=5, frameon=False,
            bbox_to_anchor=(0.5, 0.97), fontsize=13.5)
 fig.suptitle('Matrix completion', fontsize=18, fontweight='bold', y=1.03)
 fig.tight_layout(rect=[0, 0, 1, 0.88])
 for ext in ('png', 'pdf'):
-    fig.savefig(f'results-pkps-unified/fig_suite_completion.{ext}', dpi=200, bbox_inches='tight')
-print('wrote results-pkps-unified/fig_suite_completion.png')
+    fig.savefig(D / f'{CFG["stem"]}.{ext}', dpi=200, bbox_inches='tight')
+print(f'wrote {D}/{CFG["stem"]}.png')

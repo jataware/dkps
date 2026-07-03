@@ -3,6 +3,7 @@
 Each cell is observed with m noisy queries; predict its true (full-budget) score. Sample =
 the m-query mean; DKPS/PKPS denoise via the perspective; IRT is the item-response baseline;
 ensemble = sample (+) PKPS. Three observation levers; MAE over observed cells, +/- 1 SEM."""
+import argparse
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -19,7 +20,13 @@ import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 
-D = Path('results-pkps-rd1')
+ap = argparse.ArgumentParser()
+ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
+args = ap.parse_args()
+# suite-specific: results dir, full cohort size n, output stem
+CFG = {'helm': dict(dir='results-pkps-rd1', n=93, stem='fig_suite_query_efficiency'),
+       'eee':  dict(dir='results-eee-rd1',  n=45, stem='fig_eee_query_efficiency')}[args.suite]
+D = Path(CFG['dir'])
 # colour = method; line style = score-only (dashed: sample, IRT) vs response embedding
 # (solid: DKPS, PKPS); the ensemble is solid and thicker.
 STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
@@ -28,9 +35,10 @@ STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
          'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),
          'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=3.6)}
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
-PANELS = [('budget',   'm',       r'queries per cell $m$',           r'$n{=}93,\ p_{\mathrm{task}}{=}1$', True),
+N = CFG['n']
+PANELS = [('budget',   'm',       r'queries per cell $m$',           rf'$n{{=}}{N},\ p_{{\mathrm{{task}}}}{{=}}1$', True),
           ('n_models', 'n_models', r'number of models $n$',          r'$m{=}2,\ p_{\mathrm{task}}{=}1$',   False),
-          ('coverage', 'p_task',  r'task coverage $p_{\mathrm{task}}$', r'$m{=}2,\ n{=}93$',              False)]
+          ('coverage', 'p_task',  r'task coverage $p_{\mathrm{task}}$', rf'$m{{=}}2,\ n{{=}}{N}$',              False)]
 
 
 def panel(ax, sweep, xcol, xlabel, fixed, logx):
@@ -65,5 +73,5 @@ fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False,
 fig.suptitle('Query efficiency', fontsize=17.5, fontweight='bold', y=1.02)
 fig.tight_layout(rect=[0, 0, 1, 0.87])
 for ext in ('png', 'pdf'):
-    fig.savefig(f'results-pkps-rd1/fig_suite_query_efficiency.{ext}', dpi=200, bbox_inches='tight')
-print('wrote results-pkps-rd1/fig_suite_query_efficiency.png')
+    fig.savefig(D / f'{CFG["stem"]}.{ext}', dpi=200, bbox_inches='tight')
+print(f'wrote {D}/{CFG["stem"]}.png')
