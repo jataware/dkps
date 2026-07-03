@@ -299,22 +299,23 @@ exactly the same information.
 \PKPS is designed to reach a target prediction accuracy from fewer evaluated queries than
 paired DKPS: by bridging responses to similar queries it uses evidence that DKPS, limited
 to shared queries, discards. The query-efficiency analysis of \citet{dkps_qeff} extends to
-\PKPS. Assume (A1) the benchmark score is $\gamma$-Lipschitz on the population perspective
-space; (A2) the model distribution places mass on every neighborhood, so a near reference
-neighbor exists; (A3) kernels and embedded responses are bounded; and (A4) the
+\PKPS. Assume (A1) the benchmark score is bounded and $\gamma$-Lipschitz on the population
+perspective space; (A2) the model distribution places mass on every neighborhood, so a near
+reference neighbor exists; (A3) kernels and embedded responses are bounded; (A4) the
 \emph{cross-model query-kernel mass} is bounded below,
 $\kappa=\inf_{a,b}\,\mathbb{E}\,[k_Q(u,u')]>0$ for queries drawn from any two models'
-designs. (A4) is the population analogue of the overlap $\rho$: for an RBF $k_Q$ it holds
-whenever the query \emph{distributions} overlap in embedding space, even if no individual
-query is shared.
-\begin{theorem}[Query efficiency of \PKPS; informal]
+designs; and (A5) the population squared-distance matrix embeds in $\mathbb{R}^d$, with a
+spectral gap $\lambda_d>0$ in its centered Gram matrix. (A4) is the population analogue of
+the overlap $\rho$: for an RBF $k_Q$ it holds whenever the query \emph{distributions}
+overlap in embedding space, even if no individual query is shared.
+\begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Under (A1)--(A4), for any $\epsilon>0$ there exist $(n,m)$ with $m$ polynomial in
-$(1/\epsilon,1/\kappa)$ and independent of the pairing fraction $\rho$ such that
+Under (A1)--(A5), for any $\epsilon>0$ there exist $(n,m)$, with $m$ polynomial in
+$(1/\epsilon,1/\kappa,n)$ and independent of the pairing fraction $\rho$, such that
 nearest-neighbor regression in the \PKPS attains mean squared error at most $\epsilon$
 with high probability.
 \end{theorem}
-The proof sketch (Appendix~\ref{app:proof}) follows the DKPS argument: a
+The proof (Appendix~\ref{app:proof}) follows the DKPS argument: a
 triangle-inequality decomposition of the regression error into estimation error,
 controlled by concentration of the estimated perspectives, and approximation error,
 controlled by (A1)--(A2). The one new ingredient is a concentration lemma for the
@@ -542,9 +543,9 @@ block-diagonal instantiation deliberately disables cross-domain bridging, so the
 cannot transfer signal between, say, math and legal responses; whether a shared response
 space would help is open. Computing the affinity is quadratic in queries per model pair,
 which is practical at benchmark scale but would need approximation for very large query
-logs. Theorem~\ref{thm:qeff} is a proof sketch at the level of \citet{dkps_qeff}, and the
-strict separation from paired DKPS remains a conjecture. Finally, our real-data evidence
-comes from one (albeit
+logs. Theorem~\ref{thm:qeff} is existential---(A2) yields no explicit rate in the number
+of reference models---and the strict separation from paired DKPS remains a conjecture.
+Finally, our real-data evidence comes from one (albeit
 heterogeneous) $18$-task suite; the per-cell wins over strong score-only baselines are
 modest on low-rank, densely-observed matrices and decisive only where evaluation is sparse,
 noisy, unpaired, or small-cohort---which is, however, the regime that motivates the problem.
@@ -607,50 +608,104 @@ $k$-NN regression with $k{=}5$. Panel-specific settings are given in each figure
 \paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
 are precomputed once through the embedding API and cached.
 
-\section{Proof sketch for Theorem~\ref{thm:qeff}}
+\section{Proof of Theorem~\ref{thm:qeff}}
 \label{app:proof}
 
-\paragraph{Population quantities.} Let queries for model $a$ be drawn i.i.d.\ from a design
-distribution $\mu_a$ over embedded queries, and define the population affinity
-$A^*_{ab}=\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]\,/\,\mathbb{E}\,[k_Q(u,u')]$ with
-$u\sim\mu_a$, $u'\sim\mu_b$, expectations taken over queries and response noise. The
-population distances $D^*(a,b)$ and perspectives $\psi_a$ are defined from $A^*$ exactly as
-in Section~\ref{sec:method}; we assume the population distance matrix embeds in
-$\mathbb{R}^d$.
+\paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
+distribution over embedded queries; write $z=(u,x_a(u))$ for an embedded query--response
+pair (response noise included) and $P_a$ for its law. By (A3) the kernels are bounded:
+$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population affinity
+\[
+A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
+\qquad z\sim P_a,\; z'\sim P_b \text{ independent},
+\]
+population squared distances $D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, the centered Gram
+matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
+population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
+which exists with $\lambda_d(B^*)>0$ by (A5).
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
-Under (A3)--(A4), with $|Q_a|=|Q_b|=m$,
-$\;|A_{ab}-A^*_{ab}| = O_P\!\big(\kappa^{-1} m^{-1/2}\big)$.
-\end{lemma}
-
-\emph{Sketch.} The numerator and denominator of Eq.~\ref{eq:A} are two-sample
-$U$-statistics of order $(1,1)$ in the queries with bounded kernels ((A3); the RBF $k_Q$ is
-bounded by $1$), so each concentrates around its mean at rate $O_P(m^{-1/2})$ by
-Hoeffding-type bounds for two-sample $U$-statistics; response noise is averaged by the same
-double sum, so the number of responses per query may stay fixed. On the event that the
-denominator exceeds $\kappa/2$---which (A4) grants with high probability---the ratio
-inherits the rate with a $\kappa^{-1}$ factor. \hfill$\square$
-
-\paragraph{From affinities to perspectives.} Lemma~\ref{lem:conc} with a union bound over
-the $O(n^2)$ pairs gives $\max_{ab}|D(a,b)-D^*(a,b)|=O_P(\kappa^{-1}m^{-1/2}\sqrt{\log n})$.
-The classical-MDS perturbation analysis of \citet{acharyya2024consistent,
-acharyya2025concentration} then bounds the perspective error,
-$\max_i\|\hat\psi_i-\psi_i\| = c(n,m)\to0$ as $m\to\infty$ for fixed $n$.
-
-\paragraph{Regression error.} As in \citet{dkps_qeff}: for a target model $f$ with nearest
-reference neighbor $f^*$ in the estimated space,
+Under (A3)--(A4), for models $a,b$ with $\min(|Q_a|,|Q_b|)\ge m$ and any
+$\delta\in(0,1)$: with probability at least $1-\delta$,
 \[
-|\hat y(f)-y(f)| \;\le\; \gamma\,\|\psi^*-\psi\| \;\le\;
-\gamma\big(\underbrace{\|\psi^*-\hat\psi^*\|+\|\hat\psi-\psi\|}_{\le\,2c(n,m)}
-+\underbrace{\|\hat\psi^*-\hat\psi\|}_{\text{NN distance}}\big),
+|A_{ab}-A^*_{ab}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
+\qquad t_m(\delta)=2B_R\sqrt{\frac{\log(4/\delta)}{2m}},
 \]
-using (A1) for the first inequality. By (A2) the population NN distance vanishes as
-$n\to\infty$, and the estimation terms vanish as $m\to\infty$ by
-Lemma~\ref{lem:conc}; choosing $n$ then $m=\mathrm{poly}(1/\epsilon,1/\kappa)$ gives
-$\mathrm{MSE}\le\epsilon$. No step involves the pairing fraction $\rho$: the effective
-sample size of Lemma~\ref{lem:conc} is set by $\kappa$, which for an RBF $k_Q$ is positive
-whenever the query designs overlap in embedding space.
+provided $t_m(\delta)\le\kappa/2$.
+\end{lemma}
+\begin{proof}
+The numerator $N=\frac{1}{|Q_a||Q_b|}\sum_{j,l}k_Q(u_j,u'_l)\,k_R(x_{aj},x_{bl})$ and
+denominator $Z=\frac{1}{|Q_a||Q_b|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\ref{eq:A} are
+two-sample $U$-statistics of order $(1,1)$ in the i.i.d.\ pairs $z_j\sim P_a$,
+$z'_l\sim P_b$, with kernels of range at most $2B_R$ and $1$ respectively (response noise
+enters only through the bounded kernel argument, so the number of responses per query may
+stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
+\citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
+$\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; a union bound gives
+$|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$ jointly with probability
+$\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by (A4) and $t_m(\delta)\le\kappa/2$,
+we have $Z\ge\kappa/2$, and
+\[
+|A_{ab}-A^*_{ab}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
+\;\le\;\frac{|N-N^*|}{Z}+\frac{|N^*|\,|Z-Z^*|}{ZZ^*}
+\;\le\;\frac{2\,t_m(\delta)}{\kappa}+\frac{2B_R\,t_m(\delta)}{\kappa^2}
+\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
+\]
+using $|N^*|\le B_R$ and $\kappa\le1$.
+\end{proof}
+
+\begin{lemma}[Perspective perturbation]
+\label{lem:pert}
+Let $\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|$. There are an orthogonal
+$W\in\mathbb{R}^{d\times d}$ and a constant $C$ depending only on $\|B^*\|$ and $d$ such
+that
+\[
+\max_i\;\|\hat\psi_i-W\psi_i\|\;\le\;
+C\Big(\lambda_d(B^*)^{-1/2}+\|B^*\|^{1/2}\lambda_d(B^*)^{-1}\Big)\,n\,\varepsilon_\infty .
+\]
+\end{lemma}
+\begin{proof}
+Entrywise, $|D^2-D^{*2}|\le4\varepsilon_\infty$, and double centering inflates an
+entrywise bound by at most a factor of $4$, so
+$\|B-B^*\|\le\|B-B^*\|_F\le16\,n\,\varepsilon_\infty$. Weyl's inequality bounds the
+eigenvalue perturbation by $\|B-B^*\|$, and the Davis--Kahan theorem in the form of
+\citet{yu2015useful} bounds the distance between the top-$d$ eigenspaces by
+$2\|B-B^*\|/\lambda_d(B^*)$ up to an orthogonal alignment $W$. Propagating both through
+the spectral embedding $\Psi=V\Lambda^{1/2}$ (eigenvalue error through
+$|\sqrt{x}-\sqrt{y}|\le|x-y|/\sqrt{\lambda_d}$, eigenvector error scaled by
+$\|B^*\|^{1/2}$) gives the stated row-wise bound. Nearest-neighbor distances are invariant
+to $W$.
+\end{proof}
+
+\paragraph{Proof of Theorem~\ref{thm:qeff}.} Take scores in $[0,1]$ without loss of
+generality (A1). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
+the estimation error and $\epsilon'\le\sqrt{\epsilon/2}/(2\gamma)$ for the population
+nearest-neighbor distance. By (A2) there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
+reference model within population distance $\epsilon'$ of the target exists except with
+probability at most $\epsilon/8$. Fix such an $n$. Applying Lemma~\ref{lem:conc} with
+confidence $\delta=\epsilon/(8n^2)$ to every pair, a union bound and
+Lemma~\ref{lem:pert} give $\max_i\|\hat\psi_i-W\psi_i\|\le c$ except with probability at
+most $\epsilon/8$, once
+\[
+m\;\ge\;C'\,\frac{(1+B_R)^2B_R^2\,n^2\log(n/\epsilon)}{\kappa^4\,c^2}
+\Big(\lambda_d^{-1/2}+\|B^*\|^{1/2}\lambda_d^{-1}\Big)^{2}
+\;=\;\mathrm{poly}(n,1/\kappa,1/\epsilon),
+\]
+which does not involve the pairing fraction $\rho$. On the intersection of the two
+events, for a target model $f$ with nearest estimated reference neighbor $f^*$
+(perspectives $\psi^*,\hat\psi^*$; the target's $\psi,\hat\psi$),
+\[
+|\hat y(f)-y(f)|\;\le\;\gamma\,\|\psi^*-\psi\|\;\le\;
+\gamma\big(\|\hat\psi^*-W\psi^*\|+\|\hat\psi^*-\hat\psi\|+\|\hat\psi-W\psi\|\big)
+\;\le\;\gamma\,(2c+\hat\delta),
+\]
+using (A1) and orthogonal invariance. The estimated nearest-neighbor distance
+$\hat\delta$ is at most the estimated distance to the $\epsilon'$-close reference, itself
+at most $\epsilon'+2c$ by the same alignment argument, so
+$|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding the two
+failure events (squared errors are bounded by $1$),
+$\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 
 \paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
 pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
