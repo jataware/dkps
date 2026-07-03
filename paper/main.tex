@@ -630,7 +630,7 @@ Under (A3)--(A4), for models $a,b$ with $\min(|Q_a|,|Q_b|)\ge m$ and any
 $\delta\in(0,1)$: with probability at least $1-\delta$,
 \[
 |A_{ab}-A^*_{ab}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
-\qquad t_m(\delta)=2B_R\sqrt{\frac{\log(4/\delta)}{2m}},
+\qquad t_m(\delta)=\bar B\sqrt{\frac{\log(4/\delta)}{2m}},\quad \bar B=\max(2B_R,1),
 \]
 provided $t_m(\delta)\le\kappa/2$.
 \end{lemma}
@@ -642,9 +642,9 @@ $z'_l\sim P_b$, with kernels of range at most $2B_R$ and $1$ respectively (respo
 enters only through the bounded kernel argument, so the number of responses per query may
 stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
 \citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
-$\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; a union bound gives
-$|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$ jointly with probability
-$\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by (A4) and $t_m(\delta)\le\kappa/2$,
+$\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; since $\bar B$ dominates
+both ranges, a union bound gives $|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$
+jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by (A4) and $t_m(\delta)\le\kappa/2$,
 we have $Z\ge\kappa/2$, and
 \[
 |A_{ab}-A^*_{ab}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
@@ -657,25 +657,39 @@ using $|N^*|\le B_R$ and $\kappa\le1$.
 
 \begin{lemma}[Perspective perturbation]
 \label{lem:pert}
-Let $\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|$. There are an orthogonal
-$W\in\mathbb{R}^{d\times d}$ and a constant $C$ depending only on $\|B^*\|$ and $d$ such
-that
+Let $\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|$. There is an orthogonal
+$W\in\mathbb{R}^{d\times d}$ such that
 \[
 \max_i\;\|\hat\psi_i-W\psi_i\|\;\le\;
-C\Big(\lambda_d(B^*)^{-1/2}+\|B^*\|^{1/2}\lambda_d(B^*)^{-1}\Big)\,n\,\varepsilon_\infty .
+\frac{25\sqrt{d}\;n\,\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}\,.
 \]
 \end{lemma}
 \begin{proof}
 Entrywise, $|D^2-D^{*2}|\le4\varepsilon_\infty$, and double centering inflates an
-entrywise bound by at most a factor of $4$, so
-$\|B-B^*\|\le\|B-B^*\|_F\le16\,n\,\varepsilon_\infty$. Weyl's inequality bounds the
-eigenvalue perturbation by $\|B-B^*\|$, and the Davis--Kahan theorem in the form of
-\citet{yu2015useful} bounds the distance between the top-$d$ eigenspaces by
-$2\|B-B^*\|/\lambda_d(B^*)$ up to an orthogonal alignment $W$. Propagating both through
-the spectral embedding $\Psi=V\Lambda^{1/2}$ (eigenvalue error through
-$|\sqrt{x}-\sqrt{y}|\le|x-y|/\sqrt{\lambda_d}$, eigenvector error scaled by
-$\|B^*\|^{1/2}$) gives the stated row-wise bound. Nearest-neighbor distances are invariant
-to $W$.
+entrywise bound by at most a factor of $4$, so $E=B-B^*$ satisfies
+$\|E\|_{\mathrm{op}}\le\|E\|_F\le8\,n\,\varepsilon_\infty$. Let $B_d$ be the top-$d$
+truncation of $B$ that classical MDS embeds ($B_d=\hat\Psi\hat\Psi^\top$, positive
+semidefinite). By Weyl's inequality every eigenvalue of $B$ beyond the $d$-th, and every
+negative eigenvalue, has magnitude at most $\|E\|_{\mathrm{op}}$ (since
+$\lambda_{d+1}(B^*)=0$ and $B^*\succeq0$), so
+$\|B_d-B\|_{\mathrm{op}}\le\|E\|_{\mathrm{op}}$. The matrix $B_d-B^*$ has rank at most
+$2d$, hence
+\[
+\|B_d-B^*\|_F\;\le\;\sqrt{2d}\,\|B_d-B^*\|_{\mathrm{op}}
+\;\le\;\sqrt{2d}\,\big(\|B_d-B\|_{\mathrm{op}}+\|E\|_{\mathrm{op}}\big)
+\;\le\;2\sqrt{2d}\,\|E\|_F .
+\]
+Both $B_d=\hat\Psi\hat\Psi^\top$ and $B^*=\Psi^*\Psi^{*\top}$ are positive semidefinite of
+rank at most $d$, so by the Procrustes alignment lemma of
+\citet[Lemma~5.4]{tu2016procrustes},
+\[
+\min_{W\in O(d)}\;\|\hat\Psi-\Psi^*W\|_F^2
+\;\le\;\frac{\|B_d-B^*\|_F^2}{2(\sqrt2-1)\,\lambda_d(B^*)}\,.
+\]
+Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
+\frac{2\sqrt{2d}}{\sqrt{2(\sqrt2-1)}}\cdot\frac{8n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}
+\le\frac{25\sqrt d\,n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}$. Nearest-neighbor
+distances are invariant to $W$.
 \end{proof}
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}.} Take scores in $[0,1]$ without loss of
@@ -688,11 +702,12 @@ confidence $\delta=\epsilon/(8n^2)$ to every pair, a union bound and
 Lemma~\ref{lem:pert} give $\max_i\|\hat\psi_i-W\psi_i\|\le c$ except with probability at
 most $\epsilon/8$, once
 \[
-m\;\ge\;C'\,\frac{(1+B_R)^2B_R^2\,n^2\log(n/\epsilon)}{\kappa^4\,c^2}
-\Big(\lambda_d^{-1/2}+\|B^*\|^{1/2}\lambda_d^{-1}\Big)^{2}
+m\;\ge\;C'\,\frac{d\,(1+B_R)^2\,\bar B^2\,n^2\log(n/\epsilon)}{\kappa^4\,\lambda_d\,c^2}
 \;=\;\mathrm{poly}(n,1/\kappa,1/\epsilon),
 \]
-which does not involve the pairing fraction $\rho$. On the intersection of the two
+for an absolute constant $C'$ (this choice also satisfies the proviso
+$t_m\le\kappa/2$ of Lemma~\ref{lem:conc}), and does not involve the pairing fraction
+$\rho$. On the intersection of the two
 events, for a target model $f$ with nearest estimated reference neighbor $f^*$
 (perspectives $\psi^*,\hat\psi^*$; the target's $\psi,\hat\psi$),
 \[

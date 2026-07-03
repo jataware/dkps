@@ -160,6 +160,13 @@ Warren~S Torgerson.
 \newblock Multidimensional scaling: I. theory and method.
 \newblock In \emph{Psychometrika}, 1952.
 
+\bibitem[Tu et~al.(2016)Tu, Boczar, Simchowitz, Soltanolkotabi, and
+  Recht]{tu2016procrustes}
+Stephen Tu, Ross Boczar, Max Simchowitz, Mahdi Soltanolkotabi, and Benjamin
+  Recht.
+\newblock Low-rank solutions of linear matrix equations via procrustes flow.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2016.
+
 \bibitem[Vivek et~al.(2024)Vivek, Ethayarajh, Yang, and Kiela]{vivek2024anchor}
 Rajan Vivek, Kawin Ethayarajh, Diyi Yang, and Douwe Kiela.
 \newblock Anchor points: Benchmarking models with much fewer examples.
@@ -174,11 +181,6 @@ Colin White, Samuel Dooley, Manley Roberts, Arka Pal, Ben Feuer, Siddhartha
   Goldblum.
 \newblock Livebench: A challenging, contamination-free llm benchmark.
 \newblock \emph{arXiv preprint arXiv:2406.19314}, 2024.
-
-\bibitem[Yu et~al.(2015)Yu, Wang, and Samworth]{yu2015useful}
-Yi~Yu, Tengyao Wang, and Richard~J. Samworth.
-\newblock A useful variant of the davis--kahan theorem for statisticians.
-\newblock \emph{Biometrika}, 102\penalty0 (2):\penalty0 315--323, 2015.
 
 \bibitem[Zeng and Papailiopoulos(2026)]{benchpress}
 Yuchen Zeng and Dimitris Papailiopoulos.
