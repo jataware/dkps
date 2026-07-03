@@ -3,6 +3,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{amsthm}
 \newtheorem{conjecture}{Conjecture}
+\newtheorem{proposition}{Proposition}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -32,21 +33,23 @@ Space as the bandwidth $\sigma\!\to\!0$ and stays defined when models answer dif
 queries. Ensembling this embedding with the available score signal---a cell's own sample mean
 where measured, matrix completion where not---makes efficient benchmarking and benchmark
 completion two ends of one problem. On a heterogeneous $18$-task, $93$-model suite, the
-ensemble beats the best score-only predictor across task coverage, queries per cell, and
-cohort size; the embedding survives unpaired queries where DKPS and IRT collapse, and rescues
+ensemble matches or beats the best score-only predictor across task coverage, queries per
+cell, and cohort size, by a margin that grows as evaluation gets sparser and noisier; the
+embedding survives unpaired queries where DKPS and IRT collapse, and rescues
 small cohorts where low-rank completion fails for lack of rows.
 \end{abstract}
 
 \section{Introduction}
 Comprehensive evaluation of language models is a growing bottleneck: leaderboards
 track hundreds of models across dozens of benchmarks, yet no model is run on
-everything. The resulting (model $\times$ task) score matrix is \emph{doubly
-sparse}. \emph{Across tasks}, a model is evaluated on a subset of benchmarks
-(missing tasks). \emph{Within a task}, evaluation may use only a subset of queries
-to save cost (missing queries). Predicting the missing entries---a model's score on
-a task it has not been (fully) run on---would let practitioners reuse cached
-evaluations instead of paying to re-run them \citep{polo2024tinybenchmarks,
-vivek2024anchor, benchpress}.
+everything---a recent compilation of $84$ frontier models on $133$ benchmarks finds
+only $23\%$ of the score matrix filled \citep{benchpress}. The resulting
+(model $\times$ task) score matrix is \emph{doubly sparse}. \emph{Across tasks}, a
+model is evaluated on a subset of benchmarks (missing tasks). \emph{Within a task},
+evaluation may use only a subset of queries to save cost (missing queries).
+Predicting the missing entries---a model's score on a task it has not been (fully)
+run on---would let practitioners reuse cached evaluations instead of paying to re-run
+them \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
 
 The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} is a black-box approach:
 it embeds each model from its query responses, places models in a low-dimensional
@@ -54,9 +57,13 @@ Euclidean space via classical multidimensional scaling, and regresses benchmark
 scores in that space. DKPS is query-efficient and competitive with item-response
 theory. However, it has a structural limitation: the distance between two models is the
 average squared difference of their responses \emph{to the same queries}, so DKPS
-requires a \emph{paired} design. When models answer different queries---the common
-case in real, organically-assembled leaderboards---DKPS has nothing to compare and
-the information in those unpaired responses is thrown away.
+requires a \emph{paired} design. Real evaluation data is routinely unpaired: arena-style
+platforms score each model on whatever conversations its users happen to have
+\citep{chiang2024chatbot}; contamination-driven benchmarks refresh their items, so models
+evaluated in different months answer different questions \citep{white2024livebench}; and
+cost-driven subsampling \citep{perlitz2024efficient} gives each evaluation run its own
+item subset. In all of these, DKPS has nothing to compare and the information in the
+unpaired responses is thrown away.
 
 We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}. The key change
 is to compare responses to \emph{similar} queries, not only identical ones, by
@@ -81,9 +88,9 @@ queries per cell) and matrix completion ($m{=}0$)---over a heterogeneous $18$-ta
 suite spanning math, translation, medical QA, and legal classification
 (Sections~\ref{sec:synthetic}--\ref{sec:real}). The embedding survives unpaired queries where
 DKPS and IRT collapse and recovers the small-cohort regime where low-rank completion fails for
-lack of rows; the ensemble beats the best score-only predictor across task coverage, queries
-per cell, and cohort size, by a margin that grows as evaluation gets sparser, noisier, or
-smaller-cohort.
+lack of rows; the ensemble matches or beats the best score-only predictor across task
+coverage, queries per cell, and cohort size, by a margin that grows as evaluation gets
+sparser, noisier, or smaller-cohort.
 \end{itemize}
 
 \section{Related work}
@@ -134,7 +141,9 @@ $\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$ (e.g.\ different text-embedding
 For $q_j\in Q_i$ we average the embeddings of the $r$ sampled responses,
 $x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)\in\mathbb{R}^{p}$,
 and write $u_j=\mathrm{embed}_Q(q_j)$ for the embedded query. The goal is to predict each
-model's benchmark score $y_i\in\mathcal{Y}$.
+model's true score on each task, $y_{it}\in\mathcal{Y}$---including tasks the model was run
+on with few queries (denoising) and tasks it was never run on (completion); we write $y_i$
+when the benchmark has a single score.
 
 \paragraph{Perspective space.} Each method summarizes the $n$ models in an $n\times n$
 affinity matrix $A$ (defined below). The squared distance between two models is
@@ -167,10 +176,15 @@ $k_Q=\delta$, where only $j=l$ survives.
 
 \paragraph{Kernels.} The response kernel $k_R$ compares embedded responses, the query
 kernel $k_Q$ compares embedded queries. Paired DKPS uses a linear response kernel and the
-identity query kernel $k_Q=\delta$. Throughout our analysis we use a linear or RBF $k_R$
-and an RBF query kernel over the embedded queries,
+identity query kernel $k_Q=\delta$. We use an RBF query kernel over the embedded queries,
 $k_Q(q_j,q_l)=\exp(-\|u_j-u_l\|^2/2\sigma^2)$, with bandwidth $\sigma$ chosen per run
-(below).
+(below); $k_R$ is RBF in the synthetic study and linear on real data, where linearity makes
+the kernel factorize across response domains (Section~\ref{sec:real}). Because
+Eq.~\ref{eq:A} normalizes each pair by its own kernel mass, $A$ is a ratio of kernel sums
+and need not be positive semidefinite; as is standard for such dissimilarities, classical
+MDS embeds the doubly-centered matrix using its top-$d$ nonnegative eigenvalues. Computing
+$A_{ab}$ costs $|Q_a||Q_b|$ kernel terms per model pair, and one pass over the
+response-kernel terms serves every query bandwidth on the grid.
 
 \begin{figure}[t]
 \centering
@@ -203,22 +217,30 @@ diagonal (MAE $0.07$).}
 \end{figure}
 
 \subsection{Theoretical properties of the \PKPS}
-\PKPS is a strict generalization of DKPS. \textbf{(i) DKPS limit.} Take $k_Q=\delta$, the
-indicator $\mathbf{1}[q_j=q_l]$. Since the double sum already ranges over $j\in Q_a$,
+\PKPS is a strict generalization of DKPS.
+\begin{proposition}[Strict generalization]
+\label{prop:gen}
+(i)~\emph{DKPS limit.} With $k_Q=\delta$, Eq.~\ref{eq:A} reduces to paired DKPS over the
+shared queries, $A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$;
+if the query embeddings are distinct, the RBF query kernel converges to $\delta$ as
+$\sigma\!\to\!0$, so DKPS is also the small-bandwidth limit.
+(ii)~\emph{Unpaired comparability.} For any strictly positive $k_Q$ (e.g.\ RBF), $A_{ab}$
+is defined for every pair of nonempty query sets, including disjoint ones, whereas paired
+DKPS is undefined when $Q_a\cap Q_b=\emptyset$.
+\end{proposition}
+\begin{proof}
+(i) Take $k_Q(q_j,q_l)=\mathbf{1}[q_j=q_l]$. Since the double sum ranges over $j\in Q_a$,
 $l\in Q_b$, a term survives only if the two queries are equal \emph{and} that query lies in
-both sets,
-$\mathbf{1}[q_j=q_l]\,\mathbf{1}[q_j\in Q_a]\,\mathbf{1}[q_l\in Q_b]=\mathbf{1}[q_j=q_l\in
-Q_a\cap Q_b]$, so $A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$
----exactly paired DKPS over the shared queries (the same-$m$-queries case recovers
-$\tfrac1m\sum_j k_R(x_{aj},x_{bj})$). Moreover, as $\sigma\!\to\!0$ the RBF kernel converges
-to $\delta$ (distinct queries have distinct embeddings), so DKPS is recovered in the
-small-bandwidth limit. \textbf{(ii) Unpaired
-comparability.} Because each affinity is normalized by its own query-kernel mass
-$\sum_{jl}k_Q(q_j,q_l)$, two models that answered different---or entirely disjoint---query
-sets remain comparable, whereas paired DKPS, which sums only over shared queries, is
-undefined when no query is shared. \textbf{(iii) Bandwidth interpolation.} Increasing
-$\sigma$ smoothly trades exact query matching for cross-query bridging, so a single
-scalar controls how much unpaired evidence the perspective uses.
+both sets, $\mathbf{1}[q_j=q_l]\,\mathbf{1}[q_j\in Q_a]\,\mathbf{1}[q_l\in Q_b]
+=\mathbf{1}[q_j=q_l\in Q_a\cap Q_b]$; the normalizer counts the same terms, giving the
+stated average (the same-$m$-queries case recovers $\tfrac1m\sum_j k_R(x_{aj},x_{bj})$).
+For the limit, $\exp(-\|u_j-u_l\|^2/2\sigma^2)\to\mathbf{1}[u_j=u_l]$ pointwise as
+$\sigma\to0$. (ii) With $k_Q>0$ the normalizer $\sum_{jl}k_Q(q_j,q_l)$ is positive for any
+nonempty $Q_a,Q_b$, so the ratio in Eq.~\ref{eq:A} is well defined.
+\end{proof}
+Between the two limits, increasing $\sigma$ smoothly trades exact query matching for
+cross-query bridging, so a single scalar controls how much unpaired evidence the
+perspective uses.
 
 \subsection{Inference in the \PKPS}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
@@ -368,8 +390,9 @@ product kernel factorizes by domain, never comparing a proof to a legal label.
 
 \paragraph{Application 1: query efficiency.} Because the embedding captures response
 \emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
-cheap evaluations. Each model answers $m$ queries per cell (sampled independently---so
-this is itself an unpaired regime, and IRT cannot fit); we predict the true full-eval
+cheap evaluations. Each model answers $m$ queries per cell, sampled independently---so this
+is itself an unpaired regime: IRT, whose item difficulties can only be fit on the largest
+block of coincidentally-shared items, is poorly identified; we predict the true full-eval
 score (Figure~\ref{fig:qe}). At a small budget the embedding is far more accurate than the
 raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.133$ versus the sample's
 $0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
@@ -386,8 +409,9 @@ most cells, with the largest gains at the smallest budgets and on the rich-respo
 \caption{\textbf{Query efficiency.} Each model answers $m$ unpaired queries per
 \emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM). \PKPS (red) and
 the ensemble (brown) denoise far below the raw sample (grey) at small budgets and across
-cohort size (b) and coverage (c); DKPS (green) trails because the queries are unpaired and
-IRT (purple) cannot fit at all.}
+cohort size (b) and coverage (c); DKPS (green) trails because the queries are unpaired, and
+IRT (purple) degrades badly because its item difficulties are fit on the largest
+coincidentally-shared item block and are poorly identified.}
 \label{fig:qe}
 \end{figure}
 
@@ -486,6 +510,73 @@ cheap, few-query evaluations (query efficiency) and predicts cells that were nev
 the worse choice. None of this assumes pairing or exhaustive per-cell evaluation, which is
 exactly what organically-assembled leaderboards cannot provide.
 
+\paragraph{Limitations.} \PKPS requires embedding every response and query, so its cost and
+quality inherit from the chosen text embedders, whose effect we do not ablate. Our
+block-diagonal instantiation deliberately disables cross-domain bridging, so the method
+cannot transfer signal between, say, math and legal responses; whether a shared response
+space would help is open. Computing the affinity is quadratic in queries per model pair,
+which is practical at benchmark scale but would need approximation for very large query
+logs. The query-efficiency gain is stated as a conjecture; a formal bound in the style of
+\citet{dkps_qeff} is future work. Finally, our real-data evidence comes from one (albeit
+heterogeneous) $18$-task suite; the per-cell wins over strong score-only baselines are
+modest on low-rank, densely-observed matrices and decisive only where evaluation is sparse,
+noisy, unpaired, or small-cohort---which is, however, the regime that motivates the problem.
+
+\subsubsection*{Reproducibility statement}
+All methods are released as a documented Python package (the \PKPS estimator, matrix
+completion, and IRT baselines), with the data-preparation, experiment, and figure scripts
+for both the synthetic study and the HELM suite; every experiment is seeded, all real-data
+numbers are means over $16$ seeds (synthetic: $50$), and hyperparameters are selected by the
+leak-free cross-validation described in Section~\ref{sec:method} (leakage is checked by an
+automated test that corrupts one model's held-out scores and verifies its predictions are
+unchanged). Appendix~\ref{app:details} lists the suite composition, embedding models, and
+all hyperparameter settings.
+
 \bibliographystyle{plainnat}
 \bibliography{references}
+
+\appendix
+\section{Experimental details}
+\label{app:details}
+
+\paragraph{Suite.} $18$ tasks over four datasets from HELM \citep{helm}: MATH ($7$
+subjects), WMT-14 ($5$ translation directions), MedQA, and LegalBench ($5$ subsets), on the
+$93$ models evaluated on all four. MATH and WMT-14 responses are free text and are embedded
+with \texttt{gemini-embedding-001} ($3072$-d); MedQA and LegalBench responses are
+single-token answers, encoded one-hot. Queries share a single \texttt{gemini-embedding-001}
+embedding space. Response and query embeddings are reduced by PCA fit on observed rows
+only, with dimension chosen by the second Zhu--Ghodsi elbow.
+
+\paragraph{\PKPS.} RBF query kernel with bandwidth selected per run by leave-one-model-out
+$k$-NN ($k{=}8$) on the observed scores over the grid
+$\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, plus the
+near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Models are
+embedded by classical MDS ($d{=}12$ real data; $d$ = latent dimension on synthetic).
+
+\paragraph{Prediction head.} All embedding methods share one head: logit-transformed
+scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
+bias, and a distance-weighted $k$-NN ($k{=}5$) regression of the residual on the model
+embedding. Held-out cells are predicted directly; observed cells leave-one-out.
+
+\paragraph{Baselines.} Matrix completion follows BenchPress \citep{benchpress}: logit
+space, per-task standardization, two-way bias, rank-$2$ ALS with ridge $\lambda{=}0.1$,
+averaged over $5$ random initializations; on observed cells it is cross-fit so a cell's
+prediction never sees its own sample. IRT is a 1PL (Rasch) model on binary tasks: item
+difficulties by maximum likelihood (L-BFGS) on the largest fully-observed
+(model $\times$ item) block, per-model ability by bounded scalar MLE, clipped to
+$[-4,4]$. The sample baseline is the cell's own $m$-query mean.
+
+\paragraph{Ensemble.} On observed cells, the sample mean is shrunk toward the \PKPS
+estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\hat p(1-\hat p)/m)$ on
+the sample, where $e^2_{\PKPS}$ is the embedding's depth-weighted disagreement with the
+observed samples of that model; on missing cells, \PKPS and matrix completion are blended
+with a weight fit by held-out cross-validation against observed scores. No quantity ever
+uses the held-out full-eval scores.
+
+\paragraph{Synthetic study.} $50$ seeds per configuration; latent dimension $5$, observed
+embedding dimension $20$, score noise $0.1$, response noise $0.5$; both kernels RBF;
+$k$-NN regression with $k{=}5$. Panel-specific settings are given in each figure title.
+
+\paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
+are precomputed once through the embedding API and cached.
 \end{document}

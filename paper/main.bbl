@@ -1,4 +1,4 @@
-\begin{thebibliography}{23}
+\begin{thebibliography}{26}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -37,6 +37,15 @@ Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
 \newblock Extracting information from fine-tuned weights.
 \newblock In \emph{Non-Euclidean Foundation Models: Advancing AI Beyond
   Euclidean Frameworks}, 2025.
+
+\bibitem[Chiang et~al.(2024)Chiang, Zheng, Sheng, Angelopoulos, Li, Li, Zhang,
+  Zhu, Jordan, Gonzalez, and Stoica]{chiang2024chatbot}
+Wei-Lin Chiang, Lianmin Zheng, Ying Sheng, Anastasios~N. Angelopoulos, Tianle
+  Li, Dacheng Li, Hao Zhang, Banghua Zhu, Michael Jordan, Joseph~E. Gonzalez,
+  and Ion Stoica.
+\newblock Chatbot arena: An open platform for evaluating llms by human
+  preference.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
@@ -99,6 +108,11 @@ Yang Li, Jie Ma, Miguel Ballesteros, Yassine Benajiba, and Graham Horwood.
 \newblock Active evaluation acquisition for efficient llm benchmarking.
 \newblock \emph{arXiv preprint arXiv:2410.05952}, 2024.
 
+\bibitem[Liang et~al.(2023)]{helm}
+Percy Liang et~al.
+\newblock Holistic evaluation of language models.
+\newblock \emph{Transactions on Machine Learning Research (TMLR)}, 2023.
+
 \bibitem[Mazumder et~al.(2010)Mazumder, Hastie, and
   Tibshirani]{mazumder2010softimpute}
 Rahul Mazumder, Trevor Hastie, and Robert Tibshirani.
@@ -144,6 +158,16 @@ Warren~S Torgerson.
 Rajan Vivek, Kawin Ethayarajh, Diyi Yang, and Douwe Kiela.
 \newblock Anchor points: Benchmarking models with much fewer examples.
 \newblock In \emph{EACL}, 2024.
+
+\bibitem[White et~al.(2024)White, Dooley, Roberts, Pal, Feuer, Jain,
+  Shwartz-Ziv, Jain, Saifullah, Naidu, Hegde, LeCun, Goldstein, Neiswanger, and
+  Goldblum]{white2024livebench}
+Colin White, Samuel Dooley, Manley Roberts, Arka Pal, Ben Feuer, Siddhartha
+  Jain, Ravid Shwartz-Ziv, Neel Jain, Khalid Saifullah, Siddartha Naidu,
+  Chinmay Hegde, Yann LeCun, Tom Goldstein, Willie Neiswanger, and Micah
+  Goldblum.
+\newblock Livebench: A challenging, contamination-free llm benchmark.
+\newblock \emph{arXiv preprint arXiv:2406.19314}, 2024.
 
 \bibitem[Zeng and Papailiopoulos(2026)]{benchpress}
 Yuchen Zeng and Dimitris Papailiopoulos.
