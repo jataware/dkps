@@ -33,21 +33,19 @@
 \begin{abstract}
 Evaluating a generative model on all available benchmarks is prohibitively expensive. As
 such, models are often evaluated on different subsets of tasks and/or different subsets of
-queries from a given task. The resulting (model $\times$ task) score matrix is sparse and
-noisy, and the responses beneath it are unpaired: two models rarely answer the same
-queries. Methods that complete the score matrix use only each cell's aggregate score, and
-the response-based Data Kernel Perspective Space (DKPS) requires exactly the pairing that
-is missing. In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)},
-which embeds each model from its responses by comparing responses to similar---rather than
-only identical---queries; it contains DKPS as a special case and remains defined on
-disjoint query sets. Theoretically, we show that \PKPS is
-query-efficient independently of the fraction of queries shared across models. Empirically,
-on two heterogeneous suites, ensembling the \PKPS embedding with the available score
-signal---a cell's own sample mean where measured, matrix completion where not---matches or
-beats the best score-only predictor in every observation regime, with the largest gains
-where evaluation is sparsest and noisiest. The embedding survives fully unpaired
-evaluation where DKPS and item-response theory collapse, and rescues small cohorts where
-low-rank completion fails.
+queries from a given task, and the resulting (model $\times$ task) score matrix is sparse
+and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
+(\PKPS)}---a collection of low-dimensional representations of models based on their
+embedded responses. \PKPS generalizes the Data Kernel Perspective Space (DKPS): it
+compares responses to similar---rather than only identical---queries, and so remains
+defined when models answer different queries. Theoretically, we show that \PKPS is
+query-efficient independently of the fraction of queries shared across models.
+Empirically, on two heterogeneous suites, ensembling the \PKPS embedding with the
+available score signal---a cell's own sample mean where measured, matrix completion where
+not---matches or beats the best score-only predictor in every observation regime, with the
+largest gains where evaluation is sparsest and noisiest. The embedding survives fully
+unpaired evaluation where DKPS and item-response theory collapse, and rescues small
+cohorts where low-rank completion fails.
 \end{abstract}
 
 \section{Introduction}
