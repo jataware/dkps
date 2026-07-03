@@ -89,6 +89,37 @@ means with an $8\times$ smaller query budget, and that ensembling it with score-
 methods reduces the error of low-rank completion by up to $28\%$
 (Section~\ref{sec:experiments}).
 
+\begin{table}[t!]
+\centering
+\caption{Headline results: MAE vs.\ the full-eval score on both benchmark suites
+(setup in Section~\ref{sec:setup}; $16$ seeds; best per column bold).
+Query efficiency at $m\in\{1,8\}$ queries/cell; completion on missing cells
+($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$) at small and full cohort. ``---'': not
+applicable. The ensemble stays best even where the raw sample catches the embedding
+($m{=}8$), and on the second suite beats completion even at full cohort.}
+\label{tab:suite}
+\footnotesize
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.95}
+\begin{tabular}{lcccc cccc}
+\toprule
+ & \multicolumn{4}{c}{\textbf{HELM suite} ($18$ tasks, $93$ models)}
+ & \multicolumn{4}{c}{\textbf{EEE suite} ($16$ tasks, $45$ models)} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+ & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion}
+ & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion} \\
+Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$)
+       & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) \\
+\midrule
+sample mean        & $0.292$ & $0.092$ & --- & --- & $0.224$ & $0.081$ & --- & --- \\
+IRT                & $0.348$ & $0.343$ & --- & --- & $0.165$ & $0.139$ & --- & --- \\
+matrix completion  & --- & --- & $0.139$ & $0.105$ & --- & --- & $0.109$ & $0.096$ \\
+DKPS               & $0.171$ & $0.115$ & --- & --- & $0.117$ & $0.083$ & --- & --- \\
+\PKPS              & $0.136$ & $0.111$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.078}$ & $0.059$ & $\mathbf{0.082}$ & $0.070$ \\
+ensemble           & $\mathbf{0.133}$ & $\mathbf{0.076}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $0.087$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Problem setting and notation}
 \label{sec:setting}
 A \emph{model} is a random mapping $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a
@@ -504,35 +535,6 @@ strongest. Table~\ref{tab:suite} collects the two applications on both suites: \
 competitive in every column, and the ensemble, which folds in whichever score signal
 exists, is best or tied nearly everywhere.
 
-\begin{table}[tb]
-\centering
-\caption{MAE vs.\ the full-eval score, both suites ($16$ seeds; best per column bold).
-Query efficiency at $m\in\{1,8\}$ queries/cell; completion on missing cells
-($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$) at small and full cohort. ``---'': not
-applicable. The ensemble stays best even where the raw sample catches the embedding
-($m{=}8$), and on the second suite beats completion even at full cohort.}
-\label{tab:suite}
-\footnotesize
-\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.95}
-\begin{tabular}{lcccc cccc}
-\toprule
- & \multicolumn{4}{c}{\textbf{HELM suite} ($18$ tasks, $93$ models)}
- & \multicolumn{4}{c}{\textbf{EEE suite} ($16$ tasks, $45$ models)} \\
-\cmidrule(lr){2-5}\cmidrule(lr){6-9}
- & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion}
- & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion} \\
-Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$)
-       & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) \\
-\midrule
-sample mean        & $0.292$ & $0.092$ & --- & --- & $0.224$ & $0.081$ & --- & --- \\
-IRT                & $0.348$ & $0.343$ & --- & --- & $0.165$ & $0.139$ & --- & --- \\
-matrix completion  & --- & --- & $0.139$ & $0.105$ & --- & --- & $0.109$ & $0.096$ \\
-DKPS               & $0.171$ & $0.115$ & --- & --- & $0.117$ & $0.083$ & --- & --- \\
-\PKPS              & $0.136$ & $0.111$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.078}$ & $0.059$ & $\mathbf{0.082}$ & $0.070$ \\
-ensemble           & $\mathbf{0.133}$ & $\mathbf{0.076}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $0.087$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \section{Discussion}
 Real leaderboards are organic: each model answers whatever queries its authors chose, so
