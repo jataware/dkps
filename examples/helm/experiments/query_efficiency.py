@@ -233,10 +233,13 @@ def main():
     ap.add_argument('--fixed_m', type=int, default=2)  # few-query regime for the n/coverage QE panels
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
-    ap.add_argument('--outdir', default='results-pkps-rd1')
+    ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
+    ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
+    if args.outdir is None:
+        args.outdir = 'results-pkps-rd1' if args.suite == 'helm' else 'results-eee-rd1'
 
-    data = H.load_suite()
+    data = H.load_suite() if args.suite == 'helm' else H.load_eee()
     print(f'suite: {len(data[7])} models, {len(data[8])} tasks')
     # pairing cliff (headline): one full rho-curve per budget (robustness). Query-efficiency
     # panels vary p_query (m), cohort n, or task coverage p_task. breakdown dumps per-cell

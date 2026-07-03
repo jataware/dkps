@@ -22,7 +22,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from dotenv import load_dotenv
 from rich import print as rprint
+
+load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dkps.embed import embed_api

@@ -45,11 +45,19 @@ from .cache import disk_cache
 # Google
 @disk_cache(cache_dir='./.cache/embed/google', verbose=False, ignore_fields=['client'])
 async def _aembed_google_chunk(chunk_id, client, chunk, model):
-    chunk_response = await client.aio.models.embed_content(
-        model    = model,
-        contents = chunk,
-    )
-    return chunk_id, np.array([xx.values for xx in chunk_response.embeddings])
+    # retry with backoff on 429 RESOURCE_EXHAUSTED (per-minute content quota)
+    for attempt in range(10):
+        try:
+            chunk_response = await client.aio.models.embed_content(
+                model    = model,
+                contents = chunk,
+            )
+            return chunk_id, np.array([xx.values for xx in chunk_response.embeddings])
+        except Exception as e:
+            if '429' in str(e) and attempt < 9:
+                await asyncio.sleep(20 + 5 * attempt + (chunk_id % 7))
+            else:
+                raise
 
 # Jina
 class JinaClient:

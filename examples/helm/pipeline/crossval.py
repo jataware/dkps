@@ -73,6 +73,9 @@ def load(dataset):
     if dataset == 'suite':
         d = H.load_suite()
         return d[:11], d[11], True
+    if dataset == 'eee':
+        d = H.load_eee()
+        return d[:11], d[11], True
     if dataset == 'pooled':
         return H.load_pooled(('math', 'wmt_14')), None, False
     cfg = H.DATASETS[dataset]

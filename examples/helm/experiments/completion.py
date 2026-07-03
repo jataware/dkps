@@ -128,9 +128,12 @@ def main():
     ap.add_argument('--fixed_pq', type=float, default=0.5)
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
-    ap.add_argument('--outdir', default='results-pkps-unified')
+    ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
+    ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
-    data, qmed, suite = load('suite')
+    if args.outdir is None:
+        args.outdir = 'results-pkps-unified' if args.suite == 'helm' else 'results-eee-unified'
+    data, qmed, suite = load('suite' if args.suite == 'helm' else 'eee')
     # each spec is (n_models, n_tasks, p_task, p_query). The lever panels show one line per
     # n_models in --line_models; the n_models panel sweeps n at fixed levers.
     if args.sweep == 'n_models':

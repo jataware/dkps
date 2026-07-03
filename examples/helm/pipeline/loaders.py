@@ -257,6 +257,76 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
 
 
+def load_eee(reduce_dim=48, seed=0):
+    """The Every Eval Ever suite (data/eee.py + data/embed_eee.py): 5 benchmarks
+    (math-mc, gsm-mc, gpqa-diamond, judgebench, reward-bench-2) -> 16 tasks over the
+    models shared by all five. Same block-diagonal construction as load_suite -- each
+    benchmark's responses are PCA-reduced, unit-normalized, and placed in a disjoint
+    block (linear cross-benchmark k_R = 0) -- but every domain is Google-embedded text.
+    score_mat holds the FULL-depth per-cell means from eee_cell_targets (42-1288
+    queries/cell), while the loaded rows are the capped per-cell pools; the pools are
+    sampled with model-dependent seeds, so the suite is unpaired by construction.
+    Returns the load_suite 12-tuple."""
+    emb = pd.read_parquet('exports/eee_response_embeddings.parquet')
+    qdf = pd.read_parquet('exports/eee_query_embeddings.parquet')
+    tgt = pd.read_parquet('exports/eee_cell_targets.parquet')
+
+    shared = set.intersection(*[set(g['model']) for _, g in emb.groupby('bench')])
+    df = emb[emb['model'].isin(shared)].reset_index(drop=True)
+    df = df.rename(columns={'model': 'model_id', 'task': 'task_id'})
+
+    # block-diagonal response space, one block per benchmark
+    blocks, dims = {}, {}
+    for b, g in df.groupby('bench'):
+        R = np.stack(g['emb'].values).astype(np.float64)
+        if R.shape[1] > reduce_dim:
+            R = pca_reduce_elbow(R, max_components=reduce_dim)
+        R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
+        blocks[b] = (g.index.to_numpy(), R.astype(np.float32))
+        dims[b] = R.shape[1]
+    total, off = sum(dims.values()), 0
+    resp_X = np.zeros((len(df), total), np.float32)
+    for b in sorted(dims):
+        idx, R = blocks[b]
+        resp_X[idx, off:off + dims[b]] = R
+        off += dims[b]
+
+    df = df.assign(_row=np.arange(len(df))).sort_values(
+        ['model_id', 'task_id', 'query_id']).reset_index(drop=True)
+    resp_X = resp_X[df['_row'].to_numpy()]
+
+    unique_qids = sorted(df['query_id'].unique())
+    qcode = {q: i for i, q in enumerate(unique_qids)}
+    qid_code = df['query_id'].map(qcode).to_numpy()
+    qmap = {q: np.asarray(v, dtype=np.float32) for q, v in zip(qdf['query_id'], qdf['emb'])}
+    Qu = np.stack([qmap[q] for q in unique_qids]).astype(np.float64)
+    Qu = pca_reduce_elbow(Qu, max_components=64).astype(np.float32)
+    q_task = df.drop_duplicates('query_id').set_index('query_id')['task_id'].to_dict()
+
+    models = sorted(df['model_id'].unique())
+    tasks = sorted(df['task_id'].unique())
+    m_idx = {m: i for i, m in enumerate(models)}
+    t_idx = {t: i for i, t in enumerate(tasks)}
+    # targets = FULL-depth cell means (never limited to the embedded pool)
+    score_mat = np.full((len(models), len(tasks)), np.nan)
+    for r in tgt.itertuples():
+        if r.model in m_idx and r.task in t_idx:
+            score_mat[m_idx[r.model], t_idx[r.task]] = r.y_full
+    groups = {key: g.index.to_numpy() for key, g in df.groupby(['model_id', 'task_id'])}
+    row_score = df['score'].to_numpy(dtype=float)
+
+    meds, rng = [], np.random.default_rng(seed)
+    for t in tasks:
+        qi = [i for i, q in enumerate(unique_qids) if q_task[q] == t]
+        if len(qi) > 1:
+            sub = Qu[qi] if len(qi) <= 400 else Qu[rng.choice(qi, 400, replace=False)]
+            meds.append(np.median(pdist(sub)))
+    query_med = float(np.median(meds)) if meds else 1.0
+
+    return (resp_X, Qu, qid_code, df['model_id'].to_numpy(), df['task_id'].to_numpy(),
+            df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
+
+
 def load_helm_math(parquet_path, tsv_path, query_source='google', query_parquet=None,
                    score_col='score'):
     """Return raw (unreduced) response/query embeddings + metadata.

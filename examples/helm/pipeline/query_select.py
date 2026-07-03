@@ -37,7 +37,8 @@ from dkps.baselines import irt_fit_difficulties, irt_estimate_ability, irt_predi
 
 
 def family(model):
-    return model.split('_')[0]
+    """Developer prefix: 'openai_gpt-4' -> 'openai' (HELM), 'allenai/olmo-3' -> 'allenai' (EEE)."""
+    return model.split('/')[0] if '/' in model else model.split('_')[0]
 
 
 def max_dense_block(amask):
