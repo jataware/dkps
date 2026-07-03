@@ -200,30 +200,16 @@ response-kernel terms serves every query bandwidth on the grid.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_concept.pdf}
-\caption{Why the query kernel matters under \emph{unpaired} evaluation: \PKPS can use all
-available information. \textbf{Left:} two
-models, $i$ (red) and $i'$ (blue), each answer their own subset of a shared query pool,
-shown both as answered-query blocks (top) and as points in query-embedding space (bottom;
-nearby points are similar queries). The two models share only a few queries.
-Both kernel panels index the queries by a single universal ordering (shared by rows and
-columns). \textbf{Center (DKPS, $k_Q=\delta$).} The identity query kernel keeps a cell only
-when the two queries are the \emph{same} ($q_j=q_l$, the diagonal) \emph{and} both models
-answered it ($q_j\in Q_i\cap Q_{i'}$), so only the few shared queries survive---almost every
-response is discarded. \textbf{Right (PKPS,
-$k_Q=$ RBF).} The RBF query kernel over the same ordering is a dense, \emph{symmetric}
-similarity matrix, so responses to \emph{similar} queries---not only identical ones---bridge
-the two models and every response can contribute. \PKPS thus turns the sparse shared-query
-diagonal DKPS depends on into a dense similarity kernel. \textbf{Right block (d, d$'$, e,
-e$'$):} a benchmark-prediction example on a small model population. Each model answers only a
-few queries from a large pool, so two models rarely answer the \emph{same} query though they
-answer \emph{similar} ones. Each method embeds the models by classical MDS of the pairwise
-distance matrix (\textbf{d, e}: the 2-D model representations, coloured by true score and
-rotated so the score gradient runs left-to-right), then predicts each model's full-benchmark
-score by leave-one-out regression onto that embedding (\textbf{d$'$, e$'$}: predicted vs.\
-true). Restricted to the rare shared queries, \textbf{DKPS} yields a noisy geometry with no
-clean score axis and predictions scatter off the diagonal (MAE $0.31$); \textbf{PKPS} bridges
-all similar queries, so score varies smoothly across its embedding and predictions land on the
-diagonal (MAE $0.07$).}
+\caption{\PKPS under \emph{unpaired} evaluation. \textbf{(a)} Two models, $i$ (red) and
+$i'$ (blue), answer their own subsets of a query pool (blocks: who answered what; dots:
+queries in embedding space, nearby $=$ similar). \textbf{(b)} DKPS's identity kernel keeps
+only the diagonal cells where both models answered the \emph{same} query---almost every
+response is discarded. \textbf{(c)} An RBF $k_Q$ is a dense similarity matrix: responses to
+\emph{similar} queries bridge the two models. Both panels index the pooled queries in one
+shared order; the weights feed one entry of the model affinity (Eq.~\ref{eq:A}).
+\textbf{(d--e$'$)} A toy benchmark-prediction example: restricted to the rare shared
+queries, DKPS's embedding has no clean score axis and predicts poorly (MAE $0.31$); \PKPS
+recovers a smooth score gradient and predicts on the diagonal (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
