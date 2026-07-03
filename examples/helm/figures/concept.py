@@ -208,7 +208,8 @@ axBlk.set_position([pb.x0, mt - pb.height, pb.width, pb.height])
 pc = axC.get_position()
 axR.set_position([pc.x1 + 0.022, pc.y0, pc.width, pc.height])
 mcax = fig.add_axes([axR.get_position().x1 + 0.012, pc.y0, 0.008, pc.height])
-mcb = fig.colorbar(im, cax=mcax); mcb.set_label('$k_Q(q_j,q_l)$', fontsize=9.5, labelpad=-2)
+mcb = fig.colorbar(im, cax=mcax)
+mcax.set_title(r'$k_Q$', fontsize=9, pad=3, color='#475569')   # label on top: the flow arrow passes mid-height
 mcb.set_ticks([0, 1])
 # arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
 # packed tight to save space
@@ -257,11 +258,27 @@ fig.legend(handles=[Line2D([0], [0], marker='s', ls='', mfc=RED, mec='white', ms
            loc='lower center', bbox_to_anchor=(xc, 0.125), bbox_transform=fig.transFigure,
            ncol=3, frameon=False, fontsize=9.5, handletextpad=0.2, columnspacing=1.0)
 
-# faint rule grouping the data column (a) apart from the two method panels (b, c)
-pc = axC.get_position()
-sep_x = (axEmb.get_position().x1 + pc.x0) / 2
-fig.add_artist(Line2D([sep_x, sep_x], [pc.y0, pc.y1], transform=fig.transFigure,
-                      color='#dce1e8', lw=1.2, zorder=0))
+# ---- flow arrows + the product-kernel formula: make the pipeline explicit -------------
+# (a) data -> (b,c) kernel weights -> (d,e) embedding & prediction. The arrows carry the
+# left-to-right process; the strip below the matrices shows WHAT they feed (Eq. 2: one
+# entry of the n x n model affinity, k_Q weighting k_R), and the strip below the 2x2
+# block names the remaining steps.
+from matplotlib.patches import FancyArrowPatch
+pc = axC.get_position(); pr2 = axR.get_position(); pe_ = axEmb.get_position()
+ymid = (pc.y0 + pc.y1) / 2
+yhi = pc.y0 + 0.80 * (pc.y1 - pc.y0)         # arrow 1 rides high, clear of (b)'s ylabel
+for xa, xb, ya in [(pe_.x1 + 0.004, pc.x0 - 0.012, yhi),             # (a) -> (b|c)
+                   (mcax.get_position().x1 + 0.006, x0 - 0.012, ymid)]:  # (b|c) -> (d|e)
+    fig.add_artist(FancyArrowPatch((xa, ya), (xb, ya), transform=fig.transFigure,
+                                   arrowstyle='-|>', mutation_scale=13, color='#94a3b8',
+                                   lw=1.3, zorder=1))
+fig.text((pc.x0 + pr2.x1) / 2, 0.012,
+         r"$A_{ii'}=\sum_{j,l}k_Q(q_j,q_l)\,k_R(x_{ij},x_{i'l})\;/\;\sum_{j,l}k_Q(q_j,q_l)$",
+         ha='center', va='top', fontsize=9.2, color='#334155')
+fig.text((pc.x0 + pr2.x1) / 2, -0.105, 'one entry of the $n\\times n$ model affinity',
+         ha='center', va='top', fontsize=7.5, color='#64748b')
+fig.text(x0 + side + hgap / 2, 0.012, 'classical MDS of $D^2\\!(A)$, then $k$-NN regression',
+         ha='center', va='top', fontsize=7.5, color='#64748b')
 
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_concept.{ext}', dpi=200, bbox_inches='tight')
