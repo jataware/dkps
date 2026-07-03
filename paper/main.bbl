@@ -1,4 +1,4 @@
-\begin{thebibliography}{28}
+\begin{thebibliography}{29}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -52,6 +52,14 @@ Wei-Lin Chiang, Lianmin Zheng, Ying Sheng, Anastasios~N. Angelopoulos, Tianle
 Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
 \newblock Comparing foundation models using data kernels.
 \newblock \emph{arXiv preprint arXiv:2305.05126}, 2023.
+
+\bibitem[{EvalEval Coalition}(2026)]{eee2026}
+{EvalEval Coalition}.
+\newblock Every eval ever: A unified open data format and public datastore for
+  ai evaluation results.
+\newblock \url{https://evalevalai.com/projects/every-eval-ever/}, 2026.
+\newblock Dataset:
+  \url{https://huggingface.co/datasets/evaleval/EEE_datastore}.
 
 \bibitem[Helm et~al.(2024)Helm, Duderstadt, Park, and Priebe]{helm2024tracking}
 Hayden Helm, Brandon Duderstadt, Youngser Park, and Carey~E. Priebe.
