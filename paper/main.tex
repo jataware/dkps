@@ -315,16 +315,30 @@ $(1/\epsilon,1/\kappa,n)$ and independent of the pairing fraction $\rho$, such t
 nearest-neighbor regression in the \PKPS attains mean squared error at most $\epsilon$
 with high probability.
 \end{theorem}
-The proof (Appendix~\ref{app:proof}) follows the DKPS argument: a
-triangle-inequality decomposition of the regression error into estimation error,
-controlled by concentration of the estimated perspectives, and approximation error,
-controlled by (A1)--(A2). The one new ingredient is a concentration lemma for the
-self-normalized affinity of Eq.~\ref{eq:A}, a ratio of two-sample $U$-statistics over
-$|Q_a||Q_b|$ query pairs whose effective sample size is governed by $\kappa$. Applied to
-paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$ shared pairs,
-so DKPS's guarantee degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. The
-strict separation---a matching lower bound for DKPS---we leave as a conjecture;
-Section~\ref{sec:synthetic} is its empirical counterpart.
+\begin{proof}[Proof sketch]
+(Full proof in Appendix~\ref{app:proof}.)
+\emph{Step 1: affinity concentration.} The affinity of Eq.~\ref{eq:A} is a ratio of two
+two-sample $U$-statistics over the $|Q_a||Q_b|$ query pairs, with bounded kernels by (A3).
+Numerator and denominator each concentrate at rate $m^{-1/2}$ by Hoeffding's inequality
+for two-sample $U$-statistics, and (A4) keeps the denominator---the realized query-kernel
+mass---above $\kappa/2$, so the ratio is stable:
+$\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|=O\big(\kappa^{-2}m^{-1/2}\big)$ with high
+probability (Lemma~\ref{lem:conc}). \emph{Step 2: perspective perturbation.} The affinity
+error moves the centered Gram matrix by $O(n\varepsilon_\infty)$ in Frobenius norm; Weyl's
+inequality and a Procrustes alignment for rank-$d$ factorizations then move the embedded
+perspectives by at most $25\sqrt d\,n\varepsilon_\infty/\sqrt{\lambda_d}$ row-wise, using
+the spectral gap (A5) (Lemma~\ref{lem:pert}). \emph{Step 3: regression.} For a target
+model and its nearest estimated reference neighbor, the prediction error is at most
+$\gamma$ times their population distance (A1), which the triangle inequality splits into
+two estimation terms, bounded by Step~2, and the population nearest-neighbor distance,
+which (A2) makes small for $n$ large. Choosing
+$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ drives the MSE below $\epsilon$; no step
+involves $\rho$.
+\end{proof}
+Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
+shared pairs, so DKPS's guarantee degrades as $\rho\to0$ while Theorem~\ref{thm:qeff}
+does not. The strict separation---a matching lower bound for DKPS---we leave as a
+conjecture; Section~\ref{sec:synthetic} is its empirical counterpart.
 \begin{conjecture}[Strict gap]
 \label{conj:qeff}
 Under (A1)--(A4), the number of queries per model that \PKPS needs to reach error
