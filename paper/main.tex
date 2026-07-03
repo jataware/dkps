@@ -2,8 +2,10 @@
 \usepackage{iclr2025_conference}
 \usepackage{amsmath,amssymb}
 \usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
 \newtheorem{conjecture}{Conjecture}
 \newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -80,8 +82,10 @@ product-kernel affinity $k_Q\cdot k_R$ that compares responses to similar querie
 paired DKPS as the special case $k_Q=\delta$ and recovers it as the bandwidth
 $\sigma\!\to\!0$, stays defined when models answer disjoint queries (where paired DKPS is
 undefined), and interpolates between the two with a single bandwidth, which we select per run
-by a leak-free cross-validation. We state the expected query-efficiency gain as a conjecture,
-and treat the embedding as one term of an embedding-$\oplus$-score ensemble.
+by a leak-free cross-validation. Extending the proof technique of \citet{dkps_qeff}, we give a
+query-efficiency guarantee whose query requirement is independent of the pairing fraction
+(Theorem~\ref{thm:qeff}), state the strict gap over paired DKPS as a conjecture, and treat the
+embedding as one term of an embedding-$\oplus$-score ensemble.
 \item \textbf{Empirical.} We demonstrate the method's utility and robustness to missing
 responses on the two ends of one estimation problem---query-efficient evaluation ($m{>}0$
 queries per cell) and matrix completion ($m{=}0$)---over a heterogeneous $18$-task, $93$-model
@@ -291,18 +295,40 @@ sample---so the weight never touches the held-out full scores and the score base
 exactly the same information.
 
 \subsection{Query efficiency}
+\label{sec:qeff}
 \PKPS is designed to reach a target prediction accuracy from fewer evaluated queries than
 paired DKPS: by bridging responses to similar queries it uses evidence that DKPS, limited
-to shared queries, discards. We state the expected gain as a conjecture and leave a formal
-analysis---in the style of the DKPS query-efficiency bound \citep{dkps_qeff}---to future
-work; Section~\ref{sec:real} is its empirical counterpart.
-\begin{conjecture}[Query efficiency of \PKPS]
+to shared queries, discards. The query-efficiency analysis of \citet{dkps_qeff} extends to
+\PKPS. Assume (A1) the benchmark score is $\gamma$-Lipschitz on the population perspective
+space; (A2) the model distribution places mass on every neighborhood, so a near reference
+neighbor exists; (A3) kernels and embedded responses are bounded; and (A4) the
+\emph{cross-model query-kernel mass} is bounded below,
+$\kappa=\inf_{a,b}\,\mathbb{E}\,[k_Q(u,u')]>0$ for queries drawn from any two models'
+designs. (A4) is the population analogue of the overlap $\rho$: for an RBF $k_Q$ it holds
+whenever the query \emph{distributions} overlap in embedding space, even if no individual
+query is shared.
+\begin{theorem}[Query efficiency of \PKPS; informal]
+\label{thm:qeff}
+Under (A1)--(A4), for any $\epsilon>0$ there exist $(n,m)$ with $m$ polynomial in
+$(1/\epsilon,1/\kappa)$ and independent of the pairing fraction $\rho$ such that
+nearest-neighbor regression in the \PKPS attains mean squared error at most $\epsilon$
+with high probability.
+\end{theorem}
+The proof sketch (Appendix~\ref{app:proof}) follows the DKPS argument: a
+triangle-inequality decomposition of the regression error into estimation error,
+controlled by concentration of the estimated perspectives, and approximation error,
+controlled by (A1)--(A2). The one new ingredient is a concentration lemma for the
+self-normalized affinity of Eq.~\ref{eq:A}, a ratio of two-sample $U$-statistics over
+$|Q_a||Q_b|$ query pairs whose effective sample size is governed by $\kappa$. Applied to
+paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$ shared pairs,
+so DKPS's guarantee degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. The
+strict separation---a matching lower bound for DKPS---we leave as a conjecture;
+Section~\ref{sec:synthetic} is its empirical counterpart.
+\begin{conjecture}[Strict gap]
 \label{conj:qeff}
-Fix a benchmark score function that is Lipschitz on the perspective space and a target
-error $\epsilon$. For a query design $\mathbf{Q}=(Q_1,\dots,Q_n)$ with cross-model overlap
-$\rho$ (the fraction of query-kernel mass shared across models), the number of queries per
-model that \PKPS needs to reach error $\epsilon$ is at most that of paired DKPS, and the
-gap is increasing as $\rho\to0$; the two are closest in the fully paired limit $\rho=1$.
+Under (A1)--(A4), the number of queries per model that \PKPS needs to reach error
+$\epsilon$ is at most that of paired DKPS, and the gap increases as $\rho\to0$; the two
+are closest in the fully paired limit $\rho=1$.
 \end{conjecture}
 
 \section{Experiments}
@@ -346,7 +372,7 @@ at a single query the accuracy the raw sample needs roughly five queries to matc
 so whether queries are paired or not, while DKPS denoises only when paired (unpaired DKPS,
 dashed, barely improves). Only once the budget is large is the raw sample precise enough to
 overtake the embedding's residual bias. This is the empirical counterpart of
-Conjecture~\ref{conj:qeff}.
+Theorem~\ref{thm:qeff} and Conjecture~\ref{conj:qeff}.
 
 \begin{figure}[t]
 \centering
@@ -516,8 +542,9 @@ block-diagonal instantiation deliberately disables cross-domain bridging, so the
 cannot transfer signal between, say, math and legal responses; whether a shared response
 space would help is open. Computing the affinity is quadratic in queries per model pair,
 which is practical at benchmark scale but would need approximation for very large query
-logs. The query-efficiency gain is stated as a conjecture; a formal bound in the style of
-\citet{dkps_qeff} is future work. Finally, our real-data evidence comes from one (albeit
+logs. Theorem~\ref{thm:qeff} is a proof sketch at the level of \citet{dkps_qeff}, and the
+strict separation from paired DKPS remains a conjecture. Finally, our real-data evidence
+comes from one (albeit
 heterogeneous) $18$-task suite; the per-cell wins over strong score-only baselines are
 modest on low-rank, densely-observed matrices and decisive only where evaluation is sparse,
 noisy, unpaired, or small-cohort---which is, however, the regime that motivates the problem.
@@ -579,4 +606,56 @@ $k$-NN regression with $k{=}5$. Panel-specific settings are given in each figure
 
 \paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
 are precomputed once through the embedding API and cached.
+
+\section{Proof sketch for Theorem~\ref{thm:qeff}}
+\label{app:proof}
+
+\paragraph{Population quantities.} Let queries for model $a$ be drawn i.i.d.\ from a design
+distribution $\mu_a$ over embedded queries, and define the population affinity
+$A^*_{ab}=\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]\,/\,\mathbb{E}\,[k_Q(u,u')]$ with
+$u\sim\mu_a$, $u'\sim\mu_b$, expectations taken over queries and response noise. The
+population distances $D^*(a,b)$ and perspectives $\psi_a$ are defined from $A^*$ exactly as
+in Section~\ref{sec:method}; we assume the population distance matrix embeds in
+$\mathbb{R}^d$.
+
+\begin{lemma}[Affinity concentration]
+\label{lem:conc}
+Under (A3)--(A4), with $|Q_a|=|Q_b|=m$,
+$\;|A_{ab}-A^*_{ab}| = O_P\!\big(\kappa^{-1} m^{-1/2}\big)$.
+\end{lemma}
+
+\emph{Sketch.} The numerator and denominator of Eq.~\ref{eq:A} are two-sample
+$U$-statistics of order $(1,1)$ in the queries with bounded kernels ((A3); the RBF $k_Q$ is
+bounded by $1$), so each concentrates around its mean at rate $O_P(m^{-1/2})$ by
+Hoeffding-type bounds for two-sample $U$-statistics; response noise is averaged by the same
+double sum, so the number of responses per query may stay fixed. On the event that the
+denominator exceeds $\kappa/2$---which (A4) grants with high probability---the ratio
+inherits the rate with a $\kappa^{-1}$ factor. \hfill$\square$
+
+\paragraph{From affinities to perspectives.} Lemma~\ref{lem:conc} with a union bound over
+the $O(n^2)$ pairs gives $\max_{ab}|D(a,b)-D^*(a,b)|=O_P(\kappa^{-1}m^{-1/2}\sqrt{\log n})$.
+The classical-MDS perturbation analysis of \citet{acharyya2024consistent,
+acharyya2025concentration} then bounds the perspective error,
+$\max_i\|\hat\psi_i-\psi_i\| = c(n,m)\to0$ as $m\to\infty$ for fixed $n$.
+
+\paragraph{Regression error.} As in \citet{dkps_qeff}: for a target model $f$ with nearest
+reference neighbor $f^*$ in the estimated space,
+\[
+|\hat y(f)-y(f)| \;\le\; \gamma\,\|\psi^*-\psi\| \;\le\;
+\gamma\big(\underbrace{\|\psi^*-\hat\psi^*\|+\|\hat\psi-\psi\|}_{\le\,2c(n,m)}
++\underbrace{\|\hat\psi^*-\hat\psi\|}_{\text{NN distance}}\big),
+\]
+using (A1) for the first inequality. By (A2) the population NN distance vanishes as
+$n\to\infty$, and the estimation terms vanish as $m\to\infty$ by
+Lemma~\ref{lem:conc}; choosing $n$ then $m=\mathrm{poly}(1/\epsilon,1/\kappa)$ gives
+$\mathrm{MSE}\le\epsilon$. No step involves the pairing fraction $\rho$: the effective
+sample size of Lemma~\ref{lem:conc} is set by $\kappa$, which for an RBF $k_Q$ is positive
+whenever the query designs overlap in embedding space.
+
+\paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
+pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
+and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$: DKPS's
+guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
+where its distance is undefined (Proposition~\ref{prop:gen}). This asymmetry motivates
+Conjecture~\ref{conj:qeff}; a formal lower bound for DKPS is future work.
 \end{document}
