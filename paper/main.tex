@@ -674,8 +674,11 @@ writer\_palmyra-x-v3}.
 \paragraph{\PKPS.} RBF query kernel with bandwidth selected per run by leave-one-model-out
 $k$-NN ($k{=}8$) on the observed scores over the grid
 $\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, plus the
-near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Models are
-embedded by classical MDS ($d{=}12$ real data; $d$ = latent dimension on synthetic).
+near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Response
+blocks are capped at $48$ PCA components per dataset and the shared query space at $64$;
+each (model, query) pair uses one sampled response ($r{=}1$). Models are embedded by
+classical MDS ($d{=}12$ on real data, fixed a priori and not tuned; $d$ = latent dimension
+on synthetic).
 
 \paragraph{Prediction head.} All embedding methods share one head: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
@@ -697,19 +700,32 @@ observed samples of that model; on missing cells, \PKPS and matrix completion ar
 with a weight fit by held-out cross-validation against observed scores. No quantity ever
 uses the held-out full-eval scores.
 
+\paragraph{Sweeps and reporting.} All real-data sweeps use $16$ seeds; curves and table
+entries report the per-seed mean over tasks, then the mean ($\pm1$ SEM) over seeds. Query
+efficiency: budgets $m\in\{1,2,4,8,16,32\}$ at full cohort and coverage; cohort
+$n\in\{10,20,40,60,93\}$ (HELM) or $\{10,20,30,45\}$ (EEE) and task coverage
+$p_{\mathrm{task}}\in\{0.2,0.35,0.5,0.7,0.9\}$, both at the few-query point $m{=}2$.
+Completion: task coverage as above and query depth
+$p_{\mathrm{query}}\in\{0.1,0.25,0.5,0.75,1.0\}$ with cohort lines $n\in\{10,\text{full}\}$;
+task count $T\in\{4,8,12,18\}$ (HELM) or $\{4,8,12,16\}$ (EEE); the cohort sweep holds
+$p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$.
+
 \paragraph{Synthetic study.} $50$ seeds per configuration; latent dimension $5$, observed
 embedding dimension $20$, score noise $0.1$, response noise $0.5$; both kernels RBF;
 $k$-NN regression with $k{=}5$. Panel-specific settings are given in each figure title.
 
 \paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
-are precomputed once through the embedding API and cached.
+are precomputed once through the embedding API and cached. Embedding the EEE suite
+($30{,}304$ pooled responses plus $7{,}665$ queries, ${\sim}11$M tokens) took ${\sim}13$
+minutes and under \$$2$ of API credit; each $16$-seed sweep completes in minutes (EEE) to
+hours (HELM) on the same node.
 
 \section{The Every Eval Ever suite}
 \label{app:eee}
 
-The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
-community-maintained collection of item-level evaluation results in a unified format
-(inputs, raw model outputs, and per-item scores). We take the five benchmarks with the
+The second suite is built from the Every Eval Ever datastore \citep{eee2026}, an
+MIT-licensed, community-maintained collection of item-level evaluation results in a
+unified format (inputs, raw model outputs, and per-item scores). We take the five benchmarks with the
 widest item-level model coverage---MATH-MC, GSM-MC, GPQA-Diamond, JudgeBench, and
 RewardBench~2---restricted to the $45$ models present on all five; sub-tasks (MATH-MC
 levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks
@@ -718,7 +734,9 @@ judging benchmarks' rationales), so all responses and queries are embedded with
 \texttt{gemini-embedding-001} and blocked by benchmark exactly as in
 Appendix~\ref{app:details}. Each cell's observable pool is $32$ queries drawn with a
 model-dependent seed, so two models share only incidental queries ($\sim\!10\%$); the
-prediction target is the cell's full-depth mean over all items, which is never embedded.
+query-efficiency budget $m$ and the completion depth $p_{\mathrm{query}}$ subsample this
+pool, and the prediction target is always the cell's full-depth mean over all items, which
+is never embedded.
 All scores are binary, so IRT applies to every task (on the HELM suite it excludes WMT).
 Figures~\ref{fig:eeeqe} and \ref{fig:eeecomp} repeat the lever sweeps of
 Figures~\ref{fig:qe} and \ref{fig:completion} on this suite; Table~\ref{tab:suite}
