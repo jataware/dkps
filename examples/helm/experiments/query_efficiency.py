@@ -54,6 +54,7 @@ def _cv_bandwidth(Zs, sample_mat, obs, k=8):
 
 
 def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12, predictor='knn',
+             fixed_sig_idx=None,
              dump_cells=False):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
      score_mat, models_all, tasks, groups, row_score, qmed) = data
@@ -138,6 +139,9 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12
     Z = Zs.get(sig_star)                                       # PKPS (CV bandwidth)
     if Z is None:
         Z = H._mds_full(Ds[SIG_GRID[2]], names, models, mds_dim)
+    if fixed_sig_idx is not None:                              # sensitivity: force a grid point
+        Z = (H._mds_full(Ds[SIG_DELTA], names, models, mds_dim)
+             if fixed_sig_idx >= len(SIG_GRID) else Zs[SIG_GRID[fixed_sig_idx]])
     Zd = H._mds_full(Ds[SIG_DELTA], names, models, mds_dim)   # DKPS (delta limit)
     n2r = {mm: i for i, mm in enumerate(models)}
 
@@ -234,6 +238,9 @@ def main():
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
+    ap.add_argument('--mds_dim', type=int, default=12)
+    ap.add_argument('--sigma_idx', type=int, default=-1,
+                    help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
     if args.outdir is None:
@@ -255,7 +262,9 @@ def main():
         specs = [(args.fixed_m, n, 1.0, None) for n in args.n_models_values]
     else:
         specs = [(args.fixed_m, None, p, None) for p in args.coverages]
-    jobs = [delayed(run_seed)(data, m, s, n_models=n, p_task=p, n_paired=k, dump_cells=dump)
+    fsi = None if args.sigma_idx < 0 else args.sigma_idx
+    jobs = [delayed(run_seed)(data, m, s, n_models=n, p_task=p, n_paired=k, dump_cells=dump,
+                              mds_dim=args.mds_dim, fixed_sig_idx=fsi)
             for (m, n, p, k) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for sub in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) for r in sub])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
