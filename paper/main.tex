@@ -533,28 +533,31 @@ whichever score signal exists, is best or tied nearly everywhere.
 \begin{table}[t]
 \centering
 \caption{MAE vs.\ the full-eval score on both suites (lower is better; best per column in
-bold; $16$ seeds). Query efficiency at the hardest budget ($m{=}1$ query per cell); matrix
-completion on missing cells ($p_{\mathrm{task}}{=}0.5$, $p_{\mathrm{query}}{=}0.5$) at the
-small and full cohort. ``---'' marks a baseline that does not apply: the sample mean, IRT,
-and DKPS need queries from the cell itself, and matrix completion needs a cell that was
-never run. \PKPS applies in every regime; on the second suite the ensemble beats completion
-even at full cohort.}
+bold; $16$ seeds). Query efficiency at a hard ($m{=}1$) and a moderate ($m{=}8$) per-cell
+budget; completion on missing cells ($p_{\mathrm{task}}{=}0.5$, $p_{\mathrm{query}}{=}0.5$)
+at the small and full cohort. ``---'': not applicable (sample/IRT/DKPS need the cell's own
+queries; completion needs never-run cells). The ensemble stays best even where the raw
+sample catches the embedding ($m{=}8$); on the second suite it beats completion even at
+full cohort.}
 \label{tab:suite}
 \footnotesize
-\begin{tabular}{lccc ccc}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc cccc}
 \toprule
- & \multicolumn{3}{c}{\textbf{HELM suite} ($18$ tasks, $93$ models)}
- & \multicolumn{3}{c}{\textbf{EEE suite} ($16$ tasks, $45$ models)} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}
- & Query-eff. & \multicolumn{2}{c}{Completion} & Query-eff. & \multicolumn{2}{c}{Completion} \\
-Method & ($m{=}1$) & ($n{=}10$) & ($n{=}93$) & ($m{=}1$) & ($n{=}10$) & ($n{=}45$) \\
+ & \multicolumn{4}{c}{\textbf{HELM suite} ($18$ tasks, $93$ models)}
+ & \multicolumn{4}{c}{\textbf{EEE suite} ($16$ tasks, $45$ models)} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+ & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion}
+ & \multicolumn{2}{c}{Query-eff.} & \multicolumn{2}{c}{Completion} \\
+Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$)
+       & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) \\
 \midrule
-sample mean        & $0.292$ & --- & --- & $0.224$ & --- & --- \\
-IRT                & $0.348$ & --- & --- & $0.165$ & --- & --- \\
-matrix completion  & --- & $0.139$ & $0.105$ & --- & $0.109$ & $0.096$ \\
-DKPS               & $0.171$ & --- & --- & $0.117$ & --- & --- \\
-\PKPS              & $0.136$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.078}$ & $\mathbf{0.082}$ & $0.070$ \\
-ensemble           & $\mathbf{0.133}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $0.087$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ \\
+sample mean        & $0.292$ & $0.092$ & --- & --- & $0.224$ & $0.081$ & --- & --- \\
+IRT                & $0.348$ & $0.343$ & --- & --- & $0.165$ & $0.139$ & --- & --- \\
+matrix completion  & --- & --- & $0.139$ & $0.105$ & --- & --- & $0.109$ & $0.096$ \\
+DKPS               & $0.171$ & $0.115$ & --- & --- & $0.117$ & $0.083$ & --- & --- \\
+\PKPS              & $0.136$ & $0.111$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.078}$ & $0.059$ & $\mathbf{0.082}$ & $0.070$ \\
+ensemble           & $\mathbf{0.133}$ & $\mathbf{0.076}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $0.087$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
