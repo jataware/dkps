@@ -71,27 +71,17 @@ difference of their responses \emph{to the same queries}---a \emph{paired} desig
 unpaired data it has nothing to compare, and the information in the unpaired responses is
 thrown away.
 
-We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a collection of
-low-dimensional representations of models based on their embedded responses. \PKPS
-compares responses to \emph{similar}---rather than only identical---queries by weighting
-each response-pair comparison with a query kernel: every unpaired response contributes,
-and DKPS is the identity-query-kernel special case. Our broader thesis is that \PKPS
-supplies an item-level \emph{embedding} signal that score-only baselines ignore, and that
-combining it with the available item-level \emph{score} signal predicts benchmark
-performance better than either alone.
-
-\paragraph{Contribution.} Our contribution is the methodological, theoretical, and
-empirical validation of model representations built from unpaired responses.
-Methodologically, \PKPS is a strict generalization of DKPS: it contains the paired method
-as a special case and remains defined when models share no queries, with a single
-bandwidth---chosen per run by leak-free cross-validation---interpolating between the two
+In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
+collection of low-dimensional representations of models based on their embedded responses.
+\PKPS compares responses to \emph{similar}---rather than only identical---queries, so
+every unpaired response contributes and paired DKPS is recovered as a special case
 (Section~\ref{sec:method}). Theoretically, we extend the query-efficiency guarantee of
 \citet{dkps_qeff} to \PKPS and show that the required query budget is independent of the
 fraction of queries shared across models (Theorem~\ref{thm:qeff}). Empirically, on a
 $93$-model HELM suite and a $45$-model suite of modern models from the Every Eval Ever
 datastore \citep{eee2026}, \PKPS outperforms sample means, item-response theory, and DKPS
-wherever evaluation is sparse, noisy, or unpaired: at a single query per task it matches
-sample means given $8\times$ the budget, and ensembled with the available score signal it
+wherever evaluation is sparse, noisy, or unpaired---at a single query per task it matches
+sample means given $8\times$ the budget---and, ensembled with the available score signal,
 reduces low-rank completion's error by up to $28\%$
 (Sections~\ref{sec:synthetic}--\ref{sec:real}).
 
