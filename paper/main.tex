@@ -83,7 +83,7 @@ models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
 theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
 means with an $8\times$ smaller query budget, and that ensembling it with score-based
 methods reduces the error of low-rank completion by up to $28\%$
-(Sections~\ref{sec:synthetic}--\ref{sec:real}).
+(Section~\ref{sec:experiments}).
 
 \subsection{Problem setting and notation}
 \label{sec:setting}
@@ -179,7 +179,7 @@ kernel $k_Q$ compares embedded queries. Paired DKPS uses a linear response kerne
 identity query kernel $k_Q=\delta$. We use an RBF query kernel over the embedded queries,
 $k_Q(q_j,q_l)=\exp(-\|u_j-u_l\|^2/2\sigma^2)$, with bandwidth $\sigma$ chosen per run
 (below); $k_R$ is RBF in the synthetic study and linear on real data, where linearity makes
-the kernel factorize across response domains (Section~\ref{sec:real}). Since Eq.~\ref{eq:A}
+the kernel factorize across response domains (Section~\ref{sec:setup}). Since Eq.~\ref{eq:A}
 normalizes each pair by its own kernel mass, $A$ need not be positive semidefinite;
 classical MDS embeds the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as
 is standard. $A_{ab}$ costs $|Q_a||Q_b|$ kernel terms per pair, and one response-kernel
@@ -304,7 +304,7 @@ involves $\rho$.
 Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
 shared pairs, so DKPS's guarantee degrades as $\rho\to0$ while Theorem~\ref{thm:qeff}
 does not. The strict separation---a matching lower bound for DKPS---we leave as a
-conjecture; Section~\ref{sec:synthetic} is its empirical counterpart.
+conjecture; Section~\ref{sec:results} is its empirical counterpart.
 \begin{conjecture}[Strict gap]
 \label{conj:qeff}
 Under (A1)--(A4), the number of queries per model that \PKPS needs to reach error
@@ -313,29 +313,58 @@ are closest in the fully paired limit $\rho=1$.
 \end{conjecture}
 
 \section{Experiments}
-A real evaluation matrix is governed by four observation levers. The defining one is
-(i) \emph{pairing}---the fraction $\rho$ of each cell's queries shared across models, from
-fully paired ($\rho{=}1$) to fully unpaired ($\rho{=}0$); it is the axis DKPS cannot handle,
-and we sweep it directly in the synthetic study (Section~\ref{sec:synthetic}). The other three
-set how sparse and noisy the observations are: (ii) \emph{task coverage}---the fraction of
-(model, task) cells run at all; (iii) \emph{queries per cell}---how many queries a run uses,
-which sets the per-cell measurement \emph{noise}; and (iv) \emph{cohort size}---the number of
-models. On real data (Section~\ref{sec:real}) we turn to the two regimes practitioners actually
-face, both inherently unpaired since each model is run on its own queries: the
-all-tasks-covered, few-query limit is efficient benchmarking (denoising) and the zero-query
-limit is benchmark completion---two applications of the same embedding.
+\label{sec:experiments}
+We evaluate \PKPS on synthetic data, where every lever of the observation process can be
+swept, and on two heterogeneous benchmark suites. Throughout, the two prediction problems
+of Section~\ref{sec:setting} structure the experiments: denoising observed cells (query
+efficiency) and predicting missing ones (completion).
 
-\subsection{Synthetic data}
-\label{sec:synthetic}
-We generate $n$ models with latent ability vectors $v_i$ and $T$ tasks with latent
-vectors $t_k$, scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center.
-Each model answers $M_{ij}$ queries per task, of which $m_{ii'}$ are shared with another
-model (overlap $\rho=m_{ii'}/M_{ij}$); a task is observed with probability $p_{\mathrm{task}}$
-and a query with probability $p_{\mathrm{query}}$. We predict held-out (model, task)
-scores and compare DKPS (identity query kernel) against \PKPS (RBF), with the score-only
-sample baseline (predict a held-out cell by its task's observed mean) as a floor
+\subsection{Evaluation setup}
+\label{sec:setup}
+
+\paragraph{Synthetic data.} We generate $n$ models with latent ability vectors $v_i$ and
+$T$ tasks with latent vectors $t_k$, scores $v_i\cdot t_k+\epsilon$, and queries drawn
+near each task center. Each model answers $M_{ij}$ queries per task, of which $m_{ii'}$
+are shared with another model (overlap $\rho=m_{ii'}/M_{ij}$); a task is observed with
+probability $p_{\mathrm{task}}$ and a query with probability $p_{\mathrm{query}}$.
+
+\paragraph{Benchmark suites.} The first suite is $18$ tasks across four HELM datasets
+with very different response types---MATH ($7$ math subjects), WMT-14 ($5$ translation
+directions), MedQA (medical multiple-choice), and LegalBench ($5$ legal classification
+subsets)---on the $93$ models evaluated on all four. MATH and WMT have rich free-text
+responses; MedQA and LegalBench responses are single tokens for which text embeddings are
+degenerate, so we encode each dataset's responses natively (Gemini embeddings vs.\ one-hot
+answers) in disjoint blocks. With a linear $k_R$ this makes cross-dataset response
+similarity exactly zero, and a single shared query embedding with a within-domain
+bandwidth keeps $k_Q$ near zero across domains: the product kernel factorizes by domain,
+never comparing a proof to a legal label. The second suite, from the Every Eval Ever
+datastore \citep{eee2026}, is $45$ modern models on $16$ tasks (MATH-MC levels $1$--$5$,
+GSM-MC, GPQA-Diamond, and nine judging categories from JudgeBench and RewardBench~2), with
+per-cell query pools drawn independently per model ($\sim\!10\%$ incidental
+overlap)---unpaired by construction (Appendix~\ref{app:eee}).
+
+\paragraph{Prediction methods.} We compare six predictors. The \emph{sample mean} is a
+cell's own $m$-query average. \emph{IRT} fits a one-parameter logistic model on the
+largest shared item block \citep{polo2024tinybenchmarks}. \emph{Matrix completion} is the
+logit-space low-rank imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
+and \emph{\PKPS} regress scores on the model embeddings of Section~\ref{sec:method},
+DKPS being the identity-query-kernel limit. The \emph{ensemble} combines \PKPS with
+whichever score signal a cell has (Section~\ref{sec:method}).
+
+\paragraph{Measurement.} Every experiment predicts held-out or true cell scores and
+reports MAE against the full-evaluation score, mean $\pm1$ SEM over $16$ seeds ($50$ on
+synthetic data). Sweeps vary one observation lever at a time---queries per cell $m$
+(noise), task coverage $p_{\mathrm{task}}$, cohort size $n$, and, on synthetic data, the
+pairing $\rho$---holding the others fixed (grids in Appendix~\ref{app:details}); all
+hyperparameters, including the query bandwidth, are chosen per run by the leak-free
+cross-validation of Section~\ref{sec:method}.
+
+\subsection{Results}
+\label{sec:results}
+
+\paragraph{Synthetic study.} We predict held-out (model, task) scores, comparing \PKPS
+(RBF query kernel) against DKPS (identity) with the score-only sample baseline as a floor
 (Figure~\ref{fig:synthetic}).
-
 \PKPS---selecting its bandwidth by the same leak-free cross-validation as on real
 data---beats DKPS on \emph{every} lever, and both beat the sample floor: bridging similar
 queries (across tasks as well as within) supplies signal exact-match DKPS cannot reach, so
@@ -374,26 +403,9 @@ the full budget.}
 \label{fig:synthetic}
 \end{figure}
 
-\subsection{Real data}
-\label{sec:real}
-We study the two applications the unpaired embedding enables: making evaluation more
-\emph{query-efficient} (denoising cheap, few-query runs) and completing \emph{missing}
-cells. Both are inherently \emph{unpaired}---each model is run on its own queries, the
-real-data counterpart of the $\rho\!\to\!0$ limit swept in the synthetic study: DKPS's
-identity matching has little to align and IRT's shared-anchor fit cannot be estimated,
-while \PKPS bridges similar queries. All real-data numbers are means over $16$ seeds, with
-the bandwidth cross-validated per run. The suite is
-$18$ tasks across four datasets with very different response types---MATH ($7$ math
-subjects), WMT-14 ($5$ translation directions), MedQA (medical multiple-choice), and
-LegalBench ($5$ legal classification subsets)---on the $93$ models evaluated on all four.
-MATH and WMT have rich free-text responses; MedQA and LegalBench responses are single
-tokens for which text embeddings are degenerate, so we encode each dataset's responses
-natively (Gemini embeddings vs.\ one-hot answers) in disjoint blocks. With a linear $k_R$
-this makes cross-dataset response similarity exactly zero, and a single shared query
-embedding with a within-domain bandwidth keeps $k_Q$ near zero across domains: the
-product kernel factorizes by domain, never comparing a proof to a legal label.
-
-\paragraph{Application 1: query efficiency.} Because the embedding captures response
+\paragraph{Query efficiency.} Both real-data applications are inherently
+\emph{unpaired}---each model is run on its own queries, the real-data counterpart of the
+$\rho\!\to\!0$ limit above. Because the embedding captures response
 \emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
 cheap evaluations. Each model answers $m$ queries per cell, sampled independently---itself
 an unpaired regime, on which IRT is poorly identified; we predict the true full-eval score
@@ -428,7 +440,7 @@ tail-driven; the per-row mean ($\blacktriangledown$) is positive throughout.}
 \label{fig:qecond}
 \end{figure}
 
-\paragraph{Application 2: matrix completion.} The same embedding also predicts cells that
+\paragraph{Matrix completion.} The same embedding also predicts cells that
 were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each at depth
 $p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
 baseline (the sample does not apply---a missing cell has no sample). The contrast is the
@@ -463,21 +475,15 @@ this low-rank suite, but the per-row mean ($\blacktriangledown$) stays positive.
 \label{fig:mccond}
 \end{figure}
 
-\paragraph{Second suite: Every Eval Ever.} We replicate both applications on a second,
-independently assembled suite drawn from the Every Eval Ever datastore \citep{eee2026}:
-$45$ modern models on $16$ tasks (MATH-MC levels $1$--$5$, GSM-MC, GPQA-Diamond, and nine
-judging categories from JudgeBench and RewardBench~2), with per-cell query pools drawn
-independently per model ($\sim\!10\%$ incidental overlap)---unpaired by construction. The
-results mirror the first suite and sharpen the completion contrast (Table~\ref{tab:suite};
-lever sweeps in Appendix~\ref{app:eee}): at $m{=}1$ \PKPS attains a third of the sample's
-error ($0.078$ vs.\ $0.224$), and on missing cells the ensemble beats completion at
-\emph{every} operating point, including full cohort ($0.069$ vs.\ $0.096$ at
-$n{=}45$)---this matrix has higher effective rank, so the response channel wins even where
-completion is strongest.
-
-\paragraph{Summary.} Table~\ref{tab:suite} collects the two applications on both suites.
-\PKPS is present and competitive in every column, and the ensemble, which folds in
-whichever score signal exists, is best or tied nearly everywhere.
+\paragraph{Second suite.} Both applications replicate on the Every Eval Ever suite and
+sharpen the completion contrast (Table~\ref{tab:suite}; lever sweeps in
+Appendix~\ref{app:eee}): at $m{=}1$ \PKPS attains a third of the sample's error ($0.078$
+vs.\ $0.224$), and on missing cells the ensemble beats completion at \emph{every}
+operating point, including full cohort ($0.069$ vs.\ $0.096$ at $n{=}45$)---this matrix
+has higher effective rank, so the response channel wins even where completion is
+strongest. Table~\ref{tab:suite} collects the two applications on both suites: \PKPS is
+competitive in every column, and the ensemble, which folds in whichever score signal
+exists, is best or tied nearly everywhere.
 
 \begin{table}[tb]
 \centering
