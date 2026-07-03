@@ -605,11 +605,71 @@ all hyperparameter settings.
 
 \paragraph{Suite.} $18$ tasks over four datasets from HELM \citep{helm}: MATH ($7$
 subjects), WMT-14 ($5$ translation directions), MedQA, and LegalBench ($5$ subsets), on the
-$93$ models evaluated on all four. MATH and WMT-14 responses are free text and are embedded
+$93$ models evaluated on all four; Table~\ref{tab:helmsuite} lists every task with its
+query count (the loader subsamples each task to at most $120$ queries with a fixed seed, so
+datasets contribute comparably). MATH and WMT-14 responses are free text and are embedded
 with \texttt{gemini-embedding-001} ($3072$-d); MedQA and LegalBench responses are
 single-token answers, encoded one-hot. Queries share a single \texttt{gemini-embedding-001}
 embedding space. Response and query embeddings are reduced by PCA fit on observed rows
 only, with dimension chosen by the second Zhu--Ghodsi elbow.
+
+\begin{table}[h]
+\centering
+\caption{HELM suite composition: $18$ tasks over four datasets, with the number of unique
+queries per task. Every task is scored for all $93$ shared models; the loader caps each
+task at $120$ queries (seeded subsample).}
+\label{tab:helmsuite}
+\footnotesize
+\begin{tabular}{llr @{\hspace{2em}} llr}
+\toprule
+Dataset & Task & Queries & Dataset & Task & Queries \\
+\midrule
+MATH & algebra & 135 & WMT-14 & cs--en & 873 \\
+MATH & counting \& probability & 39 & WMT-14 & de--en & 776 \\
+MATH & geometry & 38 & WMT-14 & fr--en & 754 \\
+MATH & intermediate algebra & 52 & WMT-14 & hi--en & 387 \\
+MATH & number theory & 30 & WMT-14 & ru--en & 613 \\
+MATH & prealgebra & 86 & MedQA & med\_qa & 1000 \\
+MATH & precalculus & 57 & LegalBench & abercrombie & 95 \\
+LegalBench & corporate lobbying & 490 & LegalBench & citizenship questions & 1000 \\
+LegalBench & function of decision section & 367 & LegalBench & proa & 95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Model coverage (HELM).} The $93$ shared models span $20$ developers:
+{\footnotesize\ttfamily 01-ai\_yi-34b, 01-ai\_yi-6b, 01-ai\_yi-large-preview,
+AlephAlpha\_luminous-base, AlephAlpha\_luminous-extended, AlephAlpha\_luminous-supreme,
+ai21\_j2-grande, ai21\_j2-jumbo, ai21\_jamba-1.5-large, ai21\_jamba-1.5-mini,
+ai21\_jamba-instruct, allenai\_olmo-7b, amazon\_nova-lite-v1, amazon\_nova-micro-v1,
+amazon\_nova-pro-v1, anthropic\_claude-2.0, anthropic\_claude-2.1,
+anthropic\_claude-3-5-haiku-20241022, anthropic\_claude-3-5-sonnet-20240620,
+anthropic\_claude-3-5-sonnet-20241022, anthropic\_claude-3-haiku-20240307,
+anthropic\_claude-3-opus-20240229, anthropic\_claude-3-sonnet-20240229,
+anthropic\_claude-instant-1.2, anthropic\_claude-instant-v1, anthropic\_claude-v1.3,
+cohere\_command, cohere\_command-light, cohere\_command-r, cohere\_command-r-plus,
+databricks\_dbrx-instruct, deepseek-ai\_deepseek-llm-67b-chat, deepseek-ai\_deepseek-v3,
+google\_gemini-1.0-pro-001, google\_gemini-1.0-pro-002, google\_gemini-1.5-flash-001,
+google\_gemini-1.5-flash-002, google\_gemini-1.5-pro-001, google\_gemini-1.5-pro-002,
+google\_gemini-1.5-pro-preview-0409, google\_gemini-2.0-flash-exp, google\_gemma-2-27b-it,
+google\_gemma-2-9b-it, google\_gemma-7b, google\_text-bison@001, google\_text-unicorn@001,
+meta\_llama-2-13b, meta\_llama-2-70b, meta\_llama-2-7b, meta\_llama-3-70b, meta\_llama-3-8b,
+meta\_llama-3.1-405b-instruct-turbo, meta\_llama-3.1-70b-instruct-turbo,
+meta\_llama-3.1-8b-instruct-turbo, meta\_llama-3.2-11b-vision-instruct-turbo,
+meta\_llama-3.2-90b-vision-instruct-turbo, meta\_llama-3.3-70b-instruct-turbo,
+meta\_llama-65b, microsoft\_phi-2, microsoft\_phi-3-medium-4k-instruct,
+microsoft\_phi-3-small-8k-instruct, mistralai\_mistral-7b-instruct-v0.3,
+mistralai\_mistral-7b-v0.1, mistralai\_mistral-large-2407, mistralai\_mistral-medium-2312,
+mistralai\_mixtral-8x22b, mistralai\_mixtral-8x7b-32kseqlen,
+mistralai\_open-mistral-nemo-2407, nvidia\_nemotron-4-340b-instruct,
+openai\_gpt-3.5-turbo-0613, openai\_gpt-4-0613, openai\_gpt-4-1106-preview,
+openai\_gpt-4-turbo-2024-04-09, openai\_gpt-4o-2024-05-13, openai\_gpt-4o-2024-08-06,
+openai\_gpt-4o-mini-2024-07-18, openai\_text-davinci-002, openai\_text-davinci-003,
+qwen\_qwen1.5-110b-chat, qwen\_qwen1.5-14b, qwen\_qwen1.5-32b, qwen\_qwen1.5-72b,
+qwen\_qwen1.5-7b, qwen\_qwen2-72b-instruct, qwen\_qwen2.5-72b-instruct-turbo,
+qwen\_qwen2.5-7b-instruct-turbo, snowflake\_snowflake-arctic-instruct, tiiuae\_falcon-40b,
+tiiuae\_falcon-7b, upstage\_solar-pro-241126, writer\_palmyra-x-004, writer\_palmyra-x-v2,
+writer\_palmyra-x-v3}.
 
 \paragraph{\PKPS.} RBF query kernel with bandwidth selected per run by leave-one-model-out
 $k$-NN ($k{=}8$) on the observed scores over the grid
@@ -652,8 +712,8 @@ community-maintained collection of item-level evaluation results in a unified fo
 (inputs, raw model outputs, and per-item scores). We take the five benchmarks with the
 widest item-level model coverage---MATH-MC, GSM-MC, GPQA-Diamond, JudgeBench, and
 RewardBench~2---restricted to the $45$ models present on all five; sub-tasks (MATH-MC
-levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks, with
-$42$--$1{,}288$ items per (model, task) cell. Every domain is free text (including the
+levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks
+(Table~\ref{tab:eeesuite}). Every domain is free text (including the
 judging benchmarks' rationales), so all responses and queries are embedded with
 \texttt{gemini-embedding-001} and blocked by benchmark exactly as in
 Appendix~\ref{app:details}. Each cell's observable pool is $32$ queries drawn with a
@@ -663,6 +723,48 @@ All scores are binary, so IRT applies to every task (on the HELM suite it exclud
 Figures~\ref{fig:eeeqe} and \ref{fig:eeecomp} repeat the lever sweeps of
 Figures~\ref{fig:qe} and \ref{fig:completion} on this suite; Table~\ref{tab:suite}
 summarizes.
+
+\begin{table}[h]
+\centering
+\caption{EEE suite composition: $16$ tasks over five benchmarks, with the number of items
+per (model, task) cell. Every task is fully answered by all $45$ shared models; each
+cell's observable pool is $32$ items, sampled per model.}
+\label{tab:eeesuite}
+\footnotesize
+\begin{tabular}{llr @{\hspace{2em}} llr}
+\toprule
+Benchmark & Task & Items & Benchmark & Task & Items \\
+\midrule
+MATH-MC & level 1 & 430 & JudgeBench & coding & 42 \\
+MATH-MC & level 2 & 882 & JudgeBench & knowledge & 154 \\
+MATH-MC & level 3 & 1115 & JudgeBench & math & 56 \\
+MATH-MC & level 4 & 1199 & JudgeBench & reasoning & 98 \\
+MATH-MC & level 5 & 1288 & RewardBench~2 & factuality & 475 \\
+GSM-MC & gsm\_mc & 1319 & RewardBench~2 & focus & 495 \\
+GPQA-Diamond & gpqa\_diamond & 198 & RewardBench~2 & math & 183 \\
+RewardBench~2 & precise if & 160 & RewardBench~2 & safety & 450 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Model coverage (EEE).} The $45$ models shared by all five benchmarks span $13$
+developers:
+{\footnotesize\ttfamily cohere/c4ai-command-a-03-2025, cohere/c4ai-command-r-08-2024,
+cohere/c4ai-command-r-plus-08-2024, cohere/c4ai-command-r7b-12-2024,
+cohere/command-a-reasoning-08-2025, deepseek/deepseek-r1-0528,
+deepseek/deepseek-v3-1-terminus, deepseek/deepseek-v3-2, deepseek/deepseek-v3-2-speciale,
+deepseek/deepseek-v4-flash-fp8, deepseek/deepseek-v4-pro, google/gemini-3-1-pro-preview,
+google/gemma-2-27b-it, google/gemma-2-9b-it, google/gemma-3-12b-it, google/gemma-3-27b-it,
+google/gemma-4-e2b-it, google/gemma-4-e4b-it, llm360/k2-v2-instruct,
+meta/llama-4-maverick-17b-128e-instruct-fp8, meta/meta-llama-3-1-8b-instruct,
+minimax/minimax-m2-5, mistral/mistral-small-4-119b-2603, moonshot/kimi-k2-5,
+moonshot/kimi-k2-6, moonshot/kimi-k2-thinking, openai/gpt-5-5, openai/gpt-5-mini,
+openai/gpt-5-nano, openai/gpt-oss-120b, openai/gpt-oss-20b,
+qwen/qwen3-30b-a3b-thinking-2507, qwen/qwen3-5-122b-a10b, qwen/qwen3-5-2b,
+qwen/qwen3-5-397b-a17b, qwen/qwen3-6-35b-a3b, qwen/qwen3-6-plus,
+qwen/qwen3-next-80b-a3b-thinking, stepfun/step-3-5-flash, xiaomi/mimo-v2-flash,
+zai-org/glm-4-6-fp8, zai-org/glm-4-7-flash, zai-org/glm-4-7-fp8, zai-org/glm-5-1-fp8,
+zai-org/glm-5-fp8}.
 
 \begin{figure}[t]
 \centering
