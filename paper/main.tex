@@ -650,8 +650,10 @@ $\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, pl
 near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Response
 blocks are capped at $48$ PCA components per dataset and the shared query space at $64$;
 each (model, query) pair uses one sampled response ($r{=}1$). Models are embedded by
-classical MDS ($d{=}12$ on real data, fixed a priori and not tuned; $d$ = latent dimension
-on synthetic).
+classical MDS ($d{=}12$ in the query-efficiency experiments and $d{=}8$ in the completion
+experiments, both fixed a priori and not tuned; $d$ = latent dimension on synthetic).
+Appendix~\ref{app:sens} shows the results are insensitive to $d$ over $4$--$24$ and that
+the cross-validated bandwidth tracks the best fixed choice.
 
 \paragraph{Prediction head.} All embedding methods share one head: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
@@ -780,6 +782,37 @@ Figure~\ref{fig:completion}. Unlike the HELM suite, the embedding and ensemble b
 low-rank completion at every operating point---including full cohort and coverage---
 consistent with the higher effective rank of this modern score matrix.}
 \label{fig:eeecomp}
+\end{figure}
+
+\section{Sensitivity analyses}
+\label{app:sens}
+
+Figure~\ref{fig:sens} probes the two representation hyperparameters on the
+query-efficiency experiment ($16$ seeds throughout). \textbf{MDS dimension (a, b).}
+Repeating the budget sweep at $d\in\{4,8,12,24\}$ moves \PKPS's MAE by less than
+$0.005$ at every budget on both suites (at the smallest budgets, smaller $d$ is very
+slightly better---fewer coordinates to estimate from one noisy query per cell); the
+paper's a-priori choices ($d{=}12$ query efficiency, $d{=}8$ completion) are neither the
+best nor the worst point at any budget. \textbf{Query bandwidth (c).} Fixing the
+bandwidth at each grid multiplier instead of cross-validating traces the expected curve:
+near-delta multipliers and the exact-matching $\delta$ limit are substantially worse
+(unpaired pools leave them little to compare), broad multipliers are best, and the
+leak-free cross-validated choice matches the best fixed multiplier on both suites
+($0.126$ vs.\ $0.125$ on HELM, $0.069$ vs.\ $0.068$ on EEE)---the one hyperparameter
+that matters is the one the method selects automatically. Sensitivity to the number of
+reference models is part of the main experiments (the cohort sweeps of
+Figures~\ref{fig:qe}b and \ref{fig:completion}d).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_sensitivity.pdf}
+\caption{\textbf{Sensitivity analyses} on the query-efficiency experiment ($\pm1$ SEM,
+$16$ seeds). \textbf{(a, b)} \PKPS MAE vs.\ budget at MDS dimension $d\in\{4,8,12,24\}$
+(paper choice in red; raw sample dashed): the curves are nearly indistinguishable on both
+suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth \emph{fixed} at each grid
+multiplier ($\delta$ = exact matching); dotted lines mark the cross-validated selection,
+which matches the best fixed choice on both suites.}
+\label{fig:sens}
 \end{figure}
 
 \section{Proof of Theorem~\ref{thm:qeff}}
