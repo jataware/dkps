@@ -32,21 +32,21 @@
 
 \begin{abstract}
 Evaluating language models is expensive, so benchmark coverage is sparse and noisy: each
-model is run on some tasks, on some queries within a task, and each score is a noisy
-average over those queries. Methods that complete the (model $\times$ task) score
-matrix---matrix completion, item-response theory---use only each cell's \emph{aggregate}
-score; we use its individual responses. We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, which embeds
-each model from its responses through a product kernel $k_Q\cdot k_R$ that compares responses
-to \emph{similar} queries, not only identical ones; it recovers the Data Kernel Perspective
-Space as the bandwidth $\sigma\!\to\!0$ and stays defined when models answer different
-queries. Ensembling this embedding with the available score signal---a cell's own sample mean
-where measured, matrix completion where not---makes efficient benchmarking and benchmark
-completion two ends of one problem. On two heterogeneous suites---$18$ HELM tasks over
-$93$ models, and $16$ tasks over $45$ modern models from the Every Eval Ever
-datastore---the ensemble matches or beats the best score-only predictor across task
-coverage, queries per cell, and cohort size, by a margin that grows as evaluation gets
-sparser and noisier; the embedding survives unpaired queries where DKPS and IRT collapse,
-and rescues small cohorts where low-rank completion fails for lack of rows.
+model is run on a subset of tasks, on a subset of queries within each task, and each score
+is a noisy average over those queries. Methods that complete the resulting
+(model $\times$ task) score matrix use only each cell's aggregate score, and the
+response-based Data Kernel Perspective Space (DKPS) requires every model to answer the same
+queries. In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)},
+which embeds each model from its responses by comparing responses to similar---rather than
+only identical---queries. \PKPS contains DKPS as a special case and remains defined when
+models answer entirely different queries. Theoretically, we show that \PKPS is
+query-efficient independently of the fraction of queries shared across models. Empirically,
+on two heterogeneous suites, ensembling the \PKPS embedding with the available score
+signal---a cell's own sample mean where measured, matrix completion where not---matches or
+beats the best score-only predictor in every observation regime, with the largest gains
+where evaluation is sparsest and noisiest. The embedding survives fully unpaired evaluation
+where DKPS and item-response theory collapse, and rescues small model cohorts where
+low-rank completion fails.
 \end{abstract}
 
 \section{Introduction}
