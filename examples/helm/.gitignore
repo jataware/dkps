@@ -25,3 +25,6 @@ figures/*.png
 # Generated tables
 tables/
 tables-*/
+
+# EEE datastore downloads
+data/eee/
