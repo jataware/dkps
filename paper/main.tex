@@ -6,6 +6,10 @@
 \newtheorem{conjecture}{Conjecture}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\theoremstyle{plain}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -202,30 +206,16 @@ recovers a smooth score gradient and predicts on the diagonal (MAE $0.07$).}
 \end{figure}
 
 \subsection{Theoretical properties of the \PKPS}
-\PKPS is a strict generalization of DKPS.
-\begin{proposition}[Strict generalization]
-\label{prop:gen}
-(i)~\emph{DKPS limit.} With $k_Q=\delta$, Eq.~\ref{eq:A} reduces to paired DKPS over the
-shared queries, $A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$;
-if the query embeddings are distinct, the RBF query kernel converges to $\delta$ as
-$\sigma\!\to\!0$, so DKPS is also the small-bandwidth limit.
-(ii)~\emph{Unpaired comparability.} For any strictly positive $k_Q$ (e.g.\ RBF), $A_{ab}$
-is defined for every pair of nonempty query sets, including disjoint ones, whereas paired
-DKPS is undefined when $Q_a\cap Q_b=\emptyset$.
-\end{proposition}
-\begin{proof}
-(i) Take $k_Q(q_j,q_l)=\mathbf{1}[q_j=q_l]$. Since the double sum ranges over $j\in Q_a$,
-$l\in Q_b$, a term survives only if the two queries are equal \emph{and} that query lies in
-both sets, $\mathbf{1}[q_j=q_l]\,\mathbf{1}[q_j\in Q_a]\,\mathbf{1}[q_l\in Q_b]
-=\mathbf{1}[q_j=q_l\in Q_a\cap Q_b]$; the normalizer counts the same terms, giving the
-stated average (the same-$m$-queries case recovers $\tfrac1m\sum_j k_R(x_{aj},x_{bj})$).
-For the limit, $\exp(-\|u_j-u_l\|^2/2\sigma^2)\to\mathbf{1}[u_j=u_l]$ pointwise as
-$\sigma\to0$. (ii) With $k_Q>0$ the normalizer $\sum_{jl}k_Q(q_j,q_l)$ is positive for any
-nonempty $Q_a,Q_b$, so the ratio in Eq.~\ref{eq:A} is well defined.
-\end{proof}
-Between the two limits, increasing $\sigma$ smoothly trades exact query matching for
-cross-query bridging, so a single scalar controls how much unpaired evidence the
-perspective uses.
+\PKPS is a strict generalization of DKPS, in two senses. \emph{DKPS limit:} with
+$k_Q=\delta$ only equal queries lying in both query sets survive the double sum of
+Eq.~\ref{eq:A}, so it reduces to paired DKPS over the shared queries,
+$A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$; and since the
+RBF query kernel converges pointwise to $\delta$ as $\sigma\!\to\!0$ (distinct queries
+having distinct embeddings), DKPS is also the small-bandwidth limit. \emph{Unpaired
+comparability:} for any strictly positive $k_Q$ the normalizer is positive for any pair of
+nonempty query sets, so $A_{ab}$ is defined even on disjoint sets, where paired DKPS is
+undefined. Between the two limits, $\sigma$ smoothly trades exact matching for
+cross-query bridging.
 
 \subsection{Inference in the \PKPS}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
@@ -271,45 +261,74 @@ exactly the same information.
 \label{sec:qeff}
 \PKPS is designed to reach a target prediction accuracy from fewer evaluated queries than
 paired DKPS: by bridging responses to similar queries it uses evidence that DKPS, limited
-to shared queries, discards. The query-efficiency analysis of \citet{dkps_qeff} extends to
-\PKPS. Assume (A1) the benchmark score is bounded and $\gamma$-Lipschitz on the population
-perspective space; (A2) the model distribution places mass on every neighborhood, so a near
-reference neighbor exists; (A3) kernels and embedded responses are bounded; (A4) the
-\emph{cross-model query-kernel mass} is bounded below,
-$\kappa=\inf_{a,b}\,\mathbb{E}\,[k_Q(u,u')]>0$ for queries drawn from any two models'
-designs; and (A5) the population squared-distance matrix embeds in $\mathbb{R}^d$, with a
-spectral gap $\lambda_d>0$ in its centered Gram matrix. (A4) is the population analogue of
-the overlap $\rho$: for an RBF $k_Q$ it holds whenever the query \emph{distributions}
-overlap in embedding space, even if no individual query is shared.
+to shared queries, discards. We formalize this by extending the machinery of
+\citet{dkps_qeff}.
+\begin{definition}[Population \PKPS]
+\label{def:pop}
+Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
+$P_a$. The \emph{population affinity} is
+$A^*_{ab}=\mathbb{E}[k_Q(u,u')\,k_R(x_a,x_b)]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
+$P_a$ and $P_b$ independent, the population squared distances are
+$D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, and the \emph{population perspectives}
+$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
+Gram matrix $B^*$ of $D^{*2}$.
+\end{definition}
+\begin{assumption}[Score regularity]\label{ass:score}
+The benchmark score is bounded and $\gamma$-Lipschitz on the population perspective space.
+\end{assumption}
+\begin{assumption}[Model support]\label{ass:support}
+The model distribution places mass on every neighborhood of the population perspective
+space.
+\end{assumption}
+\begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
+Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
+bounded below, $\kappa=\inf_{a,b}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
+spectral gap $\lambda_d>0$. ($\kappa$ is the population analogue of $\rho$: positive for
+an RBF $k_Q$ whenever query \emph{distributions} overlap, even with no shared query.)
+\end{assumption}
+\begin{proposition}[Concentration of \PKPS perspectives]
+\label{prop:conc}
+Under Assumption~\ref{ass:reg}, with at least $m$ queries per model, for any
+$\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
+that
+$\max_i\|\hat\psi_i-W\psi_i\|\le
+C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
+where $C$ depends only on the kernel bounds (proof in Appendix~\ref{app:proof}).
+\end{proposition}
+\begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
+\label{def:qeff}
+For a score estimator $h$ and a query design with per-model budget $m$, let
+$m_h(\epsilon)$ be the smallest budget at which $h$ attains
+$\mathrm{MSE}\le\epsilon$ with high probability for some number of reference models.
+Estimator $h$ is \emph{query-efficient relative to} $h'$ if
+$m_h(\epsilon)\le m_{h'}(\epsilon)$ for all sufficiently small $\epsilon$.
+\end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Under (A1)--(A5), for any $\epsilon>0$ there exist $(n,m)$, with $m$ polynomial in
-$(1/\epsilon,1/\kappa,n)$ and independent of the pairing fraction $\rho$, such that
-nearest-neighbor regression in the \PKPS attains mean squared error at most $\epsilon$
-with high probability.
+Under Assumptions~\ref{ass:score}--\ref{ass:reg}, for any $\epsilon>0$ there exist
+$(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and independent of the pairing
+fraction $\rho$, such that nearest-neighbor regression in the \PKPS attains mean squared
+error at most $\epsilon$ with high probability; in particular $m_{\PKPS}(\epsilon)$ does
+not grow as $\rho\to0$.
 \end{theorem}
 \begin{proof}[Proof sketch]
-(Full proof in Appendix~\ref{app:proof}.) The affinity of Eq.~\ref{eq:A} is a ratio of two
-two-sample $U$-statistics over the $|Q_a||Q_b|$ query pairs; by Hoeffding's inequality and
-the mass bound (A4), $\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|=
-O(\kappa^{-2}m^{-1/2})$ w.h.p.\ (Lemma~\ref{lem:conc}). The perturbed Gram matrix then
-moves the embedded perspectives by at most $25\sqrt d\,n\varepsilon_\infty/\sqrt{\lambda_d}$
-row-wise, via Weyl and a Procrustes alignment under the spectral gap (A5)
-(Lemma~\ref{lem:pert}). Finally, the nearest-neighbor regression error is at most $\gamma$
-times the population distance to the neighbor (A1), which splits into two estimation terms
-(above) and the population NN distance, made small by (A2); choosing
-$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ drives the MSE below $\epsilon$, and no step
-involves $\rho$.
+Proposition~\ref{prop:conc} bounds the estimation error of every perspective. By
+Assumption~\ref{ass:score} and the triangle inequality, the nearest-neighbor regression
+error splits into two estimation terms and the population nearest-neighbor distance, which
+Assumption~\ref{ass:support} makes small for $n$ large; choosing
+$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives $\mathrm{MSE}\le\epsilon$, and no step
+involves $\rho$. Full proof in Appendix~\ref{app:proof}.
 \end{proof}
 Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
-shared pairs, so DKPS's guarantee degrades as $\rho\to0$ while Theorem~\ref{thm:qeff}
-does not. The strict separation---a matching lower bound for DKPS---we leave as a
-conjecture; Section~\ref{sec:results} is its empirical counterpart.
+shared query pairs, so the DKPS bound's effective budget is $\rho m$ and its guarantee
+degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. In the sense of
+Definition~\ref{def:qeff} we conjecture strict separation; Section~\ref{sec:results} is
+its empirical counterpart.
 \begin{conjecture}[Strict gap]
 \label{conj:qeff}
-Under (A1)--(A4), the number of queries per model that \PKPS needs to reach error
-$\epsilon$ is at most that of paired DKPS, and the gap increases as $\rho\to0$; the two
-are closest in the fully paired limit $\rho=1$.
+Under Assumptions~\ref{ass:score}--\ref{ass:reg}, \PKPS is query-efficient relative to
+paired DKPS, with $m_{\mathrm{DKPS}}(\epsilon)/m_{\PKPS}(\epsilon)$ increasing as
+$\rho\to0$; the two coincide in the fully paired limit $\rho=1$.
 \end{conjecture}
 
 \section{Experiments}
@@ -517,24 +536,22 @@ ensemble           & $\mathbf{0.133}$ & $\mathbf{0.076}$ & $\mathbf{0.120}$ & $\
 
 \section{Discussion}
 Real leaderboards are organic: each model answers whatever queries its authors chose, so
-the responses benchmark estimation must compare are \emph{unpaired}---and DKPS and
-item-response models, which need a shared block of identical queries, collapse there.
-\PKPS removes that requirement with a product kernel comparing responses to \emph{similar}
-queries, recovering paired DKPS in its $\sigma\!\to\!0$ limit and scaling to heterogeneous
-suites through a block-diagonal kernel. Our central finding is that benchmark estimation survives unpaired evaluation: as
+the responses benchmark estimation must compare are \emph{unpaired}---and methods that
+need a shared block of identical queries collapse there. \PKPS removes that requirement
+with a product kernel comparing responses to \emph{similar} queries, recovering paired
+DKPS in its $\sigma\!\to\!0$ limit and scaling to heterogeneous suites through a
+block-diagonal kernel. Our central finding is that benchmark estimation survives unpaired evaluation: as
 $\rho\!\to\!0$, DKPS and IRT degrade sharply while \PKPS holds.
 That capability yields two applications from one embedding---denoising cheap, few-query
 evaluations and predicting never-run cells---and the ensemble with a cell's own sample is
-never the worse choice.
-None of this assumes pairing or exhaustive evaluation, which organically-assembled
-leaderboards cannot provide.
+never the worse choice. None of this assumes pairing or exhaustive evaluation.
 
 \paragraph{Limitations.} \PKPS embeds every observed response and query; cost and quality
 inherit from the embedders, which we do not ablate. Our block-diagonal instantiation
 disables cross-domain bridging; whether a shared response space would help is open. The
-affinity is quadratic in queries per model pair, needing approximation only for very large
-query logs. Theorem~\ref{thm:qeff} is existential
-((A2) gives no rate in $n$), and the strict separation from paired DKPS remains a
+affinity is quadratic in queries per model pair (approximation needed only for very large
+logs). Theorem~\ref{thm:qeff} is existential
+(Assumption~\ref{ass:support} gives no rate in $n$), and the strict separation from paired DKPS remains a
 conjecture. Finally, per-cell wins over score-only baselines are modest on low-rank,
 dense matrices and decisive where evaluation is sparse, noisy, unpaired, small-cohort,
 or high-rank---the motivating regime.
@@ -764,7 +781,7 @@ consistent with the higher effective rank of this modern score matrix.}
 
 \paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
 distribution over embedded queries; write $z=(u,x_a(u))$ for an embedded query--response
-pair (response noise included) and $P_a$ for its law. By (A3) the kernels are bounded:
+pair (response noise included) and $P_a$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population affinity
 \[
 A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
@@ -773,11 +790,11 @@ A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_
 population squared distances $D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, the centered Gram
 matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
 population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
-which exists with $\lambda_d(B^*)>0$ by (A5).
+which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:reg} (cf.\ Definition~\ref{def:pop}).
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
-Under (A3)--(A4), for models $a,b$ with $\min(|Q_a|,|Q_b|)\ge m$ and any
+Under Assumption~\ref{ass:reg}, for models $a,b$ with $\min(|Q_a|,|Q_b|)\ge m$ and any
 $\delta\in(0,1)$: with probability at least $1-\delta$,
 \[
 |A_{ab}-A^*_{ab}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
@@ -795,7 +812,7 @@ stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
 \citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
 $\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; since $\bar B$ dominates
 both ranges, a union bound gives $|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$
-jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by (A4) and $t_m(\delta)\le\kappa/2$,
+jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by Assumption~\ref{ass:reg} and $t_m(\delta)\le\kappa/2$,
 we have $Z\ge\kappa/2$, and
 \[
 |A_{ab}-A^*_{ab}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
@@ -844,9 +861,9 @@ distances are invariant to $W$.
 \end{proof}
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}.} Take scores in $[0,1]$ without loss of
-generality (A1). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
+generality (Assumption~\ref{ass:score}). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
 the estimation error and $\epsilon'\le\sqrt{\epsilon/2}/(2\gamma)$ for the population
-nearest-neighbor distance. By (A2) there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
+nearest-neighbor distance. By Assumption~\ref{ass:support} there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
 reference model within population distance $\epsilon'$ of the target exists except with
 probability at most $\epsilon/8$. Fix such an $n$. Applying Lemma~\ref{lem:conc} with
 confidence $\delta=\epsilon/(8n^2)$ to every pair, a union bound and
@@ -866,7 +883,7 @@ events, for a target model $f$ with nearest estimated reference neighbor $f^*$
 \gamma\big(\|\hat\psi^*-W\psi^*\|+\|\hat\psi^*-\hat\psi\|+\|\hat\psi-W\psi\|\big)
 \;\le\;\gamma\,(2c+\hat\delta),
 \]
-using (A1) and orthogonal invariance. The estimated nearest-neighbor distance
+using Assumption~\ref{ass:score} and orthogonal invariance. The estimated nearest-neighbor distance
 $\hat\delta$ is at most the estimated distance to the $\epsilon'$-close reference, itself
 at most $\epsilon'+2c$ by the same alignment argument, so
 $|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding the two
@@ -877,6 +894,6 @@ $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
 and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$: DKPS's
 guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
-where its distance is undefined (Proposition~\ref{prop:gen}). This asymmetry motivates
+where its distance is undefined (Section~\ref{sec:method}). This asymmetry motivates
 Conjecture~\ref{conj:qeff}; a formal lower bound for DKPS is future work.
 \end{document}
