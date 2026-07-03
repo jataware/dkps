@@ -85,6 +85,31 @@ means with an $8\times$ smaller query budget, and that ensembling it with score-
 methods reduces the error of low-rank completion by up to $28\%$
 (Sections~\ref{sec:synthetic}--\ref{sec:real}).
 
+\subsection{Problem setting and notation}
+\label{sec:setting}
+A \emph{model} is a random mapping $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a
+response space; querying $f$ at $q$ returns a draw from the distribution $f(q)$. We
+observe $n$ models $f_1,\dots,f_n$, each run on its own \emph{query set}
+$Q_i\subseteq\mathcal{Q}$; the sets may overlap arbitrarily, and the paired design
+$Q_1=\dots=Q_n$ is a special case. Two fixed embedding functions map raw objects to
+vectors: a \emph{response} embedding $\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and
+a \emph{query} embedding $\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$. For
+$q_j\in Q_i$ we write
+$x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)$ for the
+average of the $r$ sampled response embeddings and $u_j=\mathrm{embed}_Q(q_j)$ for the
+embedded query.
+
+Queries are grouped into $T$ tasks. Model $i$'s \emph{true score} on task $t$, $y_{it}$,
+is its mean score over the task's full query set; running the model on $m_{it}\ge0$ of
+those queries yields an observed \emph{sample score} whose noise scales as
+$1/\sqrt{m_{it}}$. The goal is to predict $y_{it}$ for every cell of the
+(model $\times$ task) matrix: cells observed with few queries ($m_{it}>0$;
+\emph{denoising}, the efficient-benchmarking end) and cells never run ($m_{it}=0$;
+\emph{completion}). We write $y_i$ when the benchmark has a single score. Two properties
+of the design recur throughout: \emph{coverage}, the fraction of cells with $m_{it}>0$,
+and \emph{pairing}, the fraction $\rho$ of a cell's queries shared across models; real
+evaluations sit near $\rho\approx0$.
+
 \section{Related work}
 \label{sec:related}
 
@@ -120,23 +145,8 @@ item-level embedding signal that we ensemble with matrix completion.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-\paragraph{Models and observations.} A \emph{model} is a random mapping
-$f:\mathcal{Q}\to\mathcal{X}$ from a query space $\mathcal{Q}$ to a response space
-$\mathcal{X}$; querying $f$ at $q$ returns a response drawn from the distribution $f(q)$.
-We observe $n$ models $f_1,\dots,f_n$, each run on its own \emph{query set}
-$Q_i\subseteq\mathcal{Q}$, giving a tuple $\mathbf{Q}=(Q_1,\dots,Q_n)$ that may differ
-across models or be disjoint; the paired design $Q_1=\dots=Q_n$ is the special case. Two
-fixed, distinct embedding functions map raw objects to vectors: a \emph{response}
-embedding $\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and a \emph{query} embedding
-$\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$ (e.g.\ different text-embedding models).
-For $q_j\in Q_i$ we average the embeddings of the $r$ sampled responses,
-$x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)\in\mathbb{R}^{p}$,
-and write $u_j=\mathrm{embed}_Q(q_j)$ for the embedded query. The goal is to predict each
-model's true score on each task, $y_{it}$---both tasks run with few queries (denoising) and
-tasks never run (completion); we write $y_i$ when the benchmark has a single score.
-
-\paragraph{Perspective space.} Each method summarizes the $n$ models in an $n\times n$
-affinity matrix $A$ (defined below). The squared distance between two models is
+\paragraph{Perspective space.} Each method summarizes the $n$ models of
+Section~\ref{sec:setting} in an $n\times n$ affinity matrix $A$ (defined below). The squared distance between two models is
 $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
