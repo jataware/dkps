@@ -44,9 +44,10 @@ and that it is a complementary signal to score-based methods.
 \end{abstract}
 
 \section{Introduction}
-Evaluating a generative model on all available benchmarks is prohibitively expensive. As
-a result, models are evaluated on different subsets of tasks and on different subsets of
-queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
+Generative models are evaluated on an ever-growing collection of benchmarks spanning
+knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
+all of them is prohibitively expensive. As a result, models are evaluated on different
+subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
 finds only $23\%$ of the score matrix filled \citep{benchpress}. Nor is this an accident
 of curation---it is how modern evaluation works. Arena-style platforms score each model on
 whatever conversations its users happen to have \citep{chiang2024chatbot};
@@ -77,26 +78,22 @@ each response-pair comparison with a query kernel: every unpaired response contr
 and DKPS is the identity-query-kernel special case. Our broader thesis is that \PKPS
 supplies an item-level \emph{embedding} signal that score-only baselines ignore, and that
 combining it with the available item-level \emph{score} signal predicts benchmark
-performance better than either alone. Our contributions:
-\begin{itemize}
-\item \textbf{Methodological and theoretical.} We extend DKPS to the unpaired regime with a
-product-kernel affinity $k_Q\cdot k_R$ (Section~\ref{sec:method}): a strict generalization
-that contains paired DKPS at $k_Q=\delta$ (and as $\sigma\!\to\!0$), stays defined on
-disjoint query sets where DKPS is undefined, and interpolates via a single bandwidth chosen
-per run by leak-free cross-validation. Extending the proof technique of \citet{dkps_qeff},
-we give a query-efficiency guarantee independent of the pairing fraction
-(Theorem~\ref{thm:qeff}), state the strict gap over DKPS as a conjecture, and treat the
-embedding as one term of an embedding-$\oplus$-score ensemble.
-\item \textbf{Empirical.} We demonstrate utility and robustness to missing responses on
-the two ends of one estimation problem---query-efficient evaluation ($m{>}0$ queries per
-cell) and matrix completion ($m{=}0$)---on a heterogeneous $18$-task, $93$-model HELM suite,
-replicated on a $16$-task, $45$-model suite of modern models from the Every Eval Ever
-datastore \citep{eee2026} (Sections~\ref{sec:synthetic}--\ref{sec:real}). The embedding
-survives unpaired queries where DKPS and IRT collapse and recovers the small-cohort regime
-where low-rank completion fails; the ensemble matches or beats the best score-only
-predictor across every lever, by a margin that grows as evaluation gets sparser and
-noisier.
-\end{itemize}
+performance better than either alone.
+
+\paragraph{Contribution.} Our contribution is the methodological, theoretical, and
+empirical validation of model representations built from unpaired responses.
+Methodologically, \PKPS is a strict generalization of DKPS: it contains the paired method
+as a special case and remains defined when models share no queries, with a single
+bandwidth---chosen per run by leak-free cross-validation---interpolating between the two
+(Section~\ref{sec:method}). Theoretically, we extend the query-efficiency guarantee of
+\citet{dkps_qeff} to \PKPS and show that the required query budget is independent of the
+fraction of queries shared across models (Theorem~\ref{thm:qeff}). Empirically, on a
+$93$-model HELM suite and a $45$-model suite of modern models from the Every Eval Ever
+datastore \citep{eee2026}, \PKPS outperforms sample means, item-response theory, and DKPS
+wherever evaluation is sparse, noisy, or unpaired: at a single query per task it matches
+sample means given $8\times$ the budget, and ensembled with the available score signal it
+reduces low-rank completion's error by up to $28\%$
+(Sections~\ref{sec:synthetic}--\ref{sec:real}).
 
 \section{Related work}
 \label{sec:related}
