@@ -44,34 +44,38 @@ and that it is a complementary signal to score-based methods.
 \end{abstract}
 
 \section{Introduction}
-Comprehensive evaluation of language models is a growing bottleneck: leaderboards track
-hundreds of models across dozens of benchmarks, yet no model is run on everything---a
-recent compilation of $84$ frontier models on $133$ benchmarks finds only $23\%$ of the
-score matrix filled \citep{benchpress}. The (model $\times$ task) score matrix is
-\emph{doubly sparse}: across tasks (a model is evaluated on a subset of benchmarks) and
-within tasks (evaluation uses a subset of queries to save cost). Predicting the missing
-entries would let practitioners reuse cached evaluations instead of paying to re-run them
+Evaluating a generative model on all available benchmarks is prohibitively expensive. As
+a result, models are evaluated on different subsets of tasks and on different subsets of
+queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
+finds only $23\%$ of the score matrix filled \citep{benchpress}. Nor is this an accident
+of curation---it is how modern evaluation works. Arena-style platforms score each model on
+whatever conversations its users happen to have \citep{chiang2024chatbot};
+contamination-aware benchmarks refresh their items, so models evaluated in different
+months answer different questions \citep{white2024livebench}; and cost-driven subsampling
+gives each evaluation run its own item subset \citep{perlitz2024efficient}. The resulting
+(model $\times$ task) score matrix is sparse, its entries are noisy averages over few
+queries, and the responses beneath it are \emph{unpaired}: two models rarely answer the
+same queries. Predicting the missing and true entries of this matrix would let
+practitioners reuse cached evaluations instead of paying to re-run them
 \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
 
-The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} is a black-box approach:
-it embeds each model from its query responses, places models in a low-dimensional
-Euclidean space via classical multidimensional scaling, and regresses benchmark
-scores in that space. DKPS is query-efficient and competitive with item-response
-theory. However, it has a structural limitation: the distance between two models is the
-average squared difference of their responses \emph{to the same queries}, so DKPS
-requires a \emph{paired} design. Real evaluation data is routinely unpaired: arena-style
-platforms score each model on whatever conversations its users happen to have
-\citep{chiang2024chatbot}; contamination-driven benchmarks refresh their items, so models
-evaluated in different months answer different questions \citep{white2024livebench}; and
-cost-driven subsampling \citep{perlitz2024efficient} gives each evaluation run its own
-item subset. In all of these, DKPS has nothing to compare and the information in the
-unpaired responses is thrown away.
+Existing predictors use each cell's \emph{aggregate} score: low-rank matrix completion
+imputes missing cells \citep{benchpress}, and item-response theory extrapolates a full
+score from a scored item subset \citep{polo2024tinybenchmarks}. But the responses that
+produced those scores carry more information than the scores themselves. The Data Kernel
+Perspective Space (DKPS) \citep{dkps_qeff} uses them: it embeds each model from its query
+responses via classical multidimensional scaling and regresses benchmark scores in that
+space, query-efficiently. However, DKPS's distance between two models is the average
+difference of their responses \emph{to the same queries}---a \emph{paired} design. On
+unpaired data it has nothing to compare, and the information in the unpaired responses is
+thrown away.
 
-We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}: compare responses to
-\emph{similar} queries, not only identical ones, by weighting each response-pair
-comparison with a query kernel. This lets every unpaired response contribute and contains
-DKPS as the identity-query-kernel special case. The broader thesis is that \PKPS supplies
-an item-level \emph{embedding} signal that score-completion baselines ignore, and that
+We introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a collection of
+low-dimensional representations of models based on their embedded responses. \PKPS
+compares responses to \emph{similar}---rather than only identical---queries by weighting
+each response-pair comparison with a query kernel: every unpaired response contributes,
+and DKPS is the identity-query-kernel special case. Our broader thesis is that \PKPS
+supplies an item-level \emph{embedding} signal that score-only baselines ignore, and that
 combining it with the available item-level \emph{score} signal predicts benchmark
 performance better than either alone. Our contributions:
 \begin{itemize}
