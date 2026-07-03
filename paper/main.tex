@@ -37,14 +37,12 @@ queries from a given task, and the resulting (model $\times$ task) score matrix 
 and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
 (\PKPS)}---a collection of low-dimensional representations of models based on their
 embedded responses---that generalizes existing methods to the sparse and noisy evaluation
-regime. Theoretically, we show that \PKPS is
-query-efficient independently of the fraction of queries shared across models.
-Empirically, on two heterogeneous suites, ensembling the \PKPS embedding with the
-available score signal---a cell's own sample mean where measured, matrix completion where
-not---matches or beats the best score-only predictor in every observation regime, with the
-largest gains where evaluation is sparsest and noisiest. The embedding survives fully
-unpaired evaluation where paired methods and item-response theory collapse, and rescues small
-cohorts where low-rank completion fails.
+regime. Theoretically, we show that \PKPS more effectively uses information from unpaired
+queries for a given task. Empirically, we show that \PKPS outperforms sample means,
+item-response theory, and paired methods where evaluation is sparse, noisy, or unpaired,
+and that it is a complementary signal to score-based methods: ensembled with a cell's own
+sample mean where measured and matrix completion where not, it matches or beats the best
+score-only predictor in every observation regime.
 \end{abstract}
 
 \section{Introduction}
