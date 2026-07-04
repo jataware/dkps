@@ -41,7 +41,8 @@ queries from a given task, and the resulting (model $\times$ task) score matrix 
 and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
 (\PKPS)}---a collection of low-dimensional representations of models based on their
 embedded responses---that generalizes existing benchmark-prediction methods to the sparse
-and noisy evaluation regime. Theoretically, we show that \PKPS more effectively uses information from unpaired
+and noisy evaluation regime by comparing responses to similar, rather than identical,
+queries. Theoretically, we show that \PKPS more effectively uses information from unpaired
 queries for a given task. Empirically, we show that \PKPS outperforms sample means,
 item-response theory, and paired methods where evaluation is sparse, noisy, or unpaired,
 and that it is a complementary signal to score-based methods.
@@ -294,10 +295,9 @@ disagreement), so the weight never touches held-out scores.
 
 \subsection{Query efficiency}
 \label{sec:qeff}
-\PKPS is designed to reach a target prediction accuracy from fewer evaluated queries than
-paired DKPS: by bridging responses to similar queries it uses evidence that DKPS, limited
-to shared queries, discards. We formalize this by extending the machinery of
-\citet{dkps_qeff}.
+DKPS requires query \emph{sets} to overlap; \PKPS requires only query
+\emph{distributions} to overlap. This section makes that distinction precise by extending
+the machinery of \citet{dkps_qeff}.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
@@ -499,9 +499,7 @@ many rows: when models are scarce it fails while the embedding remains accurate-
 $n{=}10$, completion is $0.139$ versus \PKPS's $0.120$ (Figure~\ref{fig:completion},
 dashed). At full cohort ($n{=}93$,
 solid) \PKPS slightly edges completion ($0.103$ vs.\ $0.105$) and the ensemble is best
-($0.099$). Even in the regime most favorable to it---a dense, low-rank matrix---completion is
-matched or slightly beaten; the embedding's clear advantage is the sparse-cohort regime
-completion cannot reach.
+($0.099$).
 
 \begin{figure}[t]
 \centering
@@ -538,8 +536,9 @@ MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
 
 \section{Discussion}
-Real leaderboards are organic: models answer whatever queries their authors chose, so the
-responses to compare are \emph{unpaired}---and methods needing a shared block of identical
+Comparing models does not require identical queries---only similar ones. Real
+leaderboards are organic: models answer whatever queries their authors chose, so the
+responses to compare are \emph{unpaired}, and methods needing a shared block of identical
 queries collapse. \PKPS removes that requirement with a product kernel comparing responses to
 \emph{similar} queries, recovering paired DKPS in its $\sigma\!\to\!0$ limit. Our central finding is that benchmark estimation survives unpaired evaluation: as
 $\rho\!\to\!0$, DKPS and IRT degrade sharply while \PKPS holds.
