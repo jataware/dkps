@@ -47,13 +47,13 @@ coh, cov, pq = d[d.sweep == 'cohort'], d[d.sweep == 'coverage'], d[d.sweep == 'q
 
 fig, ax = plt.subplots(1, 4, figsize=(11.5, 3.1))
 ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
-      '(a) by dataset\n$n{=}40,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
+      '(e) by dataset\n$n{=}40,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[1], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10, 40, 93]],
-      '(b) by cohort\n$p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
+      '(f) by cohort\n$p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[2], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values) for q in [0.2, 0.5, 0.9]],
-      '(c) by task coverage\n$n{=}40,\\ p_\\mathrm{query}{=}0.5$')
+      '(g) by task coverage\n$n{=}40,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{query}}{{=}}{q}$', pq[pq.p_query == q]['d'].values) for q in [0.25, 0.5, 1.0]],
-      '(d) by query depth\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
+      '(h) by query depth\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
 fig.supxlabel(XLAB, fontsize=15, y=0.085)
 fig.tight_layout(rect=[0, 0.10, 1, 0.99])
 for ext in ('png', 'pdf'):

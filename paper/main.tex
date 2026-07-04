@@ -469,27 +469,22 @@ thousandths. Panels (b, c) separate the embeddings: \PKPS improves steadily with
 and coverage ($0.157\!\to\!0.124$, $0.154\!\to\!0.128$; $35$--$37\%$ on the second
 suite) while DKPS stays flat---more unpaired data helps only the method that can use it. Per cell, the denoising win is broad but tail-driven: the ensemble beats the raw sample on
 most cells, with the largest gains at the smallest budgets and on the rich-response datasets
-(Figure~\ref{fig:qecond}).
+(Figure~\ref{fig:qe}d--g).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}
-\caption{\textbf{Query efficiency.} Each model answers $m$ unpaired queries per
-\emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM). \PKPS (red) and
-the ensemble (brown) denoise far below the raw sample (grey) at small budgets and across
-cohort (b) and coverage (c); DKPS (green) trails on unpaired queries, and IRT (purple) is
-poorly identified without a shared item block (omitted from b, c; value annotated).}
-\label{fig:qe}
-\end{figure}
-
-\begin{figure}[t]
-\centering
+\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
-\caption{\textbf{Conditional breakdown of the query-efficiency win.} Per-cell
-$\Delta=$ sample $-$ ensemble MAE ($\Delta\!>\!0$, red $=$ win) by dataset, budget $m$,
-cohort $n$, and coverage $p_{\mathrm{task}}$, other levers at their sweep median. Broad but
-tail-driven; the per-row mean ($\blacktriangledown$) is positive throughout.}
-\label{fig:qecond}
+\caption{\textbf{Query efficiency.} \textbf{(a--c)} Each model answers $m$ unpaired
+queries per \emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM).
+\PKPS (red) and the ensemble (brown) denoise far below the raw sample (grey) at small
+budgets and across cohort (b) and coverage (c); DKPS (green) trails on unpaired queries,
+and IRT (purple) is poorly identified without a shared item block (omitted from b, c;
+value annotated). \textbf{(d--g)} Conditional breakdown: per-cell $\Delta=$ sample $-$
+ensemble MAE ($\Delta\!>\!0$, red $=$ win) by dataset, budget, cohort, and coverage,
+other levers at their sweep median. Broad but tail-driven; the per-row mean
+($\blacktriangledown$) is positive throughout.}
+\label{fig:qe}
 \end{figure}
 
 \paragraph{Matrix completion.} The same embedding also predicts cells that
@@ -504,27 +499,22 @@ solid) \PKPS slightly edges completion ($0.103$ vs.\ $0.105$) and the ensemble i
 matched or slightly beaten; the embedding's clear advantage is the sparse-cohort regime
 completion cannot reach. The per-cell win over completion is modest and tail-driven---completion is
 strong on this low-rank suite---but stays positive in the mean across datasets, cohorts,
-coverage, and query depth (Figure~\ref{fig:mccond}).
+coverage, and query depth (Figure~\ref{fig:completion}e--h).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_suite_completion.pdf}
-\caption{\textbf{Matrix completion.} Observe a fraction of (model, task) cells, predict the
-\emph{missing} ones (MAE on missing cells, $\pm1$ SEM). Colour is method (low-rank
-completion blue, \PKPS red, ensemble brown); line style is cohort (solid $n{=}93$, dashed
-$n{=}10$). The embedding rescues the small-cohort regime where low-rank completion
-collapses for lack of rows, and ties it at full cohort.}
-\label{fig:completion}
-\end{figure}
-
-\begin{figure}[t]
-\centering
+\includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{\textbf{Conditional breakdown of the completion win.} Per-missing-cell
-$\Delta=$ completion $-$ ensemble MAE ($\Delta\!>\!0$, red $=$ win) by dataset, cohort,
-coverage, and query depth, other levers at their sweep median. Modest and tail-driven on
-this low-rank suite, but the per-row mean ($\blacktriangledown$) stays positive.}
-\label{fig:mccond}
+\caption{\textbf{Matrix completion.} \textbf{(a--d)} Observe a fraction of (model, task)
+cells, predict the \emph{missing} ones (MAE on missing cells, $\pm1$ SEM). Colour is
+method (low-rank completion blue, \PKPS red, ensemble brown); line style is cohort (solid
+$n{=}93$, dashed $n{=}10$). The embedding rescues the small-cohort regime where low-rank
+completion collapses for lack of rows, and ties it at full cohort. \textbf{(e--h)}
+Conditional breakdown: per-missing-cell $\Delta=$ completion $-$ ensemble MAE
+($\Delta\!>\!0$, red $=$ win) by dataset, cohort, coverage, and query depth, other levers
+at their sweep median. Modest and tail-driven on this low-rank suite, but the per-row mean
+($\blacktriangledown$) stays positive.}
+\label{fig:completion}
 \end{figure}
 
 \paragraph{Second suite.} Both applications replicate on the Every Eval Ever suite and
