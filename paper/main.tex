@@ -91,14 +91,11 @@ methods reduces the error of low-rank completion by up to $28\%$
 
 \begin{table}[t!]
 \centering
-\caption{Headline results: MAE vs.\ the full-eval score on both benchmark suites
-(setup in Section~\ref{sec:setup}; $16$ seeds; best per column bold).
-Query efficiency at $m\in\{1,8\}$ queries/cell; completion on missing cells at small and
-full cohort ($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$) and at sparse coverage
-(sp.: $p_{\mathrm{task}}{=}0.2$, $n{=}10$). ``---'': not applicable. The ensemble stays
-best even where the raw sample catches the embedding ($m{=}8$), beats completion by the
-widest margins where evaluation is sparsest, and on the second suite beats it even at full
-cohort.}
+\caption{MAE of benchmark prediction methods on both suites ($16$ seeds; best per column
+bold; setup in Section~\ref{sec:setup}): query efficiency at budgets $m\in\{1,8\}$
+queries per cell, and completion of missing cells at the small-cohort, full-cohort
+($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$), and sparse-coverage
+(sp.: $p_{\mathrm{task}}{=}0.2$, $n{=}10$) operating points. ``---'': not applicable.}
 \label{tab:suite}
 \footnotesize
 \setlength{\tabcolsep}{3.4pt}\renewcommand{\arraystretch}{0.95}
