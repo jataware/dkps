@@ -65,24 +65,24 @@ same queries. Predicting the missing and true entries of this matrix would let
 practitioners reuse cached evaluations instead of paying to re-run them
 \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
 
-Existing predictors treat the two symptoms separately. Efficient benchmarking
-extrapolates a task's full score from a small scored subset of its items, classically by
-item-response theory \citep{polo2024tinybenchmarks}; matrix completion imputes cells that
-were never run, from low-rank structure across the matrix \citep{benchpress}. We view
-these as two ends of \emph{one} problem: every cell of the score matrix is observed with
-some number of queries---few or none---and predicting its true score means denoising at
-one end and completing at the other. A single representation of each model, accurate
-enough to predict any cell, would serve both ends. Both literatures, however, build it
-from each cell's \emph{aggregate} score alone.
+Two paradigms make evaluation cheaper by predicting scores instead of computing them.
+Efficient benchmarking extrapolates a task's full score from a small scored subset of its
+items, classically by item-response theory \citep{polo2024tinybenchmarks}; matrix
+completion imputes cells that were never run, from low-rank structure across the matrix
+\citep{benchpress}. These are two ends of \emph{one} problem: every cell of the score
+matrix is observed with some number of queries---few or none---and predicting its true
+score means denoising at one end and completing at the other. A single representation of
+each model, accurate enough to predict any cell, would serve both ends.
 
-The responses that produced those scores carry more information than the scores
-themselves. The Data Kernel
-Perspective Space (DKPS) \citep{dkps_qeff} uses them: it embeds each model from its query
-responses via classical multidimensional scaling and regresses benchmark scores in that
-space, query-efficiently. However, DKPS's distance between two models is the average
-difference of their responses \emph{to the same queries}---a \emph{paired} design. On
-unpaired data it has nothing to compare, and the information in the unpaired responses is
-thrown away.
+Neither paradigm has such a representation: both build predictions from each cell's
+\emph{aggregate} score alone, and the responses that produced those scores carry more
+information than the scores themselves. The Data Kernel Perspective Space (DKPS)
+\citep{dkps_qeff} uses them---it embeds each model from its responses via classical
+multidimensional scaling and regresses scores in that space, query-efficiently---but its
+distance between two models is defined only over responses \emph{to the same queries}, a
+\emph{paired} design. On unpaired data it has nothing to compare. No existing method,
+then, predicts the score matrix from evaluations as they actually arrive: sparse, noisy,
+and unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded responses.
