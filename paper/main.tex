@@ -255,43 +255,38 @@ bridging.
 \subsection{Inference in the \PKPS}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
 embed each model into the perspective space by the scaling of Eq.~\ref{eq:mds}, then
-regress its benchmark score on the resulting coordinate. Concretely, on a set of reference
-models with known scores $\{(f_i,y_i)\}$ we fit a decision function
-$\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs $\{(\hat\psi_i,y_i)\}$ and predict any
-model's score as $\hat y(f)=\hat h(\hat\psi(f))$. The only free choices are the
-query-kernel bandwidth $\sigma$ and the regressor $\hat h$, which we describe next; we then
-add the score channel that turns the embedding into an ensemble.
+regress its benchmark score on the resulting coordinate. On reference models with known
+scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
+$\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
+the bandwidth $\sigma$ and the regressor $\hat h$.
 
 \paragraph{Leak-free cross-validation chooses the bandwidth.} The optimal $\sigma$
-depends on how paired the data
-is: small when query overlap is high (exact matching), large when it is low (bridging). We
-set it per run by cross-validation over a median-scaled grid
-$\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$ (median pairwise query distance), selecting
-the $\sigma$ whose perspective best predicts the \emph{observed} scores under
-leave-one-model-out $k$-NN---never the held-out scores we report, so the choice is not
-circular. Because the grid reaches near-delta, cross-validation \emph{recovers DKPS} when
-overlap is high and bridges only when it must.
+depends on how paired the data is: small when query overlap is high, large when it is low.
+We choose it per run by cross-validation: over a median-scaled grid
+$\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, select the $\sigma$ whose perspective best
+predicts the \emph{observed} scores under leave-one-model-out $k$-NN. The criterion never
+sees the held-out scores we report. And because the grid reaches near-delta,
+cross-validation \emph{recovers DKPS} when overlap is high and bridges only when it must.
 
 \paragraph{The estimation pipeline shares the matrix-completion head.} For each
-replicate we (i) PCA-reduce response and query
-embeddings on the \emph{observed} rows only (dimension by the second Zhu--Ghodsi elbow);
-(ii) form $D$ from Eq.~\ref{eq:A}; (iii) embed models by classical MDS; (iv) map the
-embedding to scores with the \emph{same} head as the matrix-completion baseline up to the
-factor model---logit transform, per-task standardization, two-way (model $+$ task)
-bias---then $k$-NN regression of the residual on the embedding, fit leave-one-family-out and predicting every cell. Matching the per-task
-standardization matters: without it the model offset is dominated by the
-highest-logit-variance tasks, biasing the embedding on multi-scale suites.
+replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
+only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\ref{eq:A};
+(iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
+leave-one-family-out. The score head---logit transform, per-task standardization, two-way
+(model $+$ task) bias---is identical to the matrix-completion baseline's; the two methods
+differ only in the factor, $k$-NN on the perspective versus a low-rank factorization, so
+comparisons isolate the representation. Matching the per-task standardization matters:
+without it the model offset is dominated by the highest-logit-variance tasks.
 
-\paragraph{The ensemble folds in whichever score signal a cell has.} Each cell combines
-the embedding with
-whichever score signal carries independent information. On a \emph{missing} cell that is
-matrix completion \citep{benchpress}, blended with \PKPS by a weight fit by held-out
-cross-validation on observed scores. On an \emph{observed} cell it is the cell's own
-sample mean, shrunk toward the \PKPS estimate by the precision weight
-$\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$---sample noise variance over total disagreement with
-\PKPS---so the sample dominates as queries grow and the embedding as noise grows. Both
-quantities are read off observed queries ($\hat p(1-\hat p)/m$; depth-weighted
-disagreement), so the weight never touches held-out scores.
+\paragraph{The ensemble folds in whichever score signal a cell has.} The rule is
+precision weighting: trust each channel in proportion to its estimated reliability. An
+\emph{observed} cell's score signal is its own sample mean, shrunk toward the \PKPS
+estimate by the weight $\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$---sample noise variance over
+total disagreement with \PKPS---so the sample dominates as queries grow and the embedding
+as noise grows. A \emph{missing} cell's score signal is matrix completion
+\citep{benchpress}, blended with \PKPS by a weight cross-validated on observed scores.
+Every weight is read off observed queries alone ($\hat p(1-\hat p)/m$; depth-weighted
+disagreement); none touches the held-out scores we report.
 
 \subsection{Query efficiency}
 \label{sec:qeff}
@@ -416,25 +411,20 @@ Section~\ref{sec:method}.
 \label{sec:results}
 
 \paragraph{\PKPS outperforms DKPS on every observation lever.} We predict held-out
-(model, task) scores, comparing \PKPS
-(RBF query kernel) against DKPS (identity) with the score-only sample baseline as a floor
-(Figure~\ref{fig:synthetic}).
-\PKPS---selecting its bandwidth by the same leak-free cross-validation as on real
-data---beats DKPS on \emph{every} lever, and both beat the sample floor: bridging similar
-queries (across tasks as well as within) supplies signal exact-match DKPS cannot reach, so
-the margin is wide even when mostly paired (a--c). The gap peaks where pairing is scarce:
+(model, task) scores against the score-only sample baseline (Figure~\ref{fig:synthetic}).
+\PKPS beats DKPS on \emph{every} lever, and both beat the sample floor: bridging similar
+queries---across tasks as well as within---supplies signal that exact matching cannot
+reach, so the margin is wide even when the data is mostly paired (a--c). The gap peaks where pairing is scarce:
 as $p_{\mathrm{query}}$ drops (d) DKPS degrades while \PKPS stays flat, and sweeping
 $\rho$ directly (e), DKPS collapses toward the floor as $\rho\!\to\!0$ while \PKPS is
 flat---it does not rely on pairing.
 
 Panel (f) is the \emph{denoising} form of the same problem: each cell is now \emph{observed}
 with $M_{ij}$ noisy queries (sample noise $\propto1/\sqrt{M_{ij}}$) and we predict its true
-score. The raw sample mean (gray) falls like $1/\sqrt{M_{ij}}$; smoothing those noisy scores
-over the perspective denoises well below it while measurement noise dominates---\PKPS reaches
-at a single query the accuracy the raw sample needs roughly five queries to match, and does
-so whether queries are paired or not, while DKPS denoises only when paired (unpaired DKPS,
-dashed, barely improves). Only once the budget is large is the raw sample precise enough to
-overtake the embedding's residual bias. This is the empirical counterpart of
+score. The raw sample mean falls like $1/\sqrt{M_{ij}}$; smoothing those noisy scores over the
+perspective denoises well below it. \PKPS at one query matches the sample at roughly
+five, paired or unpaired; DKPS denoises only when paired (dashed). Only at large budgets
+is the raw sample precise enough to overtake the embedding's residual bias. This is the empirical counterpart of
 Theorem~\ref{thm:qeff} and Conjecture~\ref{conj:qeff}.
 
 \begin{figure}[t]
@@ -459,13 +449,11 @@ the full budget.}
 \end{figure}
 
 \paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
-Both real-data applications are inherently
-\emph{unpaired}---each model is run on its own queries, the real-data counterpart of the
-$\rho\!\to\!0$ limit above. Because the embedding captures response
-\emph{style}, which is stable even when the per-cell sample mean is noisy, it denoises
-cheap evaluations. Each model answers $m$ queries per cell, sampled independently---itself
-an unpaired regime, on which IRT is poorly identified; we predict the true full-eval score
-(Figure~\ref{fig:qe}). At a small budget the embedding is far more accurate than the
+Each model answers $m$ queries per cell, sampled independently---the real-data
+$\rho\!\to\!0$ regime, on which IRT is poorly identified---and we predict the true
+full-eval score (Figure~\ref{fig:qe}). The embedding captures response \emph{style},
+which is stable even when the per-cell sample mean is noisy, so it denoises cheap
+evaluations. At a small budget the embedding is far more accurate than the
 raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.132$ versus the sample's
 $0.292$; \PKPS at one query matches the sample at four. As the budget grows the raw mean overtakes the
 embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$); the ensemble tracks the
