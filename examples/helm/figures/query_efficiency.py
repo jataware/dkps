@@ -41,13 +41,13 @@ PANELS = [('budget',   'm',       r'queries per cell $m$',           rf'$n{{=}}{
           ('coverage', 'p_task',  r'task coverage $p_{\mathrm{task}}$', rf'$m{{=}}2,\ n{{=}}{N}$',              False)]
 
 
-def panel(ax, sweep, xcol, xlabel, fixed, logx):
+def panel(ax, sweep, xcol, xlabel, fixed, logx, skip=()):
     df = pd.read_csv(D / f'rd1_suite_{sweep}.csv')
     # mean over tasks per (x, seed, method), then mean +/- SEM over seeds
     per_seed = df.groupby([xcol, 'seed', 'method'])['mae'].mean().reset_index()
     g = per_seed.groupby([xcol, 'method'])['mae'].agg(['mean', 'sem'])
     for m in ORDER:
-        if m not in df['method'].values:
+        if m not in df['method'].values or m in skip:
             continue
         st = STYLE[m]
         sub = g.xs(m, level='method').sort_index()
@@ -58,13 +58,28 @@ def panel(ax, sweep, xcol, xlabel, fixed, logx):
         ax.set_xscale('log', base=2)
     ax.set_xlabel(xlabel, fontsize=15.6)
     ax.set_title(fixed, fontsize=13.8)
+    return g
 
 
-fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.2), sharey=True)
+# panel (a) keeps the full range (the budget crossover needs it); panels (b, c) zoom to
+# the working band with IRT annotated off-scale -- on a shared axis its ~0.34 line pins
+# the scale and flattens the real PKPS trends vs cohort and coverage.
+fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.2), sharey=False)
+gs = {}
 for ax, (sweep, xcol, xlabel, fixed, logx), letter in zip(axes, PANELS, 'abc'):
-    panel(ax, sweep, xcol, xlabel, fixed, logx)
+    gs[sweep] = panel(ax, sweep, xcol, xlabel, fixed, logx,
+                      skip=() if sweep == 'budget' else ('irt',))
     ax.set_title(f'({letter})', loc='left', fontweight='bold', fontsize=16.2)
     ax.tick_params(labelsize=13.1)
+lo = min(gs[s].xs(m, level='method')['mean'].min()
+         for s in ('n_models', 'coverage') for m in ('pkps', 'ens'))
+hi = max(gs[s].xs('sample', level='method')['mean'].max() for s in ('n_models', 'coverage'))
+for ax, sweep in zip(axes[1:], ('n_models', 'coverage')):
+    ax.set_ylim(lo * 0.88, hi * 1.14)
+    irt = gs[sweep].xs('irt', level='method')['mean'].mean()
+    tag = 'off-scale' if irt > hi * 1.14 else 'not shown'
+    ax.text(0.97, 0.965, f'IRT {tag} ({irt:.2f})', transform=ax.transAxes, ha='right',
+            va='top', fontsize=11.5, color=STYLE['irt']['color'], fontweight='bold')
 axes[0].set_ylabel('MAE vs. true score', fontsize=15.6)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
                   lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
