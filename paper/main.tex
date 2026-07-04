@@ -35,8 +35,8 @@
 \maketitle
 
 \begin{abstract}
-Evaluating a generative model on all available benchmarks is prohibitively expensive. As
-such, models are often evaluated on different subsets of tasks and/or different subsets of
+Evaluating a generative model on all available benchmarks is often prohibitively
+expensive. As such, models are often evaluated on different subsets of tasks and/or different subsets of
 queries from a given task, and the resulting (model $\times$ task) score matrix is sparse
 and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
 (\PKPS)}---a collection of low-dimensional representations of models based on their
@@ -51,11 +51,11 @@ and that it is a complementary signal to score-based methods.
 \section{Introduction}
 Generative models are evaluated on an ever-growing collection of benchmarks spanning
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
-all of them is prohibitively expensive. As a result, models are evaluated on different
+all of them is often prohibitively expensive. As a result, models are evaluated on different
 subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
-finds only $23\%$ of the score matrix filled \citep{benchpress}. Nor is this an accident
-of curation---it is how modern evaluation works. Arena-style platforms score each model on
-whatever conversations its users happen to have \citep{chiang2024chatbot};
+finds only $23\%$ of the score matrix filled \citep{benchpress}. This sparsity is not an
+artifact of curation; it is a consequence of how evaluations are collected. Arena-style
+platforms score each model on the conversations its users generate \citep{chiang2024chatbot};
 contamination-aware benchmarks refresh their items, so models evaluated in different
 months answer different questions \citep{white2024livebench}; and cost-driven subsampling
 gives each evaluation run its own item subset \citep{perlitz2024efficient}. The resulting
@@ -65,24 +65,25 @@ same queries. Predicting the missing and true entries of this matrix would let
 practitioners reuse cached evaluations instead of paying to re-run them
 \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
 
-Two paradigms make evaluation cheaper by predicting scores instead of computing them.
-Efficient benchmarking extrapolates a task's full score from a small scored subset of its
+Two lines of work aim to reduce this cost by predicting scores rather than computing
+them. Efficient benchmarking extrapolates a task's full score from a small scored subset of its
 items, classically by item-response theory \citep{polo2024tinybenchmarks}; matrix
 completion imputes cells that were never run, from low-rank structure across the matrix
-\citep{benchpress}. These are two ends of \emph{one} problem: every cell of the score
-matrix is observed with some number of queries---few or none---and predicting its true
-score means denoising at one end and completing at the other. A single representation of
-each model, accurate enough to predict any cell, would serve both ends.
+\citep{benchpress}. These are two ends of the same problem: every cell of the
+score matrix is observed with some number of queries, possibly zero, and predicting its
+true score amounts to denoising when that number is small and to completion when it is
+zero. A single representation of each model that is accurate enough to predict any cell
+would serve both ends.
 
-Neither paradigm has such a representation: both build predictions from each cell's
-\emph{aggregate} score alone, and the responses that produced those scores carry more
-information than the scores themselves. The Data Kernel Perspective Space (DKPS)
-\citep{dkps_qeff} uses them---it embeds each model from its responses via classical
-multidimensional scaling and regresses scores in that space, query-efficiently---but its
-distance between two models is defined only over responses \emph{to the same queries}, a
-\emph{paired} design. On unpaired data it has nothing to compare. No existing method,
-then, predicts the score matrix from evaluations as they actually arrive: sparse, noisy,
-and unpaired.
+Neither line of work has such a representation: both use only each cell's aggregate
+score, and the responses that produced those scores carry more information than the
+scores themselves. The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} uses this
+information: it embeds each model from its responses via classical multidimensional
+scaling and regresses benchmark scores in the resulting space. The DKPS distance between
+two models, however, is defined only over responses to shared queries---a \emph{paired}
+design---and is undefined when models were evaluated on different queries. To our
+knowledge, no existing method predicts the score matrix from evaluation data as it is
+typically available: sparse, noisy, and unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded responses.
@@ -156,34 +157,38 @@ evaluations sit near $\rho\approx0$.
 \section{Related work}
 \label{sec:related}
 
-\paragraph{Low-dimensional representations of models.} Some methods compare models through
-their internals: activations on shared inputs \citep{duderstadt2023comparing,
-huh2024platonic, horwitz2025atlas} or weights \citep{chen2025weights}. Evaluation, however,
-is black-box: it sees responses, not internals. The Data Kernel Perspective Space (DKPS)
-embeds models from their responses via multidimensional scaling \citep{torgerson1952mds,
-helm2024tracking}; the representations are consistent and concentrate
-\citep{acharyya2024consistent, acharyya2025concentration}, support statistical inference
-\citep{helm2025inference}, and are query-efficient \citep{dkps_qeff}. But DKPS averages
-over responses to \emph{shared} queries---a paired design. \PKPS keeps the response-level
-representation and replaces identity matching with a product kernel, so models that answer
-different queries remain comparable.
+\paragraph{Low-dimensional representations of models.} Some approaches construct
+representations by comparing internal activations across models
+\citep{duderstadt2023comparing, huh2024platonic, horwitz2025atlas} or by comparing model
+weights directly \citep{chen2025weights}. Evaluation frameworks, however, typically permit
+only black-box access: they observe responses, not internals. The Data Kernel Perspective
+Space (DKPS), first introduced in the context of monitoring multi-agent systems
+\citep{helm2024tracking}, addresses this setting by mapping a collection of models into a
+low-dimensional Euclidean space via classical multidimensional scaling of average embedded
+responses \citep{torgerson1952mds}. Prior work established consistency and concentration
+of the representations \citep{acharyya2024consistent, acharyya2025concentration},
+supervised inference thereon \citep{helm2025inference}, and query efficiency
+\citep{dkps_qeff}. These constructions compare responses to shared queries, a paired
+design. \PKPS replaces the identity matching with a product kernel so that models
+evaluated on different queries remain comparable.
 
-\paragraph{Benchmark prediction.} A second line predicts unobserved (model, task) scores so that
-not every evaluation must be run; efficient benchmarking and matrix completion are its two ends.
-Efficient benchmarking scores a small item subset and extrapolates. Item-response theory selects
-items by difficulty and discrimination \citep{rasch1960, polo2024tinybenchmarks, metabench};
-anchor points cluster items by cross-model agreement \citep{vivek2024anchor}; cognitive-scale
-embeddings \citep{bean2025scales} and reinforcement learning \citep{li2024active} select items
-adaptively; and design analyses optimize the cost--reliability tradeoff
-\citep{perlitz2024efficient}. Closer to us, DKPS predicts a held-out score from cached responses
-\citep{dkps_qeff}, datamodels predict outputs from inputs \citep{ilyas2022datamodels}, and
-lifelong benchmarks reuse past evaluations \citep{prabhu2024lifelong}. Matrix completion instead
-predicts cells that were never run, exploiting low rank across the score matrix
-\citep{candes2009exact, mazumder2010softimpute, koren2009matrix}; BenchPress finds it is
-approximately rank-two and completes it in logit space \citep{benchpress}. These methods use only
-each cell's \emph{aggregate} score, not its responses. \PKPS unifies the two ends---a cell with
-$m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and adds an
-item-level embedding signal that we ensemble with matrix completion.
+\paragraph{Benchmark prediction.} A second line of work predicts unobserved (model, task)
+scores so that not every evaluation must be run; efficient benchmarking and matrix
+completion are its two ends. \citet{polo2024tinybenchmarks} use item-response theory to
+construct small item subsets whose scores predict full performance \citep[see
+also][]{rasch1960, metabench}; \citet{vivek2024anchor} cluster items by cross-model
+agreement and score only the cluster centers; \citet{bean2025scales} select items using
+cognitive-scale embeddings; \citet{li2024active} select items adaptively via reinforcement
+learning; and \citet{perlitz2024efficient} analyze the cost--reliability tradeoff of
+benchmark designs. Relatedly, \citet{ilyas2022datamodels} predict a model's outputs as a
+function of its training data, \citet{prabhu2024lifelong} reuse past evaluations in
+lifelong benchmarks, and \citet{dkps_qeff} predict held-out scores from cached responses.
+On the completion end, \citet{benchpress} observe that the (model $\times$ task) score
+matrix is approximately rank-two and complete it in logit space \citep[see
+also][]{candes2009exact, mazumder2010softimpute, koren2009matrix}. These methods use only
+each cell's aggregate score. \PKPS unifies the two ends---a cell with $m\ge0$ queries
+spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and adds a response-level
+signal that can be ensembled with matrix completion.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
@@ -369,6 +374,27 @@ paired DKPS, with $m_{\mathrm{DKPS}}(\epsilon)/m_{\PKPS}(\epsilon)$ increasing a
 $\rho\to0$; the two coincide in the fully paired limit $\rho=1$.
 \end{conjecture}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_synthetic.pdf}
+\caption{\PKPS outperforms DKPS on every lever of the synthetic benchmark (score MAE,
+$\pm1$ SEM over 50 seeds). DKPS (identity query kernel, green) vs.\ \PKPS (RBF, red), with
+the score-only sample baseline (gray); each panel sweeps one parameter with the rest fixed
+(shown in its title). \textbf{(a)--(e) complete held-out
+cells} from observed responses---cohort $n$, tasks $T$, task coverage $p_{\mathrm{task}}$,
+query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$. \PKPS
+(CV-selected bandwidth) beats DKPS throughout---by a wide margin even when mostly paired
+(a--c), since it bridges across tasks as well as within---and the gap is largest when unpaired
+or sparse (d, e), where in (e) DKPS collapses toward the floor as $\rho\!\to\!0$ while \PKPS
+stays flat. \textbf{(f) denoises observed cells}:
+each cell is measured with $M_{ij}$ noisy queries and we predict its true score, at paired
+($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). The raw sample falls
+$\propto1/\sqrt{M_{ij}}$; smoothing over the perspective denoises well below it at small
+budgets---\PKPS paired or unpaired, DKPS only paired---until the sample becomes precise at
+the full budget.}
+\label{fig:synthetic}
+\end{figure}
+
 \section{Experiments}
 \label{sec:experiments}
 We evaluate \PKPS on synthetic data, where every lever of the observation process can be
@@ -437,40 +463,6 @@ Theorem~\ref{thm:qeff} and Conjecture~\ref{conj:qeff}.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_synthetic.pdf}
-\caption{\PKPS outperforms DKPS on every lever of the synthetic benchmark (score MAE,
-$\pm1$ SEM over 50 seeds). DKPS (identity query kernel, green) vs.\ \PKPS (RBF, red), with
-the score-only sample baseline (gray); each panel sweeps one parameter with the rest fixed
-(shown in its title). \textbf{(a)--(e) complete held-out
-cells} from observed responses---cohort $n$, tasks $T$, task coverage $p_{\mathrm{task}}$,
-query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$. \PKPS
-(CV-selected bandwidth) beats DKPS throughout---by a wide margin even when mostly paired
-(a--c), since it bridges across tasks as well as within---and the gap is largest when unpaired
-or sparse (d, e), where in (e) DKPS collapses toward the floor as $\rho\!\to\!0$ while \PKPS
-stays flat. \textbf{(f) denoises observed cells}:
-each cell is measured with $M_{ij}$ noisy queries and we predict its true score, at paired
-($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). The raw sample falls
-$\propto1/\sqrt{M_{ij}}$; smoothing over the perspective denoises well below it at small
-budgets---\PKPS paired or unpaired, DKPS only paired---until the sample becomes precise at
-the full budget.}
-\label{fig:synthetic}
-\end{figure}
-
-\paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
-Each model answers $m$ queries per cell, sampled independently---the real-data
-$\rho\!\to\!0$ regime, on which IRT is poorly identified---and we predict the true
-full-eval score (Figure~\ref{fig:qe}). The embedding captures response \emph{style},
-which is stable even when the per-cell sample mean is noisy, so it denoises cheap
-evaluations. At a small budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.132$ versus the sample's
-$0.292$; \PKPS at one query matches the sample at four. As the budget grows the raw mean overtakes the
-embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$); the ensemble tracks the
-better channel throughout. Panels (b, c) separate the embeddings: \PKPS improves steadily with cohort
-and coverage ($0.157\!\to\!0.124$, $0.154\!\to\!0.128$; $35$--$37\%$ on the second
-suite) while DKPS stays flat---more unpaired data helps only the method that can use it.
-
-\begin{figure}[t]
-\centering
 \includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
 \caption{Regression in the \PKPS provides query-efficient benchmark prediction relative
@@ -486,16 +478,18 @@ other levers at their sweep median. Broad but tail-driven; the per-row mean
 \label{fig:qe}
 \end{figure}
 
-\paragraph{The embedding completes missing cells where low-rank completion cannot.}
-The same embedding also predicts cells that
-were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each at depth
-$p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
-baseline (the sample does not apply---a missing cell has no sample). Low-rank completion needs
-many rows: when models are scarce it fails while the embedding remains accurate---at
-$n{=}10$, completion is $0.139$ versus \PKPS's $0.120$ (Figure~\ref{fig:completion},
-dashed). At full cohort ($n{=}93$,
-solid) \PKPS slightly edges completion ($0.103$ vs.\ $0.105$) and the ensemble is best
-($0.099$).
+\paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
+Each model answers $m$ queries per cell, sampled independently---the real-data
+$\rho\!\to\!0$ regime, on which IRT is poorly identified---and we predict the true
+full-eval score (Figure~\ref{fig:qe}). The embedding captures response \emph{style},
+which is stable even when the per-cell sample mean is noisy, so it denoises cheap
+evaluations. At a small budget the embedding is far more accurate than the
+raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.132$ versus the sample's
+$0.292$; \PKPS at one query matches the sample at four. As the budget grows the raw mean overtakes the
+embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$); the ensemble tracks the
+better channel throughout. Panels (b, c) separate the embeddings: \PKPS improves steadily with cohort
+and coverage ($0.157\!\to\!0.124$, $0.154\!\to\!0.128$; $35$--$37\%$ on the second
+suite) while DKPS, which cannot use the additional unpaired responses, stays flat.
 
 \begin{figure}[t]
 \centering
@@ -512,6 +506,17 @@ at their sweep median. Modest and tail-driven on this low-rank suite, but the pe
 ($\blacktriangledown$) stays positive.}
 \label{fig:completion}
 \end{figure}
+
+\paragraph{The embedding completes missing cells where low-rank completion cannot.}
+The same embedding also predicts cells that
+were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each at depth
+$p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
+baseline (the sample does not apply---a missing cell has no sample). Low-rank completion needs
+many rows: when models are scarce it fails while the embedding remains accurate---at
+$n{=}10$, completion is $0.139$ versus \PKPS's $0.120$ (Figure~\ref{fig:completion},
+dashed). At full cohort ($n{=}93$,
+solid) \PKPS slightly edges completion ($0.103$ vs.\ $0.105$) and the ensemble is best
+($0.099$).
 
 \paragraph{The per-cell wins are broad but tail-driven.} The ensemble beats the raw
 sample on most cells, with the largest gains at the smallest budgets and on the
@@ -532,14 +537,15 @@ MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
 
 \section{Discussion}
-Comparing models does not require identical queries---only similar ones. Real
-leaderboards are organic: models answer whatever queries their authors chose, so the
-responses to compare are \emph{unpaired}, and methods needing a shared block of identical
-queries collapse. \PKPS removes that requirement with a product kernel comparing responses to
-\emph{similar} queries, recovering paired DKPS in its $\sigma\!\to\!0$ limit. Our central finding is that benchmark estimation survives unpaired evaluation: as
-$\rho\!\to\!0$, DKPS and IRT degrade sharply while \PKPS holds.
-That capability yields two applications from one embedding---denoising cheap evaluations
-and predicting never-run cells---with the ensemble never the worse choice.
+Comparing models does not require responses to identical queries; responses to similar
+queries suffice. Evaluation data is rarely paired in practice: each model answers the
+queries its evaluators chose, and methods that require a shared block of identical
+queries do not apply. \PKPS removes this requirement by weighting response comparisons
+with a query kernel, recovering paired DKPS in the $\sigma\!\to\!0$ limit. Our central
+finding is that benchmark prediction remains possible under unpaired evaluation: as
+$\rho\!\to\!0$, DKPS and IRT degrade sharply while \PKPS does not. This yields two
+applications from a single embedding, denoising cheap evaluations and predicting
+never-run cells, with the ensemble performing at least as well as either channel alone.
 
 \paragraph{Limitations and future work.} \PKPS embeds every observed response and query
 (embedder effects not ablated); the block-diagonal instantiation disables cross-domain
