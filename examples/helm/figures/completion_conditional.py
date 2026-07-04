@@ -45,7 +45,7 @@ d['d'] = d['mc_err'] - d['ens_err']
 cen = d[(d.sweep == 'cohort') & (d.n_models == 40)]             # median center (n=40, p_task=0.5, p_q=0.5)
 coh, cov, pq = d[d.sweep == 'cohort'], d[d.sweep == 'coverage'], d[d.sweep == 'querydepth']
 
-fig, ax = plt.subplots(1, 4, figsize=(11.5, 3.1))
+fig, ax = plt.subplots(1, 4, figsize=(11.5, 2.9))
 ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
       '(e) by dataset\n$n{=}40,\\ p_\\mathrm{task}{=}0.5,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[1], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10, 40, 93]],

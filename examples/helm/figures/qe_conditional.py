@@ -46,7 +46,7 @@ p['d'] = p['sample'] - p['ens']
 cen = p[(p.sweep == 'cohort') & (p.n_models == 40)]              # median center (m=4, n=40, p_task=0.5)
 bud, coh, cov = p[p.sweep == 'budget'], p[p.sweep == 'cohort'], p[p.sweep == 'coverage']
 
-fig, ax = plt.subplots(1, 4, figsize=(11.5, 3.1))
+fig, ax = plt.subplots(1, 4, figsize=(11.5, 2.9))
 ridge(ax[0], [(n, cen[cen.dataset == dd]['d'].values) for n, dd in DS],
       '(d) by dataset\n$m{=}4,\\ n{=}40,\\ p_\\mathrm{task}{=}0.5$')
 ridge(ax[1], [(f'$m{{=}}{m}$', bud[bud.m == m]['d'].values) for m in [1, 2, 4, 8, 16]],

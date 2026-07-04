@@ -64,7 +64,7 @@ def panel(ax, sweep, xcol, xlabel, fixed, logx, skip=()):
 # panel (a) keeps the full range (the budget crossover needs it); panels (b, c) zoom to
 # the working band with IRT annotated off-scale -- on a shared axis its ~0.34 line pins
 # the scale and flattens the real PKPS trends vs cohort and coverage.
-fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.2), sharey=False)
+fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.0), sharey=False)
 gs = {}
 for ax, (sweep, xcol, xlabel, fixed, logx), letter in zip(axes, PANELS, 'abc'):
     gs[sweep] = panel(ax, sweep, xcol, xlabel, fixed, logx,

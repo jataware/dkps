@@ -104,7 +104,7 @@ PANELS = [
 ]
 
 
-def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 5.5)):
+def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
     """Create the main 2x3 figure with one shared legend and per-panel fixed-parameter titles."""
     from matplotlib.lines import Line2D
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False, sharey=True)
