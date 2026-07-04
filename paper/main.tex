@@ -222,7 +222,8 @@ pass serves the whole bandwidth grid.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_concept.pdf}
-\caption{\PKPS under \emph{unpaired} evaluation. \textbf{(a)} Two models, $i$ (red) and
+\caption{\PKPS uses every response under unpaired evaluation; DKPS uses only the shared
+ones. \textbf{(a)} Two models, $i$ (red) and
 $i'$ (blue), answer their own subsets of a query pool (blocks: who answered what; dots:
 queries in embedding space, nearby $=$ similar). \textbf{(b)} DKPS's identity kernel keeps
 only the diagonal cells where both models answered the \emph{same} query---almost every
@@ -434,9 +435,10 @@ Theorem~\ref{thm:qeff} and Conjecture~\ref{conj:qeff}.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_synthetic.pdf}
-\caption{Synthetic study (score MAE, $\pm1$ SEM over 50 seeds). DKPS (identity query kernel,
-green) vs.\ \PKPS (RBF, red), with the score-only sample baseline (gray); each panel sweeps
-one parameter with the rest fixed (shown in its title). \textbf{(a)--(e) complete held-out
+\caption{\PKPS outperforms DKPS on every lever of the synthetic benchmark (score MAE,
+$\pm1$ SEM over 50 seeds). DKPS (identity query kernel, green) vs.\ \PKPS (RBF, red), with
+the score-only sample baseline (gray); each panel sweeps one parameter with the rest fixed
+(shown in its title). \textbf{(a)--(e) complete held-out
 cells} from observed responses---cohort $n$, tasks $T$, task coverage $p_{\mathrm{task}}$,
 query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$. \PKPS
 (CV-selected bandwidth) beats DKPS throughout---by a wide margin even when mostly paired
@@ -472,8 +474,9 @@ most cells, with the largest gains at the smallest budgets and on the rich-respo
 \centering
 \includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
-\caption{\textbf{Query efficiency.} \textbf{(a--c)} Each model answers $m$ unpaired
-queries per \emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM).
+\caption{Regression in the \PKPS provides query-efficient benchmark prediction relative
+to the sample score. \textbf{(a--c)} Each model answers $m$ unpaired queries per
+\emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM).
 \PKPS (red) and the ensemble (brown) denoise far below the raw sample (grey) at small
 budgets and across cohort (b) and coverage (c); DKPS (green) trails on unpaired queries,
 and IRT (purple) is poorly identified without a shared item block (omitted from b, c;
@@ -502,11 +505,11 @@ coverage, and query depth (Figure~\ref{fig:completion}e--h).
 \centering
 \includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{\textbf{Matrix completion.} \textbf{(a--d)} Observe a fraction of (model, task)
-cells, predict the \emph{missing} ones (MAE on missing cells, $\pm1$ SEM). Colour is
-method (low-rank completion blue, \PKPS red, ensemble brown); line style is cohort (solid
-$n{=}93$, dashed $n{=}10$). The embedding rescues the small-cohort regime where low-rank
-completion collapses for lack of rows, and ties it at full cohort. \textbf{(e--h)}
+\caption{The \PKPS embedding rescues the small-cohort regime where low-rank completion
+collapses for lack of rows, and ties it at full cohort. \textbf{(a--d)} Observe a fraction
+of (model, task) cells, predict the \emph{missing} ones (MAE on missing cells, $\pm1$
+SEM). Colour is method (low-rank completion blue, \PKPS red, ensemble brown); line style
+is cohort (solid $n{=}93$, dashed $n{=}10$). \textbf{(e--h)}
 Conditional breakdown: per-missing-cell $\Delta=$ completion $-$ ensemble MAE
 ($\Delta\!>\!0$, red $=$ win) by dataset, cohort, coverage, and query depth, other levers
 at their sweep median. Modest and tail-driven on this low-rank suite, but the per-row mean
@@ -535,7 +538,7 @@ That capability yields two applications from one embedding---denoising cheap, fe
 evaluations and predicting never-run cells---and the ensemble with a cell's own sample is
 never the worse choice. None of this assumes pairing or exhaustive evaluation.
 
-\paragraph{Limitations.} \PKPS embeds every observed response and query; cost and
+\paragraph{Limitations and future work.} \PKPS embeds every observed response and query; cost and
 quality inherit from the embedders (not ablated). Our block-diagonal instantiation
 disables cross-domain bridging; a shared response space is untested. The affinity is
 quadratic in queries per model pair (approximation needed only for very large logs).
