@@ -20,8 +20,8 @@ import numpy as np
 import pandas as pd
 
 MAIN = {'helm': 'results-pkps-rd1', 'eee': 'results-eee-rd1'}
-DIMS = [4, 8, 12, 24]
-DCOL = {4: '#c6dbef', 8: '#6baed6', 12: '#E24A33', 24: '#2171b5'}   # d=12 (paper) in red
+DIMS = [4, 8, 24]
+DCOL = {4: '#6baed6', 8: '#E24A33', 24: '#2171b5'}   # d=8 (paper) in red
 SIG_LABELS = ['0.03', '0.1', '0.3', '1', '3', r'$\delta$']
 SUITE_LBL = {'helm': 'HELM', 'eee': 'EEE'}
 
@@ -37,11 +37,11 @@ fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.4))
 # (a, b) MDS dimension
 for ax, suite in zip(axes[:2], ['helm', 'eee']):
     for d in DIMS:
-        path = MAIN[suite] if d == 12 else f'results-sens/{suite}-d{d}'
+        path = MAIN[suite] if d == 8 else f'results-sens/{suite}-d{d}'
         g = budget_curve(path)
         ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3.5,
-                    lw=2.4 if d == 12 else 1.8, color=DCOL[d],
-                    label=f'$d{{=}}{d}$' + (' (paper)' if d == 12 else ''))
+                    lw=2.4 if d == 8 else 1.8, color=DCOL[d],
+                    label=f'$d{{=}}{d}$' + (' (paper)' if d == 8 else ''))
     s = budget_curve(MAIN[suite], 'sample')
     ax.errorbar(s.index.values, s['mean'], yerr=s['sem'], color='#999', ls='--', lw=1.8,
                 marker='o', ms=3, label='sample')

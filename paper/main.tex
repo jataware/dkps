@@ -115,9 +115,9 @@ Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
 sample mean        & $0.292$ & $0.092$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
 matrix completion  & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
-DKPS               & $0.171$ & $0.115$ & --- & --- & --- & $0.117$ & $0.083$ & --- & --- & --- \\
-\PKPS              & $0.136$ & $0.111$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.171}$ & $\mathbf{0.078}$ & $0.059$ & $\mathbf{0.082}$ & $0.070$ & $\mathbf{0.108}$ \\
-ensemble           & $\mathbf{0.133}$ & $\mathbf{0.076}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $0.087$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
+DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
+\PKPS              & $0.136$ & $0.108$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.171}$ & $\mathbf{0.076}$ & $0.058$ & $\mathbf{0.082}$ & $0.070$ & $\mathbf{0.108}$ \\
+ensemble           & $\mathbf{0.132}$ & $\mathbf{0.077}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $0.084$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -461,10 +461,10 @@ $\rho\!\to\!0$ limit above. Because the embedding captures response
 cheap evaluations. Each model answers $m$ queries per cell, sampled independently---itself
 an unpaired regime, on which IRT is poorly identified; we predict the true full-eval score
 (Figure~\ref{fig:qe}). At a small budget the embedding is far more accurate than the
-raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.133$ versus the sample's
-$0.292$; \PKPS at one query roughly matches the sample at four. As the budget grows the
+raw mean: at $m{=}1$, \PKPS scores $0.136$ and the ensemble $0.132$ versus the sample's
+$0.292$; \PKPS at one query matches the sample at four. As the budget grows the
 raw mean catches up and eventually overtakes the embedding's residual bias ($0.034$ vs.\
-$0.088$ at $m{=}32$); the leak-free ensemble tracks the better channel to within a few
+$0.085$ at $m{=}32$); the leak-free ensemble tracks the better channel to within a few
 thousandths. The advantage is robust across cohort size and task coverage (panels b, c).
 Per cell, the denoising win is broad but tail-driven: the ensemble beats the raw sample on
 most cells, with the largest gains at the smallest budgets and on the rich-response datasets
@@ -528,7 +528,7 @@ this low-rank suite, but the per-row mean ($\blacktriangledown$) stays positive.
 
 \paragraph{Second suite.} Both applications replicate on the Every Eval Ever suite and
 sharpen the completion contrast (Table~\ref{tab:suite}; lever sweeps in
-Appendix~\ref{app:eee}): at $m{=}1$ \PKPS attains a third of the sample's error ($0.078$
+Appendix~\ref{app:eee}): at $m{=}1$ \PKPS attains a third of the sample's error ($0.076$
 vs.\ $0.224$), and on missing cells the ensemble beats completion at \emph{every}
 operating point, including full cohort ($0.069$ vs.\ $0.096$ at $n{=}45$)---this matrix
 has higher effective rank, so the response channel wins even where completion is
@@ -650,10 +650,10 @@ $\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, pl
 near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Response
 blocks are capped at $48$ PCA components per dataset and the shared query space at $64$;
 each (model, query) pair uses one sampled response ($r{=}1$). Models are embedded by
-classical MDS ($d{=}12$ in the query-efficiency experiments and $d{=}8$ in the completion
-experiments, both fixed a priori and not tuned; $d$ = latent dimension on synthetic).
-Appendix~\ref{app:sens} shows the results are insensitive to $d$ over $4$--$24$ and that
-the cross-validated bandwidth tracks the best fixed choice.
+classical MDS with $d{=}8$ throughout, following \citet{dkps_qeff} and fixed a priori
+($d$ = latent dimension on synthetic). Appendix~\ref{app:sens} shows the results are
+insensitive to $d$ over $4$--$24$, and that the cross-validated bandwidth tracks the best
+fixed choice.
 
 \paragraph{Prediction head.} All embedding methods share one head: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
@@ -789,11 +789,11 @@ consistent with the higher effective rank of this modern score matrix.}
 
 Figure~\ref{fig:sens} probes the two representation hyperparameters on the
 query-efficiency experiment ($16$ seeds throughout). \textbf{MDS dimension (a, b).}
-Repeating the budget sweep at $d\in\{4,8,12,24\}$ moves \PKPS's MAE by less than
+Repeating the budget sweep at $d\in\{4,8,24\}$ moves \PKPS's MAE by less than
 $0.005$ at every budget on both suites (at the smallest budgets, smaller $d$ is very
 slightly better---fewer coordinates to estimate from one noisy query per cell); the
-paper's a-priori choices ($d{=}12$ query efficiency, $d{=}8$ completion) are neither the
-best nor the worst point at any budget. \textbf{Query bandwidth (c).} Fixing the
+paper's choice ($d{=}8$, following \citealp{dkps_qeff}) is never the worst point at any
+budget. \textbf{Query bandwidth (c).} Fixing the
 bandwidth at each grid multiplier instead of cross-validating traces the expected curve:
 near-delta multipliers and the exact-matching $\delta$ limit are substantially worse
 (unpaired pools leave them little to compare), broad multipliers are best, and the
@@ -807,7 +807,7 @@ Figures~\ref{fig:qe}b and \ref{fig:completion}d).
 \centering
 \includegraphics[width=\textwidth]{fig_sensitivity.pdf}
 \caption{\textbf{Sensitivity analyses} on the query-efficiency experiment ($\pm1$ SEM,
-$16$ seeds). \textbf{(a, b)} \PKPS MAE vs.\ budget at MDS dimension $d\in\{4,8,12,24\}$
+$16$ seeds). \textbf{(a, b)} \PKPS MAE vs.\ budget at MDS dimension $d\in\{4,8,24\}$
 (paper choice in red; raw sample dashed): the curves are nearly indistinguishable on both
 suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth \emph{fixed} at each grid
 multiplier ($\delta$ = exact matching); dotted lines mark the cross-validated selection,

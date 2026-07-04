@@ -53,7 +53,7 @@ def _cv_bandwidth(Zs, sample_mat, obs, k=8):
     return best_sg
 
 
-def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=12, predictor='knn',
+def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8, predictor='knn',
              fixed_sig_idx=None,
              dump_cells=False):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
@@ -238,7 +238,7 @@ def main():
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
-    ap.add_argument('--mds_dim', type=int, default=12)
+    ap.add_argument('--mds_dim', type=int, default=8)   # matches dkps_qeff and the completion pipeline
     ap.add_argument('--sigma_idx', type=int, default=-1,
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--outdir', default=None)
