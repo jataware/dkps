@@ -8,8 +8,8 @@
 \bibitem[Acharyya et~al.(2024)Acharyya, Trosset, Priebe, and
   Helm]{acharyya2024consistent}
 Aranyak Acharyya, Michael~W. Trosset, Carey~E. Priebe, and Hayden~S. Helm.
-\newblock Consistent estimation of generative model representations in the data
-  kernel perspective space.
+\newblock Consistent estimation of generative model representations in the
+  {Data Kernel Perspective Space}.
 \newblock \emph{arXiv preprint arXiv:2409.17308}, 2024.
 
 \bibitem[Acharyya et~al.(2025)Acharyya, Agterberg, Park, and
@@ -19,9 +19,9 @@ Aranyak Acharyya, Joshua Agterberg, Youngser Park, and Carey~E. Priebe.
   generative models.
 \newblock \emph{arXiv preprint arXiv:2511.08307}, 2025.
 
-\bibitem[Bean et~al.(2025)]{bean2025scales}
-Andrew~M. Bean et~al.
-\newblock Scales++: Compute efficient evaluation subset selection with
+\bibitem[Bean et~al.(2025)Bean, Seedat, Chen, and Schwarz]{bean2025scales}
+Andrew~M. Bean, Nabeel Seedat, Shengzhuang Chen, and Jonathan~Richard Schwarz.
+\newblock {Scales++}: Compute efficient evaluation subset selection with
   cognitive scales embeddings.
 \newblock \emph{arXiv preprint arXiv:2510.26384}, 2025.
 
@@ -43,7 +43,7 @@ Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
 Wei-Lin Chiang, Lianmin Zheng, Ying Sheng, Anastasios~N. Angelopoulos, Tianle
   Li, Dacheng Li, Hao Zhang, Banghua Zhu, Michael Jordan, Joseph~E. Gonzalez,
   and Ion Stoica.
-\newblock Chatbot arena: An open platform for evaluating llms by human
+\newblock {Chatbot Arena}: An open platform for evaluating {LLM}s by human
   preference.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
@@ -55,8 +55,8 @@ Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
 
 \bibitem[{EvalEval Coalition}(2026)]{eee2026}
 {EvalEval Coalition}.
-\newblock Every eval ever: A unified open data format and public datastore for
-  ai evaluation results.
+\newblock {Every Eval Ever}: A unified open data format and public datastore
+  for {AI} evaluation results.
 \newblock \url{https://evalevalai.com/projects/every-eval-ever/}, 2026.
 \newblock Dataset:
   \url{https://huggingface.co/datasets/evaleval/EEE_datastore}.
@@ -71,8 +71,8 @@ Hayden Helm, Brandon Duderstadt, Youngser Park, and Carey~E. Priebe.
   Priebe]{helm2025inference}
 Hayden Helm, Aranyak Acharyya, Youngser Park, Brandon Duderstadt, and Carey
   Priebe.
-\newblock Statistical inference on black-box generative models in the data
-  kernel perspective space.
+\newblock Statistical inference on black-box generative models in the {Data
+  Kernel Perspective Space}.
 \newblock In \emph{Findings of the Association for Computational Linguistics
   (ACL)}, 2025.
 
@@ -95,21 +95,22 @@ Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen.
 
 \bibitem[Huh et~al.(2024)Huh, Cheung, Wang, and Isola]{huh2024platonic}
 Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
-\newblock The platonic representation hypothesis.
-\newblock \emph{arXiv preprint arXiv:2405.07987}, 2024.
+\newblock The {Platonic Representation Hypothesis}.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
 \bibitem[Ilyas et~al.(2022)Ilyas, Park, Engstrom, Leclerc, and
   Madry]{ilyas2022datamodels}
 Andrew Ilyas, Sung~Min Park, Logan Engstrom, Guillaume Leclerc, and Aleksander
   Madry.
 \newblock Datamodels: Predicting predictions from training data.
-\newblock \emph{arXiv preprint arXiv:2202.00622}, 2022.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2022.
 
-\bibitem[Kipnis et~al.(2024)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
+\bibitem[Kipnis et~al.(2025)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
 Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
-\newblock metabench: A sparse benchmark of reasoning and knowledge in large
+\newblock {metabench}: A sparse benchmark of reasoning and knowledge in large
   language models.
-\newblock \emph{arXiv preprint arXiv:2407.12844}, 2024.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2025.
 
 \bibitem[Koren et~al.(2009)Koren, Bell, and Volinsky]{koren2009matrix}
 Yehuda Koren, Robert Bell, and Chris Volinsky.
@@ -119,11 +120,26 @@ Yehuda Koren, Robert Bell, and Chris Volinsky.
 \bibitem[Li et~al.(2024)Li, Ma, Ballesteros, Benajiba, and
   Horwood]{li2024active}
 Yang Li, Jie Ma, Miguel Ballesteros, Yassine Benajiba, and Graham Horwood.
-\newblock Active evaluation acquisition for efficient llm benchmarking.
+\newblock Active evaluation acquisition for efficient {LLM} benchmarking.
 \newblock \emph{arXiv preprint arXiv:2410.05952}, 2024.
 
-\bibitem[Liang et~al.(2023)]{helm}
-Percy Liang et~al.
+\bibitem[Liang et~al.(2023)Liang, Bommasani, Lee, Tsipras, Soylu, Yasunaga,
+  Zhang, Narayanan, Wu, Kumar, Newman, Yuan, Yan, Zhang, Cosgrove, Manning,
+  R{\'e}, Acosta-Navas, Hudson, Zelikman, Durmus, Ladhak, Rong, Ren, Yao, Wang,
+  Santhanam, Orr, Zheng, Yuksekgonul, Suzgun, Kim, Guha, Chatterji, Khattab,
+  Henderson, Huang, Chi, Xie, Santurkar, Ganguli, Hashimoto, Icard, Zhang,
+  Chaudhary, Wang, Li, Mai, Zhang, and Koreeda]{helm}
+Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu,
+  Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar,
+  Benjamin Newman, Binhang Yuan, Bobby Yan, Ce~Zhang, Christian Cosgrove,
+  Christopher~D. Manning, Christopher R{\'e}, Diana Acosta-Navas, Drew~A.
+  Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren,
+  Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert
+  Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar
+  Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang~Michael Xie, Shibani
+  Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang,
+  Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, and Yuta
+  Koreeda.
 \newblock Holistic evaluation of language models.
 \newblock \emph{Transactions on Machine Learning Research (TMLR)}, 2023.
 
@@ -132,7 +148,8 @@ Percy Liang et~al.
 Rahul Mazumder, Trevor Hastie, and Robert Tibshirani.
 \newblock Spectral regularization algorithms for learning large incomplete
   matrices.
-\newblock \emph{Journal of Machine Learning Research}, 2010.
+\newblock \emph{Journal of Machine Learning Research}, 11:\penalty0 2287--2322,
+  2010.
 
 \bibitem[Perlitz et~al.(2024)Perlitz, Bandel, Gera, Arviv, Ein-Dor, Shnarch,
   Slonim, Shmueli-Scheuer, and Choshen]{perlitz2024efficient}
@@ -146,7 +163,7 @@ Yotam Perlitz, Elron Bandel, Ariel Gera, Ofir Arviv, Liat Ein-Dor, Eyal
   Yurochkin]{polo2024tinybenchmarks}
 Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
   Mikhail Yurochkin.
-\newblock tinybenchmarks: Evaluating llms with fewer examples.
+\newblock {tinyBenchmarks}: Evaluating {LLM}s with fewer examples.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
 \bibitem[Prabhu et~al.(2024)Prabhu, Udandarao, Torr, Bethge, Bibi, and
@@ -164,31 +181,33 @@ Georg Rasch.
 \newblock Danish Institute for Educational Research, 1960.
 
 \bibitem[Torgerson(1952)]{torgerson1952mds}
-Warren~S Torgerson.
-\newblock Multidimensional scaling: I. theory and method.
-\newblock In \emph{Psychometrika}, 1952.
+Warren~S. Torgerson.
+\newblock Multidimensional scaling: {I}. {T}heory and method.
+\newblock \emph{Psychometrika}, 17\penalty0 (4):\penalty0 401--419, 1952.
 
 \bibitem[Tu et~al.(2016)Tu, Boczar, Simchowitz, Soltanolkotabi, and
   Recht]{tu2016procrustes}
 Stephen Tu, Ross Boczar, Max Simchowitz, Mahdi Soltanolkotabi, and Benjamin
   Recht.
-\newblock Low-rank solutions of linear matrix equations via procrustes flow.
+\newblock Low-rank solutions of linear matrix equations via {Procrustes} flow.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2016.
 
 \bibitem[Vivek et~al.(2024)Vivek, Ethayarajh, Yang, and Kiela]{vivek2024anchor}
 Rajan Vivek, Kawin Ethayarajh, Diyi Yang, and Douwe Kiela.
 \newblock Anchor points: Benchmarking models with much fewer examples.
-\newblock In \emph{EACL}, 2024.
+\newblock In \emph{Conference of the European Chapter of the Association for
+  Computational Linguistics (EACL)}, 2024.
 
-\bibitem[White et~al.(2024)White, Dooley, Roberts, Pal, Feuer, Jain,
-  Shwartz-Ziv, Jain, Saifullah, Naidu, Hegde, LeCun, Goldstein, Neiswanger, and
-  Goldblum]{white2024livebench}
+\bibitem[White et~al.(2025)White, Dooley, Roberts, Pal, Feuer, Jain,
+  Shwartz-Ziv, Jain, Saifullah, Dey, {Shubh-Agrawal}, Sandha, Naidu, Hegde,
+  LeCun, Goldstein, Neiswanger, and Goldblum]{white2024livebench}
 Colin White, Samuel Dooley, Manley Roberts, Arka Pal, Ben Feuer, Siddhartha
-  Jain, Ravid Shwartz-Ziv, Neel Jain, Khalid Saifullah, Siddartha Naidu,
-  Chinmay Hegde, Yann LeCun, Tom Goldstein, Willie Neiswanger, and Micah
-  Goldblum.
-\newblock Livebench: A challenging, contamination-free llm benchmark.
-\newblock \emph{arXiv preprint arXiv:2406.19314}, 2024.
+  Jain, Ravid Shwartz-Ziv, Neel Jain, Khalid Saifullah, Sreemanti Dey,
+  {Shubh-Agrawal}, Sandeep~Singh Sandha, Siddartha Naidu, Chinmay Hegde, Yann
+  LeCun, Tom Goldstein, Willie Neiswanger, and Micah Goldblum.
+\newblock {LiveBench}: A challenging, contamination-free {LLM} benchmark.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2025.
 
 \bibitem[Zeng and Papailiopoulos(2026)]{benchpress}
 Yuchen Zeng and Dimitris Papailiopoulos.
