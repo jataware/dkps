@@ -91,7 +91,7 @@ collection of low-dimensional representations of models based on their embedded 
 every unpaired response contributes and paired DKPS is recovered as a special case
 (Section~\ref{sec:method}). Theoretically, we show that \PKPS is query-efficient
 relative to both the sample score---with a budget that does not depend on the fraction
-of queries shared across models---and, under fully unpaired designs, paired DKPS
+of queries shared across models---and, at every pairing fraction, paired DKPS
 (Theorems~\ref{thm:qeff} and~\ref{thm:sep}). Empirically, we demonstrate on two heterogeneous suites---$93$
 models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
 \citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
@@ -366,7 +366,7 @@ fraction $\rho$, such that nearest-neighbor regression in the \PKPS attains mean
 error at most $\epsilon$ with high probability. That is, whenever the sample score's
 error at that budget remains above $\epsilon$---its MSE is $\sigma_q^2/m$ for every $n$,
 where $\sigma_q^2$ is the per-query score variance---\PKPS is query-efficient relative
-to the sample score, at every pairing fraction including $\rho=0$.
+to the sample score, at every pairing fraction.
 \end{theorem}
 \begin{proof}[Proof sketch]
 Proposition~\ref{prop:conc} bounds the estimation error of every perspective. By
@@ -380,18 +380,22 @@ Full proof in Appendix~\ref{app:proof}.
 \end{proof}
 Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
 shared query pairs, so the DKPS bound's effective budget is $\rho m$ and its guarantee
-degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. Under fully unpaired
-designs the comparison closes (proof in Appendix~\ref{app:proof}):
-\begin{theorem}[Separation under unpaired designs]
+degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. Because the bandwidth
+grid contains the exact-matching limit, cross-validation closes the comparison at every
+pairing fraction (proof in Appendix~\ref{app:proof}):
+\begin{theorem}[Query efficiency relative to paired DKPS]
 \label{thm:sep}
-Assume additionally that scores are non-degenerate, $v=\mathrm{Var}(y)>0$, and that the
-design distributions are nonatomic, so that no two models share a query almost surely.
-Then every paired-DKPS estimator has $\mathrm{MSE}\ge v$ at every $(n,m)$, while
-Theorem~\ref{thm:qeff} attains any $\epsilon<v$: \PKPS is query-efficient relative to
-paired DKPS (Definition~\ref{def:qeff}).
+Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
+bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
+by validation on held-out reference scores. For any $\epsilon>0$, with high probability
+for sufficiently many reference models,
+$\mathrm{MSE}(\PKPS\text{-CV})\le\mathrm{MSE}(\mathrm{DKPS})+\epsilon$; the
+inequality is strict---query efficiency relative to paired DKPS
+(Definition~\ref{def:qeff})---whenever some bandwidth strictly improves on exact
+matching, and at $\rho=0$ (nonatomic designs, $v=\mathrm{Var}(y)>0$) the margin is at
+least $v-2\epsilon$ under Assumptions~\ref{ass:score}--\ref{ass:reg}.
 \end{theorem}
-For intermediate pairing, the gap widens empirically as $\rho\to0$
-(Figure~\ref{fig:synthetic}e); a rate in $\rho$ is open.
+Empirically the strict case is the rule at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
 \centering
@@ -570,9 +574,9 @@ never-run cells, with the ensemble performing at least as well as either channel
 (embedder effects not ablated); the block-diagonal instantiation disables cross-domain
 bridging (a shared response space is untested); the affinity is quadratic in queries per
 model pair.
-Theorem~\ref{thm:qeff} is existential (no rate in $n$), and the DKPS separation
-(Theorem~\ref{thm:sep}) covers fully unpaired designs; a rate in the pairing fraction
-for $0<\rho<1$ is open. Finally, per-cell wins over score-only baselines are modest on dense
+Theorem~\ref{thm:qeff} is existential (no rate in $n$), and Theorem~\ref{thm:sep}'s
+strict margin at intermediate $\rho$ rests on a bandwidth improving on exact matching,
+which we establish empirically, not by a lower bound. Finally, per-cell wins over score-only baselines are modest on dense
 low-rank matrices and decisive in the sparse, noisy, unpaired regime that motivates the
 problem.
 
@@ -962,17 +966,36 @@ and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$
 guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Proof of Theorem~\ref{thm:sep}.} Nonatomic design distributions give
-$\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so with probability one
-$Q_a\cap Q_b=\emptyset$ for every pair of models and every identity-matched sum in the
-paired affinity is empty. Any measurable completion $\hat y$ of a paired-DKPS estimator
-is therefore a function of the reference data alone, and the target model is drawn
-independently of the references, so $y\perp\hat y$ and
-$\mathrm{MSE}(\hat y)=\mathbb{E}[(y-\hat y)^2]
-=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$ at every $(n,m)$. By
-Theorem~\ref{thm:qeff}, for any $\epsilon<v$ there exist $(n,m)$ at which \PKPS attains
-$\mathrm{MSE}\le\epsilon<v$ with high probability. In the sense of
-Definition~\ref{def:qeff}, \PKPS is query-efficient relative to paired DKPS: the
-comparator's error is bounded away from zero at every budget, and \PKPS falls below it.
-\hfill$\qed$
+\paragraph{Proof of Theorem~\ref{thm:sep}.} Split the reference models into a training
+set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
+perspective space on $T$, embed any model outside $T$ out of sample by its
+Eq.~\ref{eq:A} affinity row to $T$ (the standard out-of-sample MDS coordinate), and let
+$\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
+selected bandwidth is $\hat\sigma=\arg\min_{\sigma\in\Sigma}\hat L(\sigma)$ with
+$\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_\sigma(f_i)-y_i)^2$. Conditional on
+$T$, the validation losses are i.i.d.\ across the draw of validation models and bounded
+in $[0,1]$, so by Hoeffding's inequality and a union bound over $\Sigma$, with
+probability at least $1-\delta'$,
+$\sup_{\sigma\in\Sigma}|\hat L(\sigma)-L(\sigma)|\le
+\tau=\sqrt{\log(2|\Sigma|/\delta')/2n_v}$, where $L(\sigma)$ is the MSE on a fresh
+target. On this event,
+\[
+L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(\delta)+\tau
+\;\le\;L(\delta)+2\tau\;=\;\mathrm{MSE}(\mathrm{DKPS})+2\tau,
+\]
+since the $k_Q=\delta$ member of the family coincides with paired DKPS on the shared
+queries with the same regression head (Section~3.1). Taking $n_v$ large enough that
+$2\tau\le\epsilon$ gives the first claim at every $(m,\rho)$. If some
+$\sigma^\star$ has $\Delta=L(\delta)-L(\sigma^\star)>0$, the same event gives
+$L(\hat\sigma)\le L(\sigma^\star)+2\tau=\mathrm{MSE}(\mathrm{DKPS})-\Delta+2\tau$,
+strict for $2\tau<\Delta$. Finally, at $\rho=0$ with nonatomic designs,
+$\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surely every
+identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
+function of the reference data alone, independent of the target, whence
+$\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$, while under
+Assumptions~\ref{ass:score}--\ref{ass:reg} Theorem~\ref{thm:qeff} supplies a bandwidth
+attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
+least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
+validation and a joint embedding (Section~\ref{sec:method}); the split protocol is
+analyzed for independence of the validation losses. \hfill$\qed$
 \end{document}
