@@ -272,13 +272,9 @@ for xa, xb, ya in [(pe_.x1 + 0.004, pc.x0 - 0.012, yhi),             # (a) -> (b
     fig.add_artist(FancyArrowPatch((xa, ya), (xb, ya), transform=fig.transFigure,
                                    arrowstyle='-|>', mutation_scale=13, color='#94a3b8',
                                    lw=1.3, zorder=1))
-fig.text((pc.x0 + pr2.x1) / 2, 0.012,
+fig.text((pc.x0 + pr2.x1) / 2, 0.040,
          r"$A_{ii'}=\sum_{j,l}k_Q(q_j,q_l)\,k_R(x_{ij},x_{i'l})\;/\;\sum_{j,l}k_Q(q_j,q_l)$",
          ha='center', va='top', fontsize=9.2, color='#334155')
-fig.text((pc.x0 + pr2.x1) / 2, -0.105, 'one entry of the $n\\times n$ model affinity',
-         ha='center', va='top', fontsize=7.5, color='#64748b')
-fig.text(x0 + side + hgap / 2, 0.012, 'classical MDS of $D^2\\!(A)$, then $k$-NN regression',
-         ha='center', va='top', fontsize=7.5, color='#64748b')
 
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_concept.{ext}', dpi=200, bbox_inches='tight')
