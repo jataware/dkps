@@ -89,9 +89,10 @@ In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)
 collection of low-dimensional representations of models based on their embedded responses.
 \PKPS compares responses to \emph{similar}---rather than only identical---queries, so
 every unpaired response contributes and paired DKPS is recovered as a special case
-(Section~\ref{sec:method}). Theoretically, we show that the query budget \PKPS requires
-to reach a target accuracy does not depend on the fraction of queries shared across models
-(Theorem~\ref{thm:qeff}). Empirically, we demonstrate on two heterogeneous suites---$93$
+(Section~\ref{sec:method}). Theoretically, we show that \PKPS is query-efficient
+relative to both the sample score---with a budget that does not depend on the fraction
+of queries shared across models---and, under fully unpaired designs, paired DKPS
+(Theorems~\ref{thm:qeff} and~\ref{thm:sep}). Empirically, we demonstrate on two heterogeneous suites---$93$
 models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
 \citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
 theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
@@ -379,15 +380,18 @@ Full proof in Appendix~\ref{app:proof}.
 \end{proof}
 Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
 shared query pairs, so the DKPS bound's effective budget is $\rho m$ and its guarantee
-degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. In the sense of
-Definition~\ref{def:qeff} we conjecture strict separation; Section~\ref{sec:results} is
-its empirical counterpart.
-\begin{conjecture}[Strict gap]
-\label{conj:qeff}
-Under Assumptions~\ref{ass:score}--\ref{ass:reg}, \PKPS is query-efficient relative to
-paired DKPS at every budget, with the MSE gap widening as $\rho\to0$; the two coincide
-in the fully paired limit $\rho=1$.
-\end{conjecture}
+degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. Under fully unpaired
+designs the comparison closes (proof in Appendix~\ref{app:proof}):
+\begin{theorem}[Separation under unpaired designs]
+\label{thm:sep}
+Assume additionally that scores are non-degenerate, $v=\mathrm{Var}(y)>0$, and that the
+design distributions are nonatomic, so that no two models share a query almost surely.
+Then every paired-DKPS estimator has $\mathrm{MSE}\ge v$ at every $(n,m)$, while
+Theorem~\ref{thm:qeff} attains any $\epsilon<v$: \PKPS is query-efficient relative to
+paired DKPS (Definition~\ref{def:qeff}).
+\end{theorem}
+For intermediate pairing, the gap widens empirically as $\rho\to0$
+(Figure~\ref{fig:synthetic}e); a rate in $\rho$ is open.
 
 \begin{figure}[t]
 \centering
@@ -474,7 +478,7 @@ score. The raw sample mean falls like $1/\sqrt{M_{ij}}$; smoothing those noisy s
 perspective denoises well below it. \PKPS at one query matches the sample at roughly
 five, paired or unpaired; DKPS denoises only when paired (dashed). Only at large budgets
 is the raw sample precise enough to overtake the embedding's residual bias. This is the empirical counterpart of
-Theorem~\ref{thm:qeff} and Conjecture~\ref{conj:qeff}.
+Theorems~\ref{thm:qeff} and~\ref{thm:sep}.
 
 \begin{figure}[t]
 \centering
@@ -566,8 +570,9 @@ never-run cells, with the ensemble performing at least as well as either channel
 (embedder effects not ablated); the block-diagonal instantiation disables cross-domain
 bridging (a shared response space is untested); the affinity is quadratic in queries per
 model pair.
-Theorem~\ref{thm:qeff} is existential (no rate in $n$) and the strict DKPS separation
-remains a conjecture. Finally, per-cell wins over score-only baselines are modest on dense
+Theorem~\ref{thm:qeff} is existential (no rate in $n$), and the DKPS separation
+(Theorem~\ref{thm:sep}) covers fully unpaired designs; a rate in the pairing fraction
+for $0<\rho<1$ is open. Finally, per-cell wins over score-only baselines are modest on dense
 low-rank matrices and decisive in the sparse, noisy, unpaired regime that motivates the
 problem.
 
@@ -955,6 +960,19 @@ Definition~\ref{def:qeff}.
 pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
 and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$: DKPS's
 guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
-where its distance is undefined (Section~\ref{sec:method}). This asymmetry motivates
-Conjecture~\ref{conj:qeff}; a formal lower bound for DKPS is future work.
+where its distance is undefined (Section~\ref{sec:method}).
+
+\paragraph{Proof of Theorem~\ref{thm:sep}.} Nonatomic design distributions give
+$\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so with probability one
+$Q_a\cap Q_b=\emptyset$ for every pair of models and every identity-matched sum in the
+paired affinity is empty. Any measurable completion $\hat y$ of a paired-DKPS estimator
+is therefore a function of the reference data alone, and the target model is drawn
+independently of the references, so $y\perp\hat y$ and
+$\mathrm{MSE}(\hat y)=\mathbb{E}[(y-\hat y)^2]
+=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$ at every $(n,m)$. By
+Theorem~\ref{thm:qeff}, for any $\epsilon<v$ there exist $(n,m)$ at which \PKPS attains
+$\mathrm{MSE}\le\epsilon<v$ with high probability. In the sense of
+Definition~\ref{def:qeff}, \PKPS is query-efficient relative to paired DKPS: the
+comparator's error is bounded away from zero at every budget, and \PKPS falls below it.
+\hfill$\qed$
 \end{document}
