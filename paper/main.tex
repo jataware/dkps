@@ -81,9 +81,10 @@ scores themselves. The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} us
 information: it embeds each model from its responses via classical multidimensional
 scaling and regresses benchmark scores in the resulting space. The DKPS distance between
 two models, however, is defined only over responses to shared queries---a \emph{paired}
-design---and is undefined when models were evaluated on different queries. To our
-knowledge, no existing method predicts the score matrix from evaluation data as it is
-typically available: sparse, noisy, and unpaired.
+design; in practice this restricts analysis to maximal subsets of models that share a
+common query set \citep{dkps_qeff}. To our knowledge, no existing method predicts the
+score matrix from evaluation data as it is typically available: sparse, noisy, and
+unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded responses.
@@ -187,9 +188,10 @@ lifelong benchmarks, and \citet{dkps_qeff} predict held-out scores from cached r
 On the completion end, \citet{benchpress} observe that the (model $\times$ task) score
 matrix is approximately rank-two and complete it in logit space \citep[see
 also][]{candes2009exact, mazumder2010softimpute, koren2009matrix}. These methods use only
-each cell's aggregate score. \PKPS unifies the two ends---a cell with $m\ge0$ queries
-spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and adds a response-level
-signal that can be ensembled with matrix completion.
+each cell's aggregate score; \citet{benchpress} identify extending prediction to
+instance-level outcomes as a natural next step. \PKPS unifies the two ends---a cell with
+$m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and
+adds the response-level signal, which can be ensembled with matrix completion.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
