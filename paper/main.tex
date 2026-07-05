@@ -194,7 +194,7 @@ signal that can be ensembled with matrix completion.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-\paragraph{Models are embedded by classical MDS of pairwise affinities.} Each method
+\paragraph{Model representations.} Each method
 summarizes the $n$ models of
 Section~\ref{sec:setting} in an $n\times n$ affinity matrix $A$ (defined below). The squared distance between two models is
 $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
@@ -207,13 +207,13 @@ $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
 so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
 and \PKPS differ only in the affinity $A$.
 
-\paragraph{Paired DKPS compares responses to identical queries only.} With all $n$
+\paragraph{Paired DKPS.} With all $n$
 models answering the same $m$ queries
 ($Q_1=\dots=Q_n$), DKPS uses the identity-matched affinity
 $A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
 with response $j$ of model $b$, so the design must be paired.
 
-\paragraph{\PKPS weights every response comparison by query similarity.} \PKPS replaces
+\paragraph{The product kernel.} \PKPS replaces
 identity matching with a query kernel $k_Q$:
 \begin{equation}
 A_{ab} = \frac{\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)\, k_R(x_{aj},x_{bl})}
@@ -274,7 +274,7 @@ scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
 $\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
 the bandwidth $\sigma$ and the regressor $\hat h$.
 
-\paragraph{Leak-free cross-validation chooses the bandwidth.} The optimal $\sigma$
+\paragraph{Bandwidth selection.} The optimal $\sigma$
 depends on the degree of pairing in the data. We choose it per run by cross-validation
 over a median-scaled grid $\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, selecting the
 $\sigma$ whose perspective best predicts the \emph{observed} scores under
@@ -282,7 +282,7 @@ leave-one-model-out $k$-NN. Note that the selection criterion uses only observed
 and never the held-out scores we report. Because the grid includes near-zero bandwidths,
 cross-validation recovers paired DKPS when query overlap is high.
 
-\paragraph{The estimation pipeline shares the matrix-completion head.} For each
+\paragraph{Estimation pipeline.} For each
 replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
 only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\ref{eq:A};
 (iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
@@ -293,8 +293,9 @@ perspective versus a low-rank factorization), so performance differences are att
 to the representation. We found matching the per-task standardization to be important:
 without it, the model offset is dominated by the tasks with the largest logit variance.
 
-\paragraph{The ensemble combines the embedding with the available score signal.} Each
-channel is weighted in proportion to its estimated reliability. On an \emph{observed}
+\paragraph{Ensemble.} The ensemble combines the \PKPS estimate with whichever score
+signal is available for a cell, weighting each channel in proportion to its estimated
+reliability. On an \emph{observed}
 cell, the score signal is the cell's own sample mean, shrunk toward the \PKPS estimate
 by the weight $\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$, the ratio of sample noise variance
 to total disagreement with \PKPS; the sample mean therefore receives more weight as the
