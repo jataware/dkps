@@ -319,16 +319,27 @@ Gram matrix $B^*$ of $D^{*2}$.
 \begin{assumption}[Score regularity]\label{ass:score}
 The benchmark score is bounded and $\gamma$-Lipschitz on the population perspective space.
 \end{assumption}
+In practice, Assumption~\ref{ass:score} holds when models with similar response
+distributions attain similar scores---the premise of any response-based predictor, and
+visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
 \begin{assumption}[Model support]\label{ass:support}
 The model distribution places mass on every neighborhood of the population perspective
 space.
 \end{assumption}
+Assumption~\ref{ass:support} ensures that a target model has arbitrarily near reference
+neighbors once the cohort is large; in practice it suggests that a large, diverse
+reference population may be needed. Both conditions mirror \citet{dkps_qeff}.
 \begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
 Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
 bounded below, $\kappa=\inf_{a,b}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
-spectral gap $\lambda_d>0$. ($\kappa$ is the population analogue of $\rho$: positive for
-an RBF $k_Q$ whenever query \emph{distributions} overlap, even with no shared query.)
+spectral gap $\lambda_d>0$.
 \end{assumption}
+Boundedness and the spectral gap are standard in spectral-embedding analyses. The
+substantive condition is $\kappa>0$: it is the population analogue of the pairing
+fraction $\rho$, and for an RBF $k_Q$ it holds whenever query \emph{distributions}
+overlap, even when no individual query is shared. It fails only when query distributions
+are disjoint---models evaluated on domains the kernel cannot bridge---in which case no
+unpaired method should be expected to compare them.
 \begin{proposition}[Concentration of \PKPS perspectives]
 \label{prop:conc}
 Under Assumption~\ref{ass:reg}, with at least $m$ queries per model, for any
