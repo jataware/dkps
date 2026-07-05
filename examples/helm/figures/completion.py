@@ -29,7 +29,7 @@ CFG = {'helm': dict(dir='results-pkps-unified', n=93, T=18, stem='fig_suite_comp
        'eee':  dict(dir='results-eee-unified',  n=45, T=16, stem='fig_eee_completion')}[args.suite]
 D = Path(CFG['dir'])
 COL = {'mc': '#348ABC', 'pkps': '#E24A33', 'ens': '#8C564B'}
-LBL = {'mc': 'matrix completion', 'pkps': 'PKPS', 'ens': 'ensemble'}
+LBL = {'mc': 'LRMC', 'pkps': 'PKPS', 'ens': 'ensemble'}
 LW = {'mc': 2.6, 'pkps': 2.6, 'ens': 3.6}
 NLS = {CFG['n']: '-', 10: '--'}                 # cohort -> line style
 N, T = CFG['n'], CFG['T']

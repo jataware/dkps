@@ -96,7 +96,7 @@ models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
 \citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
 theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
 means with an $8\times$ smaller query budget, and that ensembling it with score-based
-methods reduces the error of low-rank completion by up to $28\%$
+methods reduces the error of low-rank matrix completion by up to $28\%$
 (Section~\ref{sec:experiments}).
 
 \begin{table}[t!]
@@ -121,7 +121,7 @@ Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
 \midrule
 sample mean        & $0.292$ & $0.092$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
-matrix completion  & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
+LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
 DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
 \PKPS              & $0.136$ & $0.108$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.171}$ & $\mathbf{0.076}$ & $0.058$ & $\mathbf{0.082}$ & $0.070$ & $\mathbf{0.108}$ \\
 ensemble           & $\mathbf{0.132}$ & $\mathbf{0.077}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $0.084$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
@@ -286,7 +286,7 @@ replicate we (i) PCA-reduce response and query embeddings on the \emph{observed}
 only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\ref{eq:A};
 (iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
 leave-one-family-out. The score head---logit transform, per-task standardization, two-way
-(model $+$ task) bias---is identical to the matrix-completion baseline's; the two methods
+(model $+$ task) bias---is identical to the low-rank matrix-completion (LRMC) baseline's; the two methods
 differ only in the factor, $k$-NN on the perspective versus a low-rank factorization, so
 comparisons isolate the representation. Matching the per-task standardization matters:
 without it the model offset is dominated by the highest-logit-variance tasks.
@@ -296,7 +296,7 @@ precision weighting: trust each channel in proportion to its estimated reliabili
 \emph{observed} cell's score signal is its own sample mean, shrunk toward the \PKPS
 estimate by the weight $\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$---sample noise variance over
 total disagreement with \PKPS---so the sample dominates as queries grow and the embedding
-as noise grows. A \emph{missing} cell's score signal is matrix completion
+as noise grows. A \emph{missing} cell's score signal is LRMC
 \citep{benchpress}, blended with \PKPS by a weight cross-validated on observed scores.
 Every weight is read off observed queries alone ($\hat p(1-\hat p)/m$; depth-weighted
 disagreement); none touches the held-out scores we report.
@@ -428,8 +428,8 @@ overlap)---unpaired by construction (Appendix~\ref{app:eee}).
 
 \paragraph{Prediction methods.} We compare six predictors. The \emph{sample mean} is a
 cell's own $m$-query average. \emph{IRT} fits a one-parameter logistic model on the
-largest shared item block \citep{polo2024tinybenchmarks}. \emph{Matrix completion} is the
-logit-space low-rank imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
+largest shared item block \citep{polo2024tinybenchmarks}. \emph{Low-rank matrix
+completion} (LRMC) is the logit-space imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
 and \emph{\PKPS} regress scores on the model embeddings of Section~\ref{sec:method},
 DKPS being the identity-query-kernel limit. The \emph{ensemble} combines \PKPS with
 whichever score signal a cell has (Section~\ref{sec:method}).
@@ -495,39 +495,39 @@ suite) while DKPS, which cannot use the additional unpaired responses, stays fla
 \centering
 \includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{The \PKPS embedding rescues the small-cohort regime where low-rank completion
+\caption{The \PKPS embedding rescues the small-cohort regime where LRMC
 collapses for lack of rows, and ties it at full cohort. \textbf{(a--d)} Observe a fraction
 of (model, task) cells, predict the \emph{missing} ones (MAE on missing cells, $\pm1$
-SEM). Colour is method (low-rank completion blue, \PKPS red, ensemble brown); line style
+SEM). Colour is method (LRMC blue, \PKPS red, ensemble brown); line style
 is cohort (solid $n{=}93$, dashed $n{=}10$). \textbf{(e--h)}
-Conditional breakdown: per-missing-cell $\Delta=$ completion $-$ ensemble MAE
+Conditional breakdown: per-missing-cell $\Delta=$ LRMC $-$ ensemble MAE
 ($\Delta\!>\!0$, red $=$ win) by dataset, cohort, coverage, and query depth, other levers
 at their sweep median. Modest and tail-driven on this low-rank suite, but the per-row mean
 ($\blacktriangledown$) stays positive.}
 \label{fig:completion}
 \end{figure}
 
-\paragraph{The embedding completes missing cells where low-rank completion cannot.}
+\paragraph{The embedding completes missing cells where LRMC cannot.}
 The same embedding also predicts cells that
 were \emph{never run}. We observe a fraction $p_{\mathrm{task}}$ of cells (each at depth
-$p_{\mathrm{query}}$) and predict the missing ones, against a low-rank matrix-completion
+$p_{\mathrm{query}}$) and predict the missing ones, against the LRMC
 baseline (the sample does not apply---a missing cell has no sample). Low-rank completion needs
 many rows: when models are scarce it fails while the embedding remains accurate---at
-$n{=}10$, completion is $0.139$ versus \PKPS's $0.120$ (Figure~\ref{fig:completion},
+$n{=}10$, LRMC is $0.139$ versus \PKPS's $0.120$ (Figure~\ref{fig:completion},
 dashed). At full cohort ($n{=}93$,
-solid) \PKPS slightly edges completion ($0.103$ vs.\ $0.105$) and the ensemble is best
+solid) \PKPS slightly edges LRMC ($0.103$ vs.\ $0.105$) and the ensemble is best
 ($0.099$).
 
 \paragraph{The per-cell wins are broad but tail-driven.} The ensemble beats the raw
 sample on most cells, with the largest gains at the smallest budgets and on the
-rich-response datasets (Figure~\ref{fig:qe}d--g); the win over completion is modest but
+rich-response datasets (Figure~\ref{fig:qe}d--g); the win over LRMC is modest but
 stays positive in the mean across datasets, cohorts, coverage, and query depth
 (Figure~\ref{fig:completion}e--h).
 
 \paragraph{Both applications replicate on the Every Eval Ever suite.} The second suite
 sharpens the completion contrast (Table~\ref{tab:suite}; lever sweeps in
 Appendix~\ref{app:eee}): at $m{=}1$ \PKPS attains a third of the sample's error ($0.076$
-vs.\ $0.224$), and on missing cells the ensemble beats completion at \emph{every}
+vs.\ $0.224$), and on missing cells the ensemble beats LRMC at \emph{every}
 operating point, including full cohort ($0.069$ vs.\ $0.096$ at $n{=}45$)---this
 higher-rank matrix favors the response channel. Table~\ref{tab:suite} collects both
 applications on both suites; the ensemble is best or tied nearly everywhere.
@@ -660,7 +660,7 @@ excluded from its training set, so predictions never lean on near-duplicate sibl
 \citep{dkps_qeff}. Held-out cells are predicted directly; observed cells leave their own
 target out.
 
-\paragraph{Baselines.} Matrix completion follows BenchPress \citep{benchpress}: logit
+\paragraph{Baselines.} Low-rank matrix completion (LRMC) follows BenchPress \citep{benchpress}: logit
 space, per-task standardization, two-way bias, rank-$2$ ALS with ridge $\lambda{=}0.1$,
 averaged over $5$ random initializations; on observed cells it is cross-fit so a cell's
 prediction never sees its own sample. IRT is a 1PL (Rasch) model on binary tasks: item
@@ -671,7 +671,7 @@ $[-4,4]$. The sample baseline is the cell's own $m$-query mean.
 \paragraph{Ensemble.} On observed cells, the sample mean is shrunk toward the \PKPS
 estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\hat p(1-\hat p)/m)$ on
 the sample, where $e^2_{\PKPS}$ is the embedding's depth-weighted disagreement with the
-observed samples of that model; on missing cells, \PKPS and matrix completion are blended
+observed samples of that model; on missing cells, \PKPS and LRMC are blended
 with a weight fit by held-out cross-validation against observed scores. No quantity ever
 uses the held-out full-eval scores.
 
@@ -776,7 +776,7 @@ identified. The ensemble is best from $m{\ge}2$ on.}
 \caption{\textbf{Matrix completion on the Every Eval Ever suite} (MAE on missing cells,
 $\pm1$ SEM; solid $n{=}45$, dashed $n{=}10$). Same protocol as
 Figure~\ref{fig:completion}. Unlike the HELM suite, the embedding and ensemble beat
-low-rank completion at every operating point---including full cohort and coverage---
+LRMC at every operating point---including full cohort and coverage---
 consistent with the higher effective rank of this modern score matrix.}
 \label{fig:eeecomp}
 \end{figure}
