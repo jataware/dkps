@@ -351,19 +351,21 @@ where $C$ depends only on the kernel bounds (proof in Appendix~\ref{app:proof}).
 \end{proposition}
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
-For a score estimator $h$ and a query design with per-model budget $m$, let
-$m_h(\epsilon)$ be the smallest budget at which $h$ attains
-$\mathrm{MSE}\le\epsilon$ with high probability for some number of reference models.
-Estimator $h$ is \emph{query-efficient relative to} $h'$ if
-$m_h(\epsilon)\le m_{h'}(\epsilon)$ for all sufficiently small $\epsilon$.
+Fix a per-model budget $m$ and let $h_n$ denote a score estimator using $n$ scored
+reference models. $h$ is \emph{query-efficient relative to} $h'$ \emph{at budget} $m$ if
+there exists $N$ such that $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high
+probability for all $n\ge N$, and \emph{query-efficient relative to} $h'$ if this holds
+at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 \end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
 Under Assumptions~\ref{ass:score}--\ref{ass:reg}, for any $\epsilon>0$ there exist
 $(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and independent of the pairing
 fraction $\rho$, such that nearest-neighbor regression in the \PKPS attains mean squared
-error at most $\epsilon$ with high probability; in particular $m_{\PKPS}(\epsilon)$ does
-not grow as $\rho\to0$.
+error at most $\epsilon$ with high probability. That is, whenever the sample score's
+error at that budget remains above $\epsilon$---its MSE is $\sigma_q^2/m$ for every $n$,
+where $\sigma_q^2$ is the per-query score variance---\PKPS is query-efficient relative
+to the sample score, at every pairing fraction including $\rho=0$.
 \end{theorem}
 \begin{proof}[Proof sketch]
 Proposition~\ref{prop:conc} bounds the estimation error of every perspective. By
@@ -371,7 +373,9 @@ Assumption~\ref{ass:score} and the triangle inequality, the nearest-neighbor reg
 error splits into two estimation terms and the population nearest-neighbor distance, which
 Assumption~\ref{ass:support} makes small for $n$ large; choosing
 $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives $\mathrm{MSE}\le\epsilon$, and no step
-involves $\rho$. Full proof in Appendix~\ref{app:proof}.
+involves $\rho$. The sample score uses no reference models, so its error at budget $m$
+is fixed at $\sigma_q^2/m$; attaining $\epsilon$ below it gives the relative statement.
+Full proof in Appendix~\ref{app:proof}.
 \end{proof}
 Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
 shared query pairs, so the DKPS bound's effective budget is $\rho m$ and its guarantee
@@ -381,8 +385,8 @@ its empirical counterpart.
 \begin{conjecture}[Strict gap]
 \label{conj:qeff}
 Under Assumptions~\ref{ass:score}--\ref{ass:reg}, \PKPS is query-efficient relative to
-paired DKPS, with $m_{\mathrm{DKPS}}(\epsilon)/m_{\PKPS}(\epsilon)$ increasing as
-$\rho\to0$; the two coincide in the fully paired limit $\rho=1$.
+paired DKPS at every budget, with the MSE gap widening as $\rho\to0$; the two coincide
+in the fully paired limit $\rho=1$.
 \end{conjecture}
 
 \begin{figure}[t]
@@ -938,6 +942,14 @@ at most $\epsilon'+2c$ by the same alignment argument, so
 $|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding the two
 failure events (squared errors are bounded by $1$),
 $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
+
+\paragraph{Relative to the sample score.} The sample score at budget $m$ is the mean of
+$m$ i.i.d.\ per-query scores and uses no reference models, so its MSE is $\sigma_q^2/m$
+for every $n$, where $\sigma_q^2$ is the per-query score variance ($\le1/4$ for scores
+in $[0,1]$). For any $\epsilon<\sigma_q^2/m$ at the budget of Theorem~\ref{thm:qeff},
+the theorem's estimator satisfies $\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all
+sufficiently large $n$: query efficiency relative to the sample score in the sense of
+Definition~\ref{def:qeff}.
 
 \paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
 pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
