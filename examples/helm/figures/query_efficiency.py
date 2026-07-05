@@ -33,7 +33,7 @@ STYLE = {'sample': dict(color='#777777', ls='--', label='sample'),
          'irt':    dict(color='#988ED5', ls='--', label='IRT'),
          'dkps':   dict(color='#8EBA42', ls='-',  label='DKPS'),
          'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),
-         'ens':    dict(color='#8C564B', ls='-',  label='ensemble', lw=3.6)}
+         'ens':    dict(color='#8C564B', ls='-',  label='Ensemble', lw=3.6)}
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 N = CFG['n']
 PANELS = [('budget',   'm',       r'queries per cell $m$',           rf'$n{{=}}{N},\ p_{{\mathrm{{task}}}}{{=}}1$', True),
