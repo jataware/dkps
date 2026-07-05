@@ -23,7 +23,7 @@ import pandas as pd
 # ablations get their own colours (teal/orange) so they never collide with a method's colour
 # (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
 ESTIMATOR_COLORS = {'sample': '#777777', 'dkps': '#8EBA42', 'pkps': '#E24A33'}
-ESTIMATOR_LABELS = {'sample': 'sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
+ESTIMATOR_LABELS = {'sample': 'Sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
 ESTIMATOR_ORDER = ['sample', 'dkps', 'pkps']
 
 
