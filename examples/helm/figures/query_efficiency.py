@@ -83,10 +83,18 @@ for ax, sweep in zip(axes[1:], ('n_models', 'coverage')):
 axes[0].set_ylabel('MAE vs. true score', fontsize=15.6)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
                   lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
-fig.legend(handles=handles, loc='upper center', ncol=5, frameon=False,
-           bbox_to_anchor=(0.5, 0.95), fontsize=13.8)
-fig.suptitle('Query efficiency', fontsize=17.5, fontweight='bold', y=1.02)
-fig.tight_layout(rect=[0, 0, 1, 0.87])
+fig.tight_layout()
+# legend flush above the tallest panel title, suptitle flush above the legend, both
+# centred on the panel span (canvas centre is skewed left by the shared ylabel)
+fig.canvas.draw()
+r, inv = fig.canvas.get_renderer(), fig.transFigure.inverted()
+xc = 0.5 * (axes[0].get_position().x0 + axes[-1].get_position().x1)
+ytop = max(ax.get_tightbbox(r).transformed(inv).y1 for ax in axes)
+lg = fig.legend(handles=handles, loc='lower center', ncol=5, frameon=False,
+                bbox_to_anchor=(xc, ytop + 0.012), fontsize=13.8)
+fig.canvas.draw()
+fig.suptitle('Query-efficiency ($m \\geq 1$)', fontsize=17.5, fontweight='bold',
+             x=xc, y=lg.get_window_extent(r).transformed(inv).y1 + 0.015, va='bottom')
 for ext in ('png', 'pdf'):
     fig.savefig(D / f'{CFG["stem"]}.{ext}', dpi=200, bbox_inches='tight')
 print(f'wrote {D}/{CFG["stem"]}.png')

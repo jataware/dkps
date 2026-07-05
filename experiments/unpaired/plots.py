@@ -130,10 +130,20 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
                       label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
-    fig.legend(handles=handles, loc='upper center', ncol=len(handles), frameon=False,
-               bbox_to_anchor=(0.5, 0.97), fontsize=16.8)
-    fig.suptitle('Synthetic study', fontsize=21.0, fontweight='bold', y=1.005)
-    fig.tight_layout(rect=[0, 0, 1, 0.93])
+    fig.tight_layout()
+    # legend flush above the top row's panel titles, suptitle flush above the legend,
+    # both centred on the panel span (canvas centre is skewed left by the shared ylabel)
+    fig.canvas.draw()
+    r, inv = fig.canvas.get_renderer(), fig.transFigure.inverted()
+    flat = [ax for row in axes for ax in row if ax.get_visible()]
+    xc = 0.5 * (min(ax.get_position().x0 for ax in flat) +
+                max(ax.get_position().x1 for ax in flat))
+    ytop = max(ax.get_tightbbox(r).transformed(inv).y1 for ax in flat)
+    lg = fig.legend(handles=handles, loc='lower center', ncol=len(handles), frameon=False,
+                    bbox_to_anchor=(xc, ytop + 0.010), fontsize=16.8)
+    fig.canvas.draw()
+    fig.suptitle('Synthetic study', fontsize=21.0, fontweight='bold',
+                 x=xc, y=lg.get_window_extent(r).transformed(inv).y1 + 0.012, va='bottom')
     return fig
 
 

@@ -67,10 +67,18 @@ axes[0].set_ylabel('MAE on missing cells', fontsize=15)
 meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
 n_h = [Line2D([0], [0], color='#444', ls='-', label=rf'$n{{=}}{N}$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
-fig.legend(handles=meth_h + n_h, loc='upper center', ncol=5, frameon=False,
-           bbox_to_anchor=(0.5, 0.97), fontsize=13.5)
-fig.suptitle('Matrix completion', fontsize=18, fontweight='bold', y=1.03)
-fig.tight_layout(rect=[0, 0, 1, 0.88])
+fig.tight_layout()
+# legend flush above the tallest panel title, suptitle flush above the legend, both
+# centred on the panel span (canvas centre is skewed left by the shared ylabel)
+fig.canvas.draw()
+r, inv = fig.canvas.get_renderer(), fig.transFigure.inverted()
+xc = 0.5 * (axes[0].get_position().x0 + axes[-1].get_position().x1)
+ytop = max(ax.get_tightbbox(r).transformed(inv).y1 for ax in axes)
+lg = fig.legend(handles=meth_h + n_h, loc='lower center', ncol=5, frameon=False,
+                bbox_to_anchor=(xc, ytop + 0.012), fontsize=13.5)
+fig.canvas.draw()
+fig.suptitle('Matrix completion ($m{=}0$)', fontsize=18, fontweight='bold',
+             x=xc, y=lg.get_window_extent(r).transformed(inv).y1 + 0.015, va='bottom')
 for ext in ('png', 'pdf'):
     fig.savefig(D / f'{CFG["stem"]}.{ext}', dpi=200, bbox_inches='tight')
 print(f'wrote {D}/{CFG["stem"]}.png')
