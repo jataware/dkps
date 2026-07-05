@@ -3,7 +3,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
-\newtheorem{conjecture}{Conjecture}
+\newtheorem{corollary}{Corollary}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
 \theoremstyle{definition}
@@ -92,7 +92,7 @@ every unpaired response contributes and paired DKPS is recovered as a special ca
 (Section~\ref{sec:method}). Theoretically, we show that \PKPS is query-efficient
 relative to both the sample score---with a budget that does not depend on the fraction
 of queries shared across models---and, at every pairing fraction, paired DKPS
-(Theorems~\ref{thm:qeff} and~\ref{thm:sep}). Empirically, we demonstrate on two heterogeneous suites---$93$
+(Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}). Empirically, we demonstrate on two heterogeneous suites---$93$
 models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
 \citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
 theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
@@ -360,42 +360,38 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 \end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Under Assumptions~\ref{ass:score}--\ref{ass:reg}, for any $\epsilon>0$ there exist
-$(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and independent of the pairing
-fraction $\rho$, such that nearest-neighbor regression in the \PKPS attains mean squared
-error at most $\epsilon$ with high probability. That is, whenever the sample score's
-error at that budget remains above $\epsilon$---its MSE is $\sigma_q^2/m$ for every $n$,
-where $\sigma_q^2$ is the per-query score variance---\PKPS is query-efficient relative
-to the sample score, at every pairing fraction.
-\end{theorem}
-\begin{proof}[Proof sketch]
-Proposition~\ref{prop:conc} bounds the estimation error of every perspective. By
-Assumption~\ref{ass:score} and the triangle inequality, the nearest-neighbor regression
-error splits into two estimation terms and the population nearest-neighbor distance, which
-Assumption~\ref{ass:support} makes small for $n$ large; choosing
-$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives $\mathrm{MSE}\le\epsilon$, and no step
-involves $\rho$. The sample score uses no reference models, so its error at budget $m$
-is fixed at $\sigma_q^2/m$; attaining $\epsilon$ below it gives the relative statement.
-Full proof in Appendix~\ref{app:proof}.
-\end{proof}
-Applied to paired DKPS ($k_Q=\delta$), the same argument retains only the $\rho M_{ij}$
-shared query pairs, so the DKPS bound's effective budget is $\rho m$ and its guarantee
-degrades as $\rho\to0$ while Theorem~\ref{thm:qeff} does not. Because the bandwidth
-grid contains the exact-matching limit, cross-validation closes the comparison at every
-pairing fraction (proof in Appendix~\ref{app:proof}):
-\begin{theorem}[Query efficiency relative to paired DKPS]
-\label{thm:sep}
 Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
 bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
 by validation on held-out reference scores. For any $\epsilon>0$, with high probability
-for sufficiently many reference models,
-$\mathrm{MSE}(\PKPS\text{-CV})\le\mathrm{MSE}(\mathrm{DKPS})+\epsilon$; the
-inequality is strict---query efficiency relative to paired DKPS
-(Definition~\ref{def:qeff})---whenever some bandwidth strictly improves on exact
-matching, and at $\rho=0$ (nonatomic designs, $v=\mathrm{Var}(y)>0$) the margin is at
-least $v-2\epsilon$ under Assumptions~\ref{ass:score}--\ref{ass:reg}.
+for sufficiently many reference models:
+\emph{(i)} $\mathrm{MSE}(\PKPS\text{-CV})\le\mathrm{MSE}(\mathrm{DKPS})+\epsilon$,
+and strictly---query efficiency relative to paired DKPS
+(Definition~\ref{def:qeff})---whenever some bandwidth improves on exact matching, with
+margin at least $v-2\epsilon$ at $\rho=0$ (nonatomic designs, $v=\mathrm{Var}(y)>0$);
+\emph{(ii)} under Assumptions~\ref{ass:score}--\ref{ass:reg} there exist $(n,m)$, with
+$m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
+$\mathrm{MSE}(\PKPS\text{-CV})\le\epsilon$.
 \end{theorem}
-Empirically the strict case is the rule at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
+\begin{corollary}[Relative to the sample score]
+\label{cor:sample}
+The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, so by
+Theorem~\ref{thm:qeff}(ii), \PKPS-CV is query-efficient relative to the sample score
+whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
+\end{corollary}
+\begin{proof}[Proof sketch]
+(i) is model selection: the $\delta$ member of the grid coincides with paired DKPS on
+the shared queries with the same regression head, and validation MSEs concentrate
+uniformly over the finite grid at rate $\sqrt{\log|\Sigma|/n}$ (Hoeffding), giving an
+oracle inequality. For (ii), Proposition~\ref{prop:conc} bounds every perspective's
+estimation error; the nearest-neighbor error splits into two estimation terms and the
+population nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for
+$n$ large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
+$\mathrm{MSE}\le\epsilon$, and no step involves $\rho$. Exact matching, by contrast,
+retains only the $\rho M_{ij}$ shared pairs, so the same argument degrades as
+$\rho\to0$. Full proofs in Appendix~\ref{app:proof}.
+\end{proof}
+Empirically the strict case of (i) is the rule at every $\rho<1$
+(Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
 \centering
@@ -482,7 +478,7 @@ score. The raw sample mean falls like $1/\sqrt{M_{ij}}$; smoothing those noisy s
 perspective denoises well below it. \PKPS at one query matches the sample at roughly
 five, paired or unpaired; DKPS denoises only when paired (dashed). Only at large budgets
 is the raw sample precise enough to overtake the embedding's residual bias. This is the empirical counterpart of
-Theorems~\ref{thm:qeff} and~\ref{thm:sep}.
+Theorem~\ref{thm:qeff}.
 
 \begin{figure}[t]
 \centering
@@ -574,9 +570,9 @@ never-run cells, with the ensemble performing at least as well as either channel
 (embedder effects not ablated); the block-diagonal instantiation disables cross-domain
 bridging (a shared response space is untested); the affinity is quadratic in queries per
 model pair.
-Theorem~\ref{thm:qeff} is existential (no rate in $n$), and Theorem~\ref{thm:sep}'s
-strict margin at intermediate $\rho$ rests on a bandwidth improving on exact matching,
-which we establish empirically, not by a lower bound. Finally, per-cell wins over score-only baselines are modest on dense
+Theorem~\ref{thm:qeff}(ii) is existential (no rate in $n$), and the strict margin of
+(i) at intermediate $\rho$ rests on a bandwidth improving on exact matching, which we
+establish empirically, not by a lower bound. Finally, per-cell wins over score-only baselines are modest on dense
 low-rank matrices and decisive in the sparse, noisy, unpaired regime that motivates the
 problem.
 
@@ -836,7 +832,7 @@ which matches the best fixed choice on both suites.}
 \label{fig:sens}
 \end{figure}
 
-\section{Proof of Theorem~\ref{thm:qeff}}
+\section{Proofs of Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}}
 \label{app:proof}
 
 \paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
@@ -922,7 +918,7 @@ Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
 distances are invariant to $W$.
 \end{proof}
 
-\paragraph{Proof of Theorem~\ref{thm:qeff}.} Take scores in $[0,1]$ without loss of
+\paragraph{Proof of Theorem~\ref{thm:qeff}(ii).} Take scores in $[0,1]$ without loss of
 generality (Assumption~\ref{ass:score}). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
 the estimation error and $\epsilon'\le\sqrt{\epsilon/2}/(2\gamma)$ for the population
 nearest-neighbor distance. By Assumption~\ref{ass:support} there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
@@ -955,10 +951,11 @@ $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 \paragraph{Relative to the sample score.} The sample score at budget $m$ is the mean of
 $m$ i.i.d.\ per-query scores and uses no reference models, so its MSE is $\sigma_q^2/m$
 for every $n$, where $\sigma_q^2$ is the per-query score variance ($\le1/4$ for scores
-in $[0,1]$). For any $\epsilon<\sigma_q^2/m$ at the budget of Theorem~\ref{thm:qeff},
-the theorem's estimator satisfies $\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all
-sufficiently large $n$: query efficiency relative to the sample score in the sense of
-Definition~\ref{def:qeff}.
+in $[0,1]$). For any $\epsilon<\sigma_q^2/m$ at the budget of
+Theorem~\ref{thm:qeff}(ii), the estimator satisfies
+$\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all sufficiently large $n$: query efficiency
+relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
+Corollary~\ref{cor:sample}.
 
 \paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
 pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
@@ -966,7 +963,7 @@ and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$
 guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Proof of Theorem~\ref{thm:sep}.} Split the reference models into a training
+\paragraph{Proof of Theorem~\ref{thm:qeff}(i).} Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
 Eq.~\ref{eq:A} affinity row to $T$ (the standard out-of-sample MDS coordinate), and let
@@ -993,7 +990,7 @@ $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surel
 identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
 function of the reference data alone, independent of the target, whence
 $\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$, while under
-Assumptions~\ref{ass:score}--\ref{ass:reg} Theorem~\ref{thm:qeff} supplies a bandwidth
+Assumptions~\ref{ass:score}--\ref{ass:reg} part (ii) supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
 validation and a joint embedding (Section~\ref{sec:method}); the split protocol is
