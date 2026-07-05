@@ -35,17 +35,18 @@
 \maketitle
 
 \begin{abstract}
-Evaluating a generative model on all available benchmarks is often prohibitively
-expensive. As such, models are often evaluated on different subsets of tasks and/or different subsets of
-queries from a given task, and the resulting (model $\times$ task) score matrix is sparse
-and noisy. In this paper, we introduce the \textbf{Product Kernel Perspective Space
-(\PKPS)}---a collection of low-dimensional representations of models based on their
-embedded responses---that generalizes existing benchmark-prediction methods to the sparse
-and noisy evaluation regime by comparing responses to similar, rather than identical,
-queries. Theoretically, we show that \PKPS more effectively uses information from unpaired
-queries for a given task. Empirically, we show that \PKPS outperforms sample means,
-item-response theory, and paired methods where evaluation is sparse, noisy, or unpaired,
-and that it is a complementary signal to score-based methods.
+Evaluating a generative model on all queries from all available benchmark tasks is
+prohibitively expensive. As such, models are often evaluated on different subsets of tasks
+and/or different subsets of queries from a given task. The resulting collection of
+responses and the corresponding (model, task) score matrix are unpaired and sparse. In
+this paper, we introduce the Product Kernel Perspective Space (\PKPS)---a collection of
+low-dimensional representations of models based on their embedded responses---that
+generalizes existing methods to the unpaired and sparse evaluation regime by comparing
+responses to similar, rather than just identical, queries. Theoretically, we show that
+benchmark prediction using \PKPS is query-efficient relative to methods that only use
+information from queries all models have responded to. Empirically, we show that \PKPS
+outperforms relevant baselines on two tasks---query-efficient evaluation and (model, task)
+score matrix imputation---across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
@@ -103,11 +104,13 @@ methods reduces the error of low-rank matrix completion by up to $28\%$
 
 \begin{table}[t!]
 \centering
-\caption{MAE of benchmark prediction methods on both suites ($16$ seeds; best per column
-bold; setup in Section~\ref{sec:setup}): query efficiency at budgets $m\in\{1,8\}$
-queries per cell, and completion of missing cells at the small-cohort, full-cohort
-($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$), and sparse-coverage
-(sp.: $p_{\mathrm{task}}{=}0.2$, $n{=}10$) operating points. ``---'': not applicable.}
+\caption{MAE of benchmark prediction methods on both suites and tasks (best per column
+bolded, second best underlined; setup described in Section~\ref{sec:setup}):
+query-efficiency at budgets $m\in\{1,8\}$ queries per cell, and completion of missing
+cells at cohort sizes $n\in\{10,\max\}$. We fix task sparsity $p_{\mathrm{task}}$ and
+query sparsity $p_{\mathrm{query}}$ at $0.5$, except for the sp.\ columns where
+$p_{\mathrm{task}}{=}0.2$ and $n{=}10$. ``---'' denotes a setting where a method is not
+applicable.}
 \label{tab:suite}
 \footnotesize
 \setlength{\tabcolsep}{3.4pt}\renewcommand{\arraystretch}{0.95}
@@ -121,12 +124,12 @@ queries per cell, and completion of missing cells at the small-cohort, full-coho
 Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
        & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) & (sp.) \\
 \midrule
-Sample mean        & $0.292$ & $0.092$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
+Sample mean        & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
-LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
+LRMC               & --- & --- & $\underline{0.139}$ & $0.105$ & $\underline{0.208}$ & --- & --- & $\underline{0.109}$ & $0.096$ & $\underline{0.144}$ \\
 DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
-\PKPS              & $0.136$ & $0.108$ & $\mathbf{0.120}$ & $0.103$ & $\mathbf{0.171}$ & $\mathbf{0.076}$ & $0.058$ & $\mathbf{0.082}$ & $0.070$ & $\mathbf{0.108}$ \\
-Ensemble           & $\mathbf{0.132}$ & $\mathbf{0.077}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $0.084$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
+\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{0.120}$ & $\underline{0.103}$ & $\mathbf{0.171}$ & $\mathbf{0.076}$ & $\underline{0.058}$ & $\mathbf{0.082}$ & $\underline{0.070}$ & $\mathbf{0.108}$ \\
+Ensemble           & $\mathbf{0.132}$ & $\mathbf{0.077}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $\underline{0.084}$ & $\mathbf{0.052}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -242,17 +245,16 @@ pass serves the whole bandwidth grid.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_concept.pdf}
-\caption{\PKPS uses every response under unpaired evaluation; DKPS uses only the shared
-ones. \textbf{(a)} Two models, $i$ (red) and
-$i'$ (blue), answer their own subsets of a query pool (blocks: who answered what; dots:
-queries in embedding space, nearby $=$ similar). \textbf{(b)} DKPS's identity kernel keeps
-only the diagonal cells where both models answered the \emph{same} query---almost every
-response is discarded. \textbf{(c)} An RBF $k_Q$ is a dense similarity matrix: responses to
-\emph{similar} queries bridge the two models. Both panels index the pooled queries in one
-shared order; the weights feed one entry of the model affinity (Eq.~\ref{eq:A}).
-\textbf{(d--e$'$)} A toy benchmark-prediction example: restricted to the rare shared
-queries, DKPS's embedding has no clean score axis and predicts poorly (MAE $0.31$); \PKPS
-recovers a smooth score gradient and predicts on the diagonal (MAE $0.07$).}
+\caption{An illustration of the difference between the Product Kernel Perspective
+Space (\PKPS) and the previously proposed Data Kernel Perspective Space (DKPS).
+\textbf{(a)} Top: two models respond to different sets of queries; bottom: queries
+represented as vectors. \textbf{(b)} The query kernel matrix used by DKPS: only
+information from queries both models have responded to is included in the dissimilarity
+matrix. \textbf{(c)} The query kernel matrix used by \PKPS: information is weighted by
+query similarity in the embedding space. \textbf{(d--e$'$)} A toy benchmark-prediction
+example. Top: restricted to the rare shared queries, DKPS is noisy and correlates poorly
+with benchmark score (MAE $0.31$). Bottom: \PKPS leverages unpaired queries and is highly
+correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
