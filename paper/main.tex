@@ -88,19 +88,26 @@ score matrix from evaluation data as it is typically available: sparse, noisy, a
 unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
-collection of low-dimensional representations of models based on their embedded responses.
-\PKPS compares responses to \emph{similar}---rather than only identical---queries, so
-every unpaired response contributes and paired DKPS is recovered as a special case
-(Section~\ref{sec:method}). Theoretically, we show that \PKPS is query-efficient
-relative to both the sample score---with a budget that does not depend on the fraction
-of queries shared across models---and, at every pairing fraction, paired DKPS
-(Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}). Empirically, we demonstrate on two heterogeneous suites---$93$
-models on HELM tasks and $45$ modern models from the Every Eval Ever datastore
-\citep{eee2026}---that \PKPS achieves lower error than sample means, item-response
-theory, and DKPS in sparse, noisy, and unpaired regimes, matching the accuracy of sample
-means with an $8\times$ smaller query budget, and that ensembling it with score-based
-methods reduces the error of low-rank matrix completion by up to $28\%$
-(Section~\ref{sec:experiments}).
+collection of low-dimensional representations of models based on their embedded
+responses. \PKPS compares responses to \emph{similar}---rather than only
+identical---queries, so every unpaired response contributes and paired DKPS is recovered
+as a special case (Section~\ref{sec:method}).
+
+\paragraph{Contributions.} We make two primary contributions.
+\begin{enumerate}
+\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
+\item \emph{Methodological \& theoretical:} we extend the DKPS and its
+query-efficiency theory to the unpaired regime. Benchmark prediction in the \PKPS is
+query-efficient relative to the sample score, with a query budget that does not depend
+on the fraction of queries shared across models, and relative to paired DKPS at every
+pairing fraction (Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}).
+\item \emph{Empirical:} on two benchmark suites---$93$ models on $18$ HELM tasks and
+$45$ modern models on $16$ tasks from the Every Eval Ever datastore
+\citep{eee2026}---we demonstrate utility on two problems: query-efficient evaluation,
+where \PKPS matches the accuracy of the sample score with an $8\times$ smaller query
+budget, and score-matrix completion, where ensembling \PKPS with low-rank matrix
+completion reduces error by up to $28\%$ (Section~\ref{sec:experiments}).
+\end{enumerate}
 
 \begin{table}[t!]
 \centering
