@@ -156,38 +156,30 @@ Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{\underline{0
 \subsection{Problem setting and notation}
 \label{sec:setting}
 Our goal is to predict the score of a model for a task for which its responses are
-partially observed or unobserved. For our purposes, a \emph{model} is a random mapping
+partially observed or unobserved in the context of sparse and unpaired previously
+evaluated reference models. For our purposes, a \emph{model} is a random mapping
 $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space. The response
-$f(q)$ is an independent sample from $P_{q}$. In the evaluation setting, we observe $n$
-models $f_1,\dots,f_n$, where each model responds to a (potentially different)
-collection of queries $Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$
-(i.e., a \emph{paired} design) is a special case. We assume access to responses
+$f(q)$ is an independent sample from $P_{q}$. We observe $n$ models $f_1,\dots,f_n$,
+where each model responds to a (potentially different) collection of queries
+$Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
+design) is a special case. We assume access to responses
 $\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$.
 
 Each query is an element of at least one of $T$
 \emph{tasks}---$Q^{(1)},\dots,Q^{(T)}$---with $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$
 and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the collection of queries from task $t$
 that model $i$ has responded to and let $m_{i}^{(t)}:=|Q^{(t)}_{i}|$. The sparsity and
-unpairedness of the tasks are functions of the $m_{i}^{(t)}$: a task is \emph{sparse}
-when few models have $m_{i}^{(t)}>0$ (this fraction is the \emph{coverage}) or when the
-observed $m_{i}^{(t)}$ are small relative to $M^{(t)}$, and \emph{unpaired} when the
-cross-model overlaps $m_{ij}^{(t)}:=|Q_{i}^{(t)}\cap Q_{j}^{(t)}|$ are small relative to
-the $m_{i}^{(t)}$. The shared fraction $\rho_{ij}^{(t)}:=m_{ij}^{(t)}/m_{i}^{(t)}$
-(\emph{pairing}) is a property of a model pair; when the design is homogeneous we
-suppress the indices and write $\rho$. Curated leaderboards sit near $\rho\approx1$,
-while deployed evaluation sits near $\rho\approx0$.
+unpairedness of a task are functions of the $\{m_{i}^{(t)}\}$: it is \emph{sparse} when
+few models have $m_{i}^{(t)}>0$, and \emph{unpaired} when the cross-model overlaps
+$m_{ij}^{(t)}:=|Q_{i}^{(t)}\cap Q_{j}^{(t)}|$ are small. We let
+$\rho_{ij}^{(t)}:=m_{ij}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
+model pair and note that $\rho_{ij}\approx1$ for all pairs in highly curated
+leaderboards and $\rho_{ij}\approx0$ in deployed evaluation settings.
 
-Let $y(f,Q)$ denote model $f$'s mean per-query score over a query collection $Q$, and
-let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s \emph{true score} on task $t$; we
-write $y_i$ when a single task is in view. The observed \emph{sample score} is
-$y(f_i,Q_i^{(t)})$. We consider two instances of the benchmark prediction problem: i)
-estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}>0$ (\emph{query efficiency}) and ii) estimate
-$y_{i}^{(t)}$ with $m_{i}^{(t)}=0$ (\emph{matrix completion}). Both instances use
-embedding functions $g_{\mathcal{Q}}:\mathcal{Q}\to\mathbb{R}^{p'}$ and
-$g_{\mathcal{X}}:\mathcal{X}\to\mathbb{R}^{p}$---for $q_j\in Q_i$,
-$x_{ij}=\tfrac1r\sum_{k=1}^{r}g_{\mathcal{X}}\big(f_i(q_j)^{(k)}\big)$ is the average
-of $r$ sampled response embeddings and $u_j=g_{\mathcal{Q}}(q_j)$ the embedded
-query---and the known true scores of previously evaluated \emph{reference} models.
+Finally, let $y_{i}^{(t)}$ be model $i$'s score on task $t$. The goal of \emph{benchmark
+prediction} is to estimate $y_{i}^{(t)}$. We consider two related instances of the
+problem: i) estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}>0$ (\emph{query efficiency}) and
+ii) estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}=0$ (\emph{matrix completion}).
 
 \section{Related work}
 \label{sec:related}
@@ -244,7 +236,12 @@ models' response behaviors. The $d$-dimensional
 \label{eq:mds}
 \end{equation}
 so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
-and \PKPS differ only in the comparison matrix $A$.
+and \PKPS differ only in the comparison matrix $A$. Throughout, responses and queries
+enter through fixed embedding functions
+$g_{\mathcal{X}}:\mathcal{X}\to\mathbb{R}^{p}$ and
+$g_{\mathcal{Q}}:\mathcal{Q}\to\mathbb{R}^{p'}$: for $q_j\in Q_i$,
+$x_{ij}=\tfrac1r\sum_{k=1}^{r}g_{\mathcal{X}}\big(f_i(q_j)^{(k)}\big)$ denotes model
+$i$'s average embedded response and $u_j=g_{\mathcal{Q}}(q_j)$ the embedded query.
 
 With all $n$
 models answering the same $m$ queries
@@ -310,7 +307,7 @@ tradeoff between exact matching and bridging.
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
 embed each model into the perspective space (Eq.~\ref{eq:mds}), then regress its
 benchmark score on the resulting coordinate. On reference models with known
-scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
+scores $\{(f_i,y_i)\}$ ($y_i$ for a single task in view) we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
 $\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
 the bandwidth $\sigma$ and the regressor $\hat h$.
 
@@ -403,7 +400,8 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 \end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
+Fix a budget $m$ and pairing fraction $\rho\in[0,1]$ (the common value of the
+$\rho_{ij}$ under a homogeneous design), and let \PKPS-CV select its
 bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
 by validation on held-out reference scores. Under
 Assumptions~\ref{ass:score}--\ref{ass:reg}, for any $\epsilon>0$:
