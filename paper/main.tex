@@ -406,21 +406,16 @@ so the strict case of (i) is typical.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_synthetic.pdf}
-\caption{\PKPS outperforms DKPS on every lever of the synthetic benchmark (score MAE,
-$\pm1$ SEM over 50 seeds). DKPS (identity query kernel, green) vs.\ \PKPS (RBF, red), with
-the score-only sample baseline (gray); each panel sweeps one parameter with the rest fixed
-(shown in its title). \textbf{(a)--(e) complete held-out
-cells} from observed responses---cohort $n$, tasks $T$, task coverage $p_{\mathrm{task}}$,
-query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$. \PKPS
-(CV-selected bandwidth) beats DKPS throughout---by a wide margin even when mostly paired
-(a--c), since it bridges across tasks as well as within---and the gap is largest when unpaired
-or sparse (d, e), where in (e) DKPS collapses toward the floor as $\rho\!\to\!0$ while \PKPS
-stays flat. \textbf{(f) denoises observed cells}:
-each cell is measured with $M_{ij}$ noisy queries and we predict its true score, at paired
-($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed). The raw sample falls
-$\propto1/\sqrt{M_{ij}}$; smoothing over the perspective denoises well below it at small
-budgets---\PKPS paired or unpaired, DKPS only paired---until the sample becomes precise at
-the full budget.}
+\caption{Score MAE on the synthetic benchmark as each lever of the observation process
+is varied ($\pm1$ SEM over $50$ seeds; DKPS green, \PKPS red, sample baseline gray;
+fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
+function of cohort size $n$, number of tasks $T$, task coverage $p_{\mathrm{task}}$,
+query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
+(e), DKPS approaches the sample baseline as $\rho\!\to\!0$ while \PKPS is unaffected.
+\textbf{(f)} Denoising of observed cells: each cell is measured with $M_{ij}$ noisy
+queries and we predict its true score, at paired ($\rho{=}1$, solid) and unpaired
+($\rho{=}0$, dashed) designs; \PKPS denoises whether or not queries are paired, DKPS
+only when paired.}
 \label{fig:synthetic}
 \end{figure}
 
@@ -494,16 +489,14 @@ residual bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 \centering
 \includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
-\caption{Regression in the \PKPS provides query-efficient benchmark prediction relative
-to the sample score. \textbf{(a--c)} Each model answers $m$ unpaired queries per
-\emph{observed} cell; predict its true full-eval score (MAE, $\pm1$ SEM).
-\PKPS (red) and the ensemble (brown) denoise far below the raw sample (grey) at small
-budgets and across cohort (b) and coverage (c); DKPS (green) trails on unpaired queries,
-and IRT (purple) is poorly identified without a shared item block (omitted from b, c;
-value annotated). \textbf{(d--g)} Conditional breakdown: per-cell $\Delta=$ sample $-$
-ensemble MAE ($\Delta\!>\!0$, red $=$ win) by dataset, budget, cohort, and coverage,
-other levers at their sweep median. Broad but tail-driven; the per-row mean
-($\blacktriangledown$) is positive throughout.}
+\caption{Query-efficient evaluation on the HELM suite. \textbf{(a--c)} MAE against the
+true full-evaluation score when each model answers $m$ unpaired queries per observed cell
+($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
+$p_{\mathrm{task}}$. IRT is poorly identified without a shared item block and is omitted
+from (b, c); its value is annotated. \textbf{(d--g)} Per-cell difference $\Delta=$
+sample $-$ Ensemble MAE (red $=$ Ensemble better) by dataset, budget, cohort, and
+coverage, with the other levers fixed at their sweep median; $\blacktriangledown$ marks
+the per-row mean.}
 \label{fig:qe}
 \end{figure}
 
@@ -524,15 +517,13 @@ the additional unpaired responses, is flat.
 \centering
 \includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
 \includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{The \PKPS embedding rescues the small-cohort regime where LRMC
-collapses for lack of rows, and ties it at full cohort. \textbf{(a--d)} Observe a fraction
-of (model, task) cells, predict the \emph{missing} ones (MAE on missing cells, $\pm1$
-SEM). Colour is method (LRMC blue, \PKPS red, ensemble brown); line style
-is cohort (solid $n{=}93$, dashed $n{=}10$). \textbf{(e--h)}
-Conditional breakdown: per-missing-cell $\Delta=$ LRMC $-$ ensemble MAE
-($\Delta\!>\!0$, red $=$ win) by dataset, cohort, coverage, and query depth, other levers
-at their sweep median. Modest and tail-driven on this low-rank suite, but the per-row mean
-($\blacktriangledown$) stays positive.}
+\caption{Matrix completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
+($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
+query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
+tasks, and cohort size (LRMC blue, \PKPS red, Ensemble brown; solid $n{=}93$, dashed
+$n{=}10$). \textbf{(e--h)} Per-missing-cell difference $\Delta=$ LRMC $-$ Ensemble MAE
+(red $=$ Ensemble better) by dataset, cohort, coverage, and query depth, with the other
+levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.}
 \label{fig:completion}
 \end{figure}
 
@@ -790,22 +781,21 @@ zai-org/glm-5-fp8.\par}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_eee_query_efficiency.pdf}
-\caption{\textbf{Query efficiency on the Every Eval Ever suite} ($45$ models, $16$ tasks;
-MAE vs.\ full-depth score, $\pm1$ SEM over $16$ seeds). Same protocol as
-Figure~\ref{fig:qe}. \PKPS at $m{=}1$ attains a third of the sample's error and the sample
-needs $m{\approx}8$ to catch up; DKPS trails because pools are unpaired, and IRT is poorly
-identified. The ensemble is best from $m{\ge}2$ on.}
+\caption{Query-efficient evaluation on the Every Eval Ever suite ($45$ models, $16$
+tasks; MAE against the full-depth score, $\pm1$ SEM over $16$ seeds). The protocol
+matches Figure~\ref{fig:qe}. \PKPS at $m{=}1$ attains a third of the sample's error;
+DKPS trails because the query pools are unpaired, and IRT is poorly identified.}
 \label{fig:eeeqe}
 \end{figure}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_eee_completion.pdf}
-\caption{\textbf{Matrix completion on the Every Eval Ever suite} (MAE on missing cells,
-$\pm1$ SEM; solid $n{=}45$, dashed $n{=}10$). Same protocol as
-Figure~\ref{fig:completion}. Unlike the HELM suite, the embedding and ensemble beat
-LRMC at every operating point---including full cohort and coverage---
-consistent with the higher effective rank of this modern score matrix.}
+\caption{Matrix completion on the Every Eval Ever suite (MAE on missing cells, $\pm1$
+SEM; solid $n{=}45$, dashed $n{=}10$). The protocol matches
+Figure~\ref{fig:completion}. Unlike on the HELM suite, \PKPS and the Ensemble
+outperform LRMC at every operating point, consistent with the higher effective rank of
+this score matrix.}
 \label{fig:eeecomp}
 \end{figure}
 
@@ -831,12 +821,12 @@ Figures~\ref{fig:qe}b and \ref{fig:completion}d).
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_sensitivity.pdf}
-\caption{\textbf{Sensitivity analyses} on the query-efficiency experiment ($\pm1$ SEM,
-$16$ seeds). \textbf{(a, b)} \PKPS MAE vs.\ budget at MDS dimension $d\in\{4,8,24\}$
-(paper choice in red; raw sample dashed): the curves are nearly indistinguishable on both
-suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth \emph{fixed} at each grid
-multiplier ($\delta$ = exact matching); dotted lines mark the cross-validated selection,
-which matches the best fixed choice on both suites.}
+\caption{Sensitivity analyses on the query-efficiency experiment ($\pm1$ SEM, $16$
+seeds). \textbf{(a, b)} \PKPS MAE against budget at MDS dimension $d\in\{4,8,24\}$
+(paper choice in red; sample dashed); the curves are nearly indistinguishable on both
+suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth fixed at each grid
+multiplier ($\delta$ $=$ exact matching); dotted lines mark the cross-validated
+selection, which matches the best fixed choice on both suites.}
 \label{fig:sens}
 \end{figure}
 
