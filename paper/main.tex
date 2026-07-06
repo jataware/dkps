@@ -222,7 +222,10 @@ directly between average embedded responses \citep{dkps_qeff}; when query sets d
 there is nothing to subtract. Kernel comparisons \emph{across} two query sets remain
 well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
 similarity matrix $A$ (defined below) and induce the squared distance
-$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$). The $d$-dimensional
+$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$)---the usual conversion of an inner
+product to a distance, $\|\phi_a-\phi_b\|^2=\langle\phi_a,\phi_a\rangle+
+\langle\phi_b,\phi_b\rangle-2\langle\phi_a,\phi_b\rangle$, with $A_{ab}$ in the
+role of an inner product between the models' response behaviors. The $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
 (\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
@@ -236,7 +239,9 @@ With all $n$
 models answering the same $m$ queries
 ($Q_1=\dots=Q_n$), DKPS uses the identity-matched similarity
 $A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
-with response $j$ of model $b$, so the design must be paired.
+with response $j$ of model $b$, so the design must be paired. With a linear $k_R$ the
+induced distance is exactly the mean squared distance between aligned responses,
+$D^2(a,b)=\tfrac1m\sum_j\|x_{aj}-x_{bj}\|^2$.
 
 \PKPS replaces
 identity matching with a query kernel $k_Q$:
@@ -257,9 +262,10 @@ $k_Q(q_j,q_l)=\exp(-\|u_j-u_l\|^2/2\sigma^2)$, with bandwidth $\sigma$ chosen pe
 corresponds to a linear $k_R$ with the identity query kernel $k_Q=\delta$. Linearity of
 $k_R$ makes the kernel factorize across response domains
 (Section~\ref{sec:setup}); the synthetic study uses an RBF $k_R$. Since Eq.~\ref{eq:A}
-normalizes each pair by its own kernel mass, $A$ need not be positive semidefinite;
-classical MDS embeds the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as
-is standard. $A_{ab}$ costs $|Q_a||Q_b|$ kernel terms per pair, and one response-kernel
+normalizes each pair by its own kernel mass, $A$ is only approximately an inner
+product and need not be positive semidefinite---hence the clamp on $D^2$, and classical
+MDS embeds the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as is
+standard. $A_{ab}$ costs $|Q_a||Q_b|$ kernel terms per pair, and one response-kernel
 pass serves the whole bandwidth grid.
 
 \begin{figure}[t]
