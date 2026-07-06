@@ -54,18 +54,18 @@ Generative models are evaluated on an ever-growing collection of benchmarks span
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
 all of them is often prohibitively expensive. As a result, models are evaluated on different
 subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
-finds only $23\%$ of the score matrix filled \citep{benchpress}. The responses beneath
-the observed scores are, moreover, \emph{unpaired}: two models rarely answer the same
-queries. This is not an artifact of curation but a consequence of how evaluations are
-collected: arena-style platforms score each model on the conversations its users generate
-\citep{chiang2024chatbot}; contamination-aware benchmarks refresh their items, so models
-evaluated in different months answer different questions \citep{white2024livebench}; and
-cost-driven subsampling gives each evaluation run its own item subset
-\citep{perlitz2024efficient}. The resulting (model $\times$ task) score matrix is
-sparse, its entries are noisy averages over few queries, and the responses that produced
-it are unpaired. Predicting its missing and true entries would let practitioners reuse
-cached evaluations instead of paying to re-run them \citep{polo2024tinybenchmarks,
-vivek2024anchor, benchpress}.
+finds only $23\%$ of the score matrix filled \citep{benchpress}. Within a curated
+benchmark, every model is forced to answer an identical set of queries---but this
+controlled setting is the exception. Arena-style platforms score each model on the
+conversations its users generate \citep{chiang2024chatbot}; contamination-aware
+benchmarks refresh their items, so models evaluated in different months answer different
+questions \citep{white2024livebench}; and cost-driven subsampling gives each evaluation
+run its own item subset \citep{perlitz2024efficient}. The resulting (model $\times$
+task) score matrix is sparse, its entries are noisy averages over few queries, and the
+responses that produced it are \emph{unpaired}: comparing models in general requires
+using responses to different queries. Predicting the matrix's missing and true entries
+would let practitioners reuse cached evaluations instead of paying to re-run them
+\citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
 
 Two lines of work aim to reduce this cost by predicting scores rather than computing
 them. Efficient benchmarking extrapolates a task's full score from a small scored subset of its
@@ -169,8 +169,9 @@ $1/\sqrt{m_{it}}$. The goal is to predict $y_{it}$ for every cell of the
 \emph{denoising}, the efficient-benchmarking end) and cells never run ($m_{it}=0$;
 \emph{completion}). We write $y_i$ when the benchmark has a single score. Two properties
 of the design recur throughout: \emph{coverage}, the fraction of cells with $m_{it}>0$,
-and \emph{pairing}, the fraction $\rho$ of a cell's queries shared across models; real
-evaluations sit near $\rho\approx0$.
+and \emph{pairing}, the fraction $\rho$ of a cell's queries shared across models;
+curated leaderboards sit at $\rho=1$, while organic evaluation sits near
+$\rho\approx0$.
 
 \section{Related work}
 \label{sec:related}
@@ -570,9 +571,9 @@ cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}
 
 \section{Discussion}
 In this paper we introduced the \PKPS, which compares models through their responses
-to similar, rather than identical, queries. Evaluation data is rarely paired in practice:
-each model answers the queries its evaluators chose, and methods that require a shared
-block of identical queries do not apply. Our central finding is that benchmark prediction
+to similar, rather than identical, queries. Outside of curated leaderboards, evaluation
+data is typically unpaired: each model answers the queries its evaluators chose, and
+methods that require a shared block of identical queries do not apply. Our central finding is that benchmark prediction
 remains possible under unpaired evaluation: as $\rho\!\to\!0$, DKPS and IRT degrade
 sharply while \PKPS does not. The same embedding supports both applications we studied,
 denoising cheap evaluations and completing never-run cells, and the ensemble performs at
