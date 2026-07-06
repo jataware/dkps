@@ -53,8 +53,12 @@ score matrix imputation---across two large benchmark suites.
 \section{Introduction}
 Generative models are evaluated on an ever-growing collection of benchmarks spanning
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
-all of them is often prohibitively expensive. As a result, models are evaluated on different
-subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
+all of them is often prohibitively expensive: a modern release reports scores on more
+than $40$ benchmarks, the same evaluations are run many more times before release---to
+track training, compare design choices, and select checkpoints---and a full suite can
+cost thousands of dollars and days of wall-clock time per run \citep{benchpress}. As a
+result, models are evaluated on different subsets of tasks and on different subsets of
+queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
 finds only $23\%$ of the score matrix filled \citep{benchpress}. Within a curated
 benchmark, every model is forced to answer an identical set of queries---but this
 controlled setting is the exception. Arena-style platforms score each model on the
