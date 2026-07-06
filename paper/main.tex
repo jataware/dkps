@@ -39,10 +39,10 @@ Evaluating a generative model on all queries from all available benchmark tasks 
 prohibitively expensive. As such, models are often evaluated on different subsets of tasks
 and/or different subsets of queries from a given task. The resulting collection of
 responses and the corresponding (model, task) score matrix are unpaired and sparse. In
-this paper, we introduce the Product Kernel Perspective Space (\PKPS)---a collection of
-low-dimensional representations of models based on their embedded responses---that
-generalizes existing methods to the unpaired and sparse evaluation regime by comparing
-responses to similar, rather than just identical, queries. Theoretically, we show that
+this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collection of
+low-dimensional representations of models based on their embedded responses. \PKPS
+compares responses to similar, rather than identical, queries, so models that answered
+different queries remain comparable; paired methods are recovered as a special case. Theoretically, we show that
 benchmark prediction using \PKPS is query-efficient relative to methods that only use
 information from queries all models have responded to. Empirically, we show that \PKPS
 outperforms relevant baselines on two tasks---query-efficient evaluation and (model, task)
