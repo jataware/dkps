@@ -176,8 +176,10 @@ $\rho_{ij}^{(t)}:=m_{ij}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 model pair and note that $\rho_{ij}\approx1$ for all pairs in highly curated
 leaderboards and $\rho_{ij}\approx0$ in deployed evaluation settings.
 
-Finally, let $y_{i}^{(t)}$ be model $i$'s score on task $t$. The goal of \emph{benchmark
-prediction} is to estimate $y_{i}^{(t)}$. We consider two related instances of the
+Finally, let $y(Q)$ be the mean per-query score of a model over a query collection
+$Q$, and let $y_{i}^{(t)}:=y(Q^{(t)})$ be model $i$'s score on task $t$; for
+$m_{i}^{(t)}>0$ we observe $y(Q_{i}^{(t)})$. The goal of \emph{benchmark prediction} is
+to estimate $y_{i}^{(t)}$. We consider two related instances of the
 problem: i) estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}>0$ (\emph{query efficiency}) and
 ii) estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}=0$ (\emph{matrix completion}).
 
