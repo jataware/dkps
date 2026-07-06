@@ -411,11 +411,11 @@ is varied ($\pm1$ SEM over $50$ seeds; DKPS green, \PKPS red, sample baseline gr
 fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
 function of cohort size $n$, number of tasks $T$, task coverage $p_{\mathrm{task}}$,
 query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
-(e), DKPS approaches the sample baseline as $\rho\!\to\!0$ while \PKPS is unaffected.
+(e), only DKPS degrades as $\rho\!\to\!0$.
 \textbf{(f)} Denoising of observed cells: each cell is measured with $M_{ij}$ noisy
 queries and we predict its true score, at paired ($\rho{=}1$, solid) and unpaired
-($\rho{=}0$, dashed) designs; \PKPS denoises whether or not queries are paired, DKPS
-only when paired.}
+($\rho{=}0$, dashed) designs; \PKPS improves on the sample at both, DKPS only when
+paired.}
 \label{fig:synthetic}
 \end{figure}
 
@@ -528,10 +528,10 @@ levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.
 \end{figure}
 
 \paragraph{The embedding completes missing cells where LRMC cannot.}
-The same embedding also predicts cells that were \emph{never run}: we observe a fraction
-$p_{\mathrm{task}}$ of cells (each at depth $p_{\mathrm{query}}$) and predict the
-missing ones against the LRMC baseline (the sample mean is unavailable for missing
-cells). LRMC requires many rows to estimate its factors and degrades when models are
+The same embedding also predicts cells that were \emph{never run}.
+Figure~\ref{fig:completion} shows MAE on missing cells when a fraction
+$p_{\mathrm{task}}$ of cells is observed (each at depth $p_{\mathrm{query}}$), against
+the LRMC baseline (the sample mean is unavailable for missing cells). LRMC requires many rows to estimate its factors and degrades when models are
 scarce: at $n{=}10$ its MAE is $0.139$ versus $0.120$ for \PKPS
 (Figure~\ref{fig:completion}, dashed). At the full cohort ($n{=}93$, solid) \PKPS
 slightly edges LRMC ($0.103$ vs.\ $0.105$) and the ensemble performs best ($0.099$).
@@ -783,8 +783,9 @@ zai-org/glm-5-fp8.\par}
 \includegraphics[width=\textwidth]{fig_eee_query_efficiency.pdf}
 \caption{Query-efficient evaluation on the Every Eval Ever suite ($45$ models, $16$
 tasks; MAE against the full-depth score, $\pm1$ SEM over $16$ seeds). The protocol
-matches Figure~\ref{fig:qe}. \PKPS at $m{=}1$ attains a third of the sample's error;
-DKPS trails because the query pools are unpaired, and IRT is poorly identified.}
+matches Figure~\ref{fig:qe}. \PKPS and the Ensemble are the most accurate at every
+budget; DKPS trails because the query pools are unpaired, and IRT is poorly
+identified.}
 \label{fig:eeeqe}
 \end{figure}
 
