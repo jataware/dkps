@@ -180,10 +180,13 @@ previously evaluated \emph{reference} models. For $q_j\in Q_i$ we write
 $x_{ij}=\tfrac1r\sum_{k=1}^{r}g_{\mathcal{X}}\big(f_i(q_j)^{(k)}\big)$ for the average
 of $r$ sampled response embeddings and $u_j=g_{\mathcal{Q}}(q_j)$ for the embedded
 query; the observed \emph{sample score} is $y(f_i,Q_i^{(t)})$. We write $y_i$ when a
-single task is in view. Two properties of the design recur throughout: \emph{coverage},
-the fraction of cells with $m_i^{(t)}>0$, and \emph{pairing}, the fraction $\rho$ of a
-cell's queries shared across models; curated leaderboards sit near $\rho\approx1$,
-while deployed evaluation sits near $\rho\approx0$.
+single task is in view. We define sparsity and unpairedness as functions of the
+$m_{i}^{(t)}$: an evaluation is \emph{sparse} when few cells have $m_{i}^{(t)}>0$ (the
+fraction with $m_{i}^{(t)}>0$ is the \emph{coverage}) or when the observed $m_{i}^{(t)}$
+are small relative to $M^{(t)}$, and \emph{unpaired} when the cross-model overlaps
+$m_{ij}^{(t)}:=|Q_{i}^{(t)}\cap Q_{j}^{(t)}|$ are small relative to the $m_{i}^{(t)}$.
+We write $\rho$ for the shared fraction (\emph{pairing}); curated leaderboards sit near
+$\rho\approx1$, while deployed evaluation sits near $\rho\approx0$.
 
 \section{Related work}
 \label{sec:related}
