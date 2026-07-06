@@ -57,7 +57,7 @@ all of them is often prohibitively expensive: a modern release reports scores on
 than $40$ benchmarks, the same evaluations are re-run many times before release to track
 training and select checkpoints, and a full suite can cost thousands of dollars and days
 of wall-clock time per run \citep{benchpress}. As a result, models are evaluated on
-different subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
+different subsets of tasks and of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
 finds only $23\%$ of the score matrix filled \citep{benchpress}. Within a curated
 benchmark, every model is forced to answer an identical set of queries---but this
 controlled setting is the exception. Arena-style platforms score each model on the
@@ -155,29 +155,33 @@ Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{\underline{0
 
 \subsection{Problem setting and notation}
 \label{sec:setting}
-A \emph{model} is a random mapping $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a
-response space; querying $f$ at $q$ returns a draw from the distribution $f(q)$. We
-observe $n$ models $f_1,\dots,f_n$, each run on its own \emph{query set}
-$Q_i\subseteq\mathcal{Q}$; the \emph{paired} design is the special case
-$Q_1=\dots=Q_n$. Two fixed embedding functions map raw objects to
-vectors: a \emph{response} embedding $\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and
-a \emph{query} embedding $\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$. For
+For our purposes, a \emph{model} is a random mapping $f:\mathcal{Q}\to\mathcal{X}$
+from a query space to a response space; the response $f(q)$ is an independent sample from
+$P_{q}$. In the evaluation setting, we observe $n$ models $f_1,\dots,f_n$, where each
+model responds to a (potentially different) collection of queries
+$Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
+design) is a special case. Two fixed embedding functions,
+$\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and
+$\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$, map responses and queries to
+vectors. For
 $q_j\in Q_i$ we write
 $x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)$ for the
 average of the $r$ sampled response embeddings and $u_j=\mathrm{embed}_Q(q_j)$ for the
 embedded query.
 
-Queries are grouped into $T$ tasks, and each response receives a score in $[0,1]$.
-Model $i$'s \emph{true score} on task $t$, $y_{it}$, is its mean per-query score over
-the task's full query set; running the model on $m_{it}\ge0$ of those queries yields an
-observed \emph{sample score}, the mean of the $m_{it}$ per-query scores; $\sigma_q^2$
-denotes the per-query score variance. The goal is to predict $y_{it}$ for every cell of the
-(model $\times$ task) matrix, given the observed responses and the known full scores of
-previously evaluated \emph{reference} models: cells observed with few queries
-($m_{it}>0$; \emph{denoising}) and cells never run ($m_{it}=0$; \emph{completion}). We write $y_i$ when a single task is in view. Two properties
-of the design recur throughout: \emph{coverage}, the fraction of cells with $m_{it}>0$,
-and \emph{pairing}, the fraction $\rho$ of a cell's queries shared across models;
-curated leaderboards sit near $\rho\approx1$, while deployed evaluation sits near
+Each query is an element of at least one of $T$ \emph{tasks}, with
+$Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$ and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the
+collection of queries from task $t$ that model $i$ has responded to and let
+$m_{i}^{(t)}:=|Q^{(t)}_{i}|$. Each response receives a score in $[0,1]$; $y(f,Q)$ denotes
+the mean per-query score of model $f$ over a query collection $Q$, and $\sigma_q^2$ the
+per-query score variance. Finally, let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s
+\emph{true score} on task $t$; the observed \emph{sample score} is $y(f_i,Q_i^{(t)})$.
+The goal of \emph{benchmark prediction} is to estimate $y_{i}^{(t)}$, given the
+observed responses and the \emph{reference} models' known full scores: cells with
+$m_i^{(t)}>0$ constitute \emph{denoising}, cells with $m_i^{(t)}=0$ \emph{completion}. We write $y_i$ when a single task is in view. Two properties of the
+design recur throughout: \emph{coverage}, the fraction of cells with $m_i^{(t)}>0$, and
+\emph{pairing}, the fraction $\rho$ of a cell's queries shared across models; curated
+leaderboards sit near $\rho\approx1$, while deployed evaluation sits near
 $\rho\approx0$.
 
 \section{Related work}
@@ -188,8 +192,8 @@ representations by comparing internal activations across models
 \citep{duderstadt2023comparing, huh2024platonic, horwitz2025atlas} or by comparing model
 weights directly \citep{chen2025weights}. Evaluation frameworks, however, typically permit
 only black-box access: they observe responses, not internals. The Data Kernel Perspective
-Space (DKPS), first introduced in the context of monitoring multi-agent systems
-\citep{helm2024tracking}, addresses this setting by mapping a collection of models into a
+Space (DKPS), introduced by \citet{helm2024tracking}, addresses this setting by
+mapping a collection of models into a
 low-dimensional Euclidean space via classical multidimensional scaling of average embedded
 responses \citep{torgerson1952mds}. Prior work established consistency and concentration
 of the representations \citep{acharyya2024consistent, acharyya2025concentration},
@@ -299,8 +303,8 @@ tradeoff between exact matching and bridging.
 
 \subsection{Inference in the \PKPS}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
-embed each model into the perspective space by the scaling of Eq.~\ref{eq:mds}, then
-regress its benchmark score on the resulting coordinate. On reference models with known
+embed each model into the perspective space (Eq.~\ref{eq:mds}), then regress its
+benchmark score on the resulting coordinate. On reference models with known
 scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
 $\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
 the bandwidth $\sigma$ and the regressor $\hat h$.
@@ -337,9 +341,9 @@ budget; Appendix~\ref{app:abl}.)
 \subsection{Query efficiency}
 \label{sec:qeff}
 DKPS requires query \emph{sets} to overlap; \PKPS requires only query
-\emph{distributions} to overlap. In this section we make this distinction precise by
-extending the machinery of \citet{dkps_qeff}. Throughout, MSE denotes mean squared error
-over the draw of a target model from the model population.
+\emph{distributions} to overlap. This section makes the distinction precise, extending
+the machinery of \citet{dkps_qeff}; MSE denotes mean squared error over the draw of a
+target model from the model population.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
@@ -482,8 +486,8 @@ responses; MedQA and LegalBench responses are single tokens for which text embed
 degenerate, so we encode each dataset's responses natively (Gemini embeddings vs.\ one-hot
 answers) in disjoint blocks. With a linear $k_R$ this makes cross-dataset response
 similarity exactly zero, and a single shared query embedding with a within-domain
-bandwidth keeps $k_Q$ near zero across domains: the product kernel factorizes by domain,
-never comparing a proof to a legal label. The second suite, from the Every Eval Ever
+bandwidth keeps $k_Q$ near zero across domains, so the product kernel factorizes by
+domain. The second suite, from the Every Eval Ever
 datastore \citep{eee2026}, is $45$ modern models on $16$ tasks (MATH-MC levels $1$--$5$,
 GSM-MC, GPQA-Diamond, and nine judging categories from JudgeBench and RewardBench~2), with
 per-cell query pools drawn independently per model ($\sim\!10\%$ incidental
@@ -503,6 +507,21 @@ synthetic data). Sweeps vary one observation lever at a time, holding the others
 (grids in Appendix~\ref{app:details}); all hyperparameters, including the query
 bandwidth, are chosen per run by the leak-free cross-validation of
 Section~\ref{sec:method}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
+\includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
+\caption{Query-efficient evaluation on the HELM suite. \textbf{(a--c)} MAE against the
+true full-evaluation score when each model answers $m$ unpaired queries per observed cell
+($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
+$p_{\mathrm{task}}$. IRT is poorly identified without a shared item block and is omitted
+from (b, c); its value is annotated. \textbf{(d--g)} Per-cell difference $\Delta=$
+Sample score $-$ Ensemble MAE (red $=$ Ensemble better) by dataset, budget, cohort, and
+coverage, with the other levers fixed at their sweep median; $\blacktriangledown$ marks
+the per-row mean.}
+\label{fig:qe}
+\end{figure}
 
 \subsection{Results}
 \label{sec:results}
@@ -526,17 +545,16 @@ bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
-\includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
-\caption{Query-efficient evaluation on the HELM suite. \textbf{(a--c)} MAE against the
-true full-evaluation score when each model answers $m$ unpaired queries per observed cell
-($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
-$p_{\mathrm{task}}$. IRT is poorly identified without a shared item block and is omitted
-from (b, c); its value is annotated. \textbf{(d--g)} Per-cell difference $\Delta=$
-Sample score $-$ Ensemble MAE (red $=$ Ensemble better) by dataset, budget, cohort, and
-coverage, with the other levers fixed at their sweep median; $\blacktriangledown$ marks
-the per-row mean.}
-\label{fig:qe}
+\includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
+\includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
+\caption{Matrix completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
+($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
+query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
+tasks, and cohort size (LRMC blue, \PKPS red, Ensemble brown; solid $n{=}93$, dashed
+$n{=}10$). \textbf{(e--h)} Per-missing-cell difference $\Delta=$ LRMC $-$ Ensemble MAE
+(red $=$ Ensemble better) by dataset, cohort, coverage, and query depth, with the other
+levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.}
+\label{fig:completion}
 \end{figure}
 
 \paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
@@ -551,20 +569,6 @@ the ensemble follows the better of its two components throughout. Panels (b, c) 
 cohort and coverage: \PKPS improves steadily ($0.157\!\to\!0.124$,
 $0.154\!\to\!0.128$; $35$--$37\%$ on the second suite) while DKPS, which cannot use
 the additional unpaired responses, is flat.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
-\includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
-\caption{Matrix completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
-($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
-query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
-tasks, and cohort size (LRMC blue, \PKPS red, Ensemble brown; solid $n{=}93$, dashed
-$n{=}10$). \textbf{(e--h)} Per-missing-cell difference $\Delta=$ LRMC $-$ Ensemble MAE
-(red $=$ Ensemble better) by dataset, cohort, coverage, and query depth, with the other
-levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.}
-\label{fig:completion}
-\end{figure}
 
 \paragraph{The embedding completes missing cells where LRMC cannot.}
 The same embedding also predicts cells that were \emph{never run}.
