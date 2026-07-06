@@ -318,8 +318,10 @@ to total disagreement with \PKPS; the sample score therefore receives more weigh
 number of queries grows, and the embedding receives more weight when the sample is noisy.
 On a \emph{missing} cell, the score signal is LRMC \citep{benchpress}, blended with
 \PKPS by a weight cross-validated on observed scores. All weights are computed from
-observed queries alone ($\hat p(1-\hat p)/m$ and depth-weighted disagreement,
-respectively) and do not use the held-out scores we report.
+observed data alone: the sample variance is estimated as $\tilde p(1-\tilde p)/m$ with
+$\tilde p$ the \PKPS estimate of the cell's score (the raw plug-in is degenerate at
+small $m$), and $e_{\PKPS}^2$ as the depth-weighted disagreement with the observed
+samples, debiased by the sample noise. No weight uses the held-out scores we report.
 
 \subsection{Query efficiency}
 \label{sec:qeff}
@@ -717,11 +719,13 @@ difficulties by maximum likelihood (L-BFGS) on the largest fully-observed
 $[-4,4]$. The sample baseline is the cell's own $m$-query mean.
 
 \paragraph{Ensemble.} On observed cells, the sample score is shrunk toward the \PKPS
-estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\hat p(1-\hat p)/m)$ on
-the sample, where $e^2_{\PKPS}$ is the embedding's depth-weighted disagreement with the
-observed samples of that model; on missing cells, \PKPS and LRMC are blended
-with a weight fit by held-out cross-validation against observed scores. No quantity ever
-uses the held-out full-eval scores.
+estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\tilde p(1-\tilde
+p)/m)$ on the sample, where $\tilde p$ is the \PKPS estimate of the cell's score
+(clipped to $[10^{-3},1-10^{-3}]$; the raw sample plug-in is degenerate at small $m$) and
+$e^2_{\PKPS}$ is the embedding's depth-weighted squared disagreement with the model's
+observed samples, debiased by the sample noise and floored at $10^{-6}$; on missing
+cells, \PKPS and LRMC are blended with a weight fit by held-out cross-validation against
+observed scores. No quantity ever uses the held-out full-eval scores.
 
 \paragraph{Sweeps and reporting.}\begin{sloppypar} All real-data sweeps use $16$ seeds; curves and table
 entries report the per-seed mean over tasks, then the mean ($\pm1$ SEM) over seeds. Query

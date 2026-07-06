@@ -54,7 +54,7 @@ def _cv_bandwidth(Zs, sample_mat, obs, k=8):
 
 
 def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8, predictor='knn',
-             fixed_sig_idx=None,
+             fixed_sig_idx=None, ens_mode='precision', resp_kernel='linear', disjoint=False,
              dump_cells=False):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
      score_mat, models_all, tasks, groups, row_score, qmed) = data
@@ -99,6 +99,8 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8,
     # sample m queries per OBSERVED (model, task); collect their rows and query depth
     keep, sample_mat = [], np.full((len(models), len(tasks)), np.nan)
     ncnt = np.zeros((len(models), len(tasks)))
+    M_full = np.ones((len(models), len(tasks)))
+    used = {tt: set() for tt in tasks} if disjoint else None   # rho=0: no query shared across models
     for i, mm in enumerate(models):
         for t, tt in enumerate(tasks):
             if not obs[i, t]:
@@ -106,10 +108,16 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8,
             idx = groups.get((mm, tt))
             if idx is None or not len(idx):
                 continue
+            M_full[i, t] = len(idx)
             if task_want is not None:
                 take = idx[np.isin(query_id[idx], list(task_want[tt][i]))]
                 if not len(take):
                     take = idx[:1]
+            elif disjoint:
+                avail = idx[~np.isin(query_id[idx], list(used[tt]))]
+                src = avail if len(avail) else idx             # exhausted pool: fall back to reuse
+                take = src if len(src) <= m else rng.choice(src, m, replace=False)
+                used[tt].update(np.asarray(query_id[take]).tolist())
             else:
                 take = idx if len(idx) <= m else rng.choice(idx, m, replace=False)
             keep.append(take)
@@ -123,7 +131,7 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8,
                        'query_id': query_id[keep], 'embedding': list(resp_X[keep]),
                        'query_embedding': list(Qu[codes])})
     bw = H.SubsampleMedianBandwidth(max_n=5000)
-    est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='linear',
+    est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel=resp_kernel,
                                           query_bandwidth=bw, response_bandwidth=bw)
     # PKPS uses the RBF query kernel at the median bandwidth; DKPS is its delta limit, which
     # dist_matrices reaches as the bandwidth -> 0 (distinct queries stop bridging, so only
@@ -174,8 +182,31 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8,
             err = (pk_mat[i, row] - sample_mat[i, row]) ** 2 - sig_cell[i, row]
             prior_err[i] = max(float(np.sum(nqc[i, row] * err) / np.sum(nqc[i, row])), 1e-6)
     w_samp = prior_err[:, None] / (prior_err[:, None] + sig_cell)   # weight on the own sample
-    ens_mat = np.where(ce, np.clip(w_samp * sample_mat + (1 - w_samp) * pk_mat, 0, 1),
-                       np.where(np.isfinite(pk_mat), pk_mat, sample_mat))
+    fallback = np.where(np.isfinite(pk_mat), pk_mat, sample_mat)
+    if ens_mode == 'mM':
+        # quench's fixed schedule: weight on the sample = m / M (per-cell full depth)
+        w_samp = np.clip(nqc / np.maximum(M_full, 1.0), 0.0, 1.0)
+        ens_mat = np.where(ce, np.clip(w_samp * sample_mat + (1 - w_samp) * pk_mat, 0, 1), fallback)
+    elif ens_mode == 'cv':
+        # scalar alpha per held-out family, fit by LOFO on the other families' observed cells
+        # against their (reference, cached) full scores -- same information the regressor uses
+        grid = np.linspace(0, 1, 21)
+        ens_mat = fallback.copy()
+        for f in sorted(set(fams.values())):
+            tr = np.array([fams[mm] != f for mm in models])
+            mask_tr = ce & tr[:, None]
+            if mask_tr.sum() >= 5:
+                errs = [float(np.nanmean(np.abs(
+                    np.clip(a * sample_mat[mask_tr] + (1 - a) * pk_mat[mask_tr], 0, 1)
+                    - score_mat[mask_tr]))) for a in grid]
+                a_f = float(grid[int(np.argmin(errs))])
+            else:
+                a_f = 0.5
+            blend = np.clip(a_f * sample_mat + (1 - a_f) * pk_mat, 0, 1)
+            te = ~tr
+            ens_mat = np.where(ce & te[:, None], blend, ens_mat)
+    else:
+        ens_mat = np.where(ce, np.clip(w_samp * sample_mat + (1 - w_samp) * pk_mat, 0, 1), fallback)
 
     rows, cells = [], []
     for t, tt in enumerate(tasks):
@@ -239,6 +270,11 @@ def main():
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
     ap.add_argument('--mds_dim', type=int, default=8)   # matches dkps_qeff and the completion pipeline
+    ap.add_argument('--predictor', choices=['knn', 'ols'], default='knn')
+    ap.add_argument('--ens_mode', choices=['precision', 'mM', 'cv'], default='precision')
+    ap.add_argument('--resp_kernel', choices=['linear', 'rbf'], default='linear')
+    ap.add_argument('--disjoint', action='store_true',
+                    help='enforce disjoint query sets across models (exact rho=0)')
     ap.add_argument('--sigma_idx', type=int, default=-1,
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--outdir', default=None)
@@ -264,7 +300,9 @@ def main():
         specs = [(args.fixed_m, None, p, None) for p in args.coverages]
     fsi = None if args.sigma_idx < 0 else args.sigma_idx
     jobs = [delayed(run_seed)(data, m, s, n_models=n, p_task=p, n_paired=k, dump_cells=dump,
-                              mds_dim=args.mds_dim, fixed_sig_idx=fsi)
+                              mds_dim=args.mds_dim, fixed_sig_idx=fsi, predictor=args.predictor,
+                              ens_mode=args.ens_mode, resp_kernel=args.resp_kernel,
+                              disjoint=args.disjoint)
             for (m, n, p, k) in specs for s in range(args.n_seeds)]
     res = pd.DataFrame([r for sub in Parallel(n_jobs=args.n_jobs, verbose=5)(jobs) for r in sub])
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
