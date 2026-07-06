@@ -44,7 +44,7 @@ for ax, suite in zip(axes[:2], ['helm', 'eee']):
                     label=f'$d{{=}}{d}$' + (' (paper)' if d == 8 else ''))
     s = budget_curve(MAIN[suite], 'sample')
     ax.errorbar(s.index.values, s['mean'], yerr=s['sem'], color='#999', ls='--', lw=1.8,
-                marker='o', ms=3, label='Sample')
+                marker='o', ms=3, label='Sample score')
     ax.set_xscale('log', base=2)
     ax.set_xlabel('queries per cell $m$', fontsize=14.5)
     ax.legend(frameon=False, fontsize=10.5)

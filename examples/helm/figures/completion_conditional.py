@@ -19,7 +19,7 @@ import pandas as pd
 from scipy.stats import gaussian_kde
 
 XL = (-0.2, 0.34)
-XLAB = 'LRMC $-$ ensemble (per missing cell)'
+XLAB = 'LRMC $-$ Ensemble (per missing cell)'
 DS = [('MATH', 'math'), ('MedQA', 'med_qa'), ('LegalB', 'legalbench'), ('WMT', 'wmt_14')]
 
 

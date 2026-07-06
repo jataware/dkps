@@ -29,7 +29,7 @@ CFG = {'helm': dict(dir='results-pkps-rd1', n=93, stem='fig_suite_query_efficien
 D = Path(CFG['dir'])
 # colour = method; line style = score-only (dashed: sample, IRT) vs response embedding
 # (solid: DKPS, PKPS); the ensemble is solid and thicker.
-STYLE = {'sample': dict(color='#777777', ls='--', label='Sample'),
+STYLE = {'sample': dict(color='#777777', ls='--', label='Sample score'),
          'irt':    dict(color='#988ED5', ls='--', label='IRT'),
          'dkps':   dict(color='#8EBA42', ls='-',  label='DKPS'),
          'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),

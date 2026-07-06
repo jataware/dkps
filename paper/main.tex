@@ -110,8 +110,8 @@ pairing fraction (Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}).
 \item \emph{Empirical:} on two benchmark suites---$93$ models on $18$ HELM tasks and
 $45$ modern models on $16$ tasks from the Every Eval Ever datastore
 \citep{eee2026}---we demonstrate utility on two problems: query-efficient evaluation,
-where \PKPS matches the accuracy of the sample score with an $8\times$ smaller query
-budget, and score-matrix completion, where ensembling \PKPS with low-rank matrix
+where \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
+query budget, and score-matrix completion, where ensembling \PKPS with low-rank matrix
 completion reduces error by up to $28\%$ (Section~\ref{sec:experiments}).
 \end{enumerate}
 
@@ -119,10 +119,10 @@ completion reduces error by up to $28\%$ (Section~\ref{sec:experiments}).
 \centering
 \caption{MAE of benchmark prediction methods on both suites and tasks (best per column
 bolded, second best underlined; setup described in Section~\ref{sec:setup}):
-query-efficiency at budgets $m\in\{1,8\}$ queries per cell, and completion of missing
-cells at cohort sizes $n\in\{10,\max\}$. We fix task sparsity $p_{\mathrm{task}}$ and
-query sparsity $p_{\mathrm{query}}$ at $0.5$, except for the sp.\ columns where
-$p_{\mathrm{task}}{=}0.2$ and $n{=}10$. ``---'' denotes a setting where a method is not
+query-efficiency at budgets $m\in\{1,8\}$ queries per cell at full task coverage, and
+completion of missing cells at cohort sizes $n\in\{10,\max\}$ with task coverage
+$p_{\mathrm{task}}$ and query depth $p_{\mathrm{query}}$ fixed at $0.5$, except for the
+sp.\ columns where $p_{\mathrm{task}}{=}0.2$ and $n{=}10$. ``---'' denotes a setting where a method is not
 applicable.}
 \label{tab:suite}
 \footnotesize
@@ -137,7 +137,7 @@ applicable.}
 Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
        & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) & (sp.) \\
 \midrule
-Sample mean        & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
+Sample score       & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
 LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
 DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
@@ -213,9 +213,8 @@ adds the response-level signal, which can be ensembled with matrix completion.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-Each method
-summarizes the $n$ models of
-Section~\ref{sec:setting} in an $n\times n$ affinity matrix $A$ (defined below). The squared distance between two models is
+Both paired DKPS and \PKPS summarize the $n$ models of Section~\ref{sec:setting} in an
+$n\times n$ affinity matrix $A$ (defined below). The squared distance between two models is
 $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
@@ -313,9 +312,9 @@ without it, the model offset is dominated by the tasks with the largest logit va
 The ensemble combines the \PKPS estimate with whichever score
 signal is available for a cell, weighting each channel in proportion to its estimated
 reliability. On an \emph{observed}
-cell, the score signal is the cell's own sample mean, shrunk toward the \PKPS estimate
+cell, the score signal is the cell's own sample score, shrunk toward the \PKPS estimate
 by the weight $\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$, the ratio of sample noise variance
-to total disagreement with \PKPS; the sample mean therefore receives more weight as the
+to total disagreement with \PKPS; the sample score therefore receives more weight as the
 number of queries grows, and the embedding receives more weight when the sample is noisy.
 On a \emph{missing} cell, the score signal is LRMC \citep{benchpress}, blended with
 \PKPS by a weight cross-validated on observed scores. All weights are computed from
@@ -421,15 +420,15 @@ so the strict case of (i) is typical.
 \centering
 \includegraphics[width=\textwidth]{fig_synthetic.pdf}
 \caption{Score MAE on the synthetic benchmark as each lever of the observation process
-is varied ($\pm1$ SEM over $50$ seeds; DKPS green, \PKPS red, sample baseline gray;
+is varied ($\pm1$ SEM over $50$ seeds; DKPS green, \PKPS red, sample score gray;
 fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
 function of cohort size $n$, number of tasks $T$, task coverage $p_{\mathrm{task}}$,
-query coverage $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
+query depth $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
 (e), only DKPS degrades as $\rho\!\to\!0$.
 \textbf{(f)} Denoising of observed cells: each cell is measured with $M_{ij}$ noisy
 queries and we predict its true score, at paired ($\rho{=}1$, solid) and unpaired
-($\rho{=}0$, dashed) designs; \PKPS improves on the sample at both, DKPS only when
-paired.}
+($\rho{=}0$, dashed) designs; \PKPS improves on the sample score at both, DKPS only
+when paired.}
 \label{fig:synthetic}
 \end{figure}
 
@@ -464,7 +463,7 @@ GSM-MC, GPQA-Diamond, and nine judging categories from JudgeBench and RewardBenc
 per-cell query pools drawn independently per model ($\sim\!10\%$ incidental
 overlap)---unpaired by construction (Appendix~\ref{app:eee}).
 
-\paragraph{Prediction methods.} We compare six predictors. The \emph{sample mean} is a
+\paragraph{Prediction methods.} We compare six predictors. The \emph{sample score} is a
 cell's own $m$-query average. \emph{IRT} fits a one-parameter logistic model on the
 largest shared item block \citep{polo2024tinybenchmarks}. \emph{Low-rank matrix
 completion} (LRMC) is the logit-space imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
@@ -483,21 +482,21 @@ Section~\ref{sec:method}.
 \label{sec:results}
 
 \paragraph{\PKPS outperforms DKPS on every observation lever.}
-Figure~\ref{fig:synthetic} shows score MAE for \PKPS, DKPS, and the sample baseline as
+Figure~\ref{fig:synthetic} shows score MAE for \PKPS, DKPS, and the sample score as
 each lever of the observation process is varied. \PKPS outperforms DKPS at every
-setting, and both outperform the sample baseline. The margin is wide even when the data
+setting, and both outperform the sample score. The margin is wide even when the data
 is mostly paired (a--c), since bridging similar queries, across tasks as well as within,
 supplies signal that exact matching does not use. The gap is largest when pairing is
 scarce: as $p_{\mathrm{query}}$ drops (d), DKPS degrades while \PKPS is stable, and when
-$\rho$ is swept directly (e), DKPS approaches the sample baseline as $\rho\!\to\!0$
+$\rho$ is swept directly (e), DKPS approaches the sample score as $\rho\!\to\!0$
 while \PKPS is unaffected.
 
 Panel (f) considers the \emph{denoising} form of the same problem: each cell is now
 \emph{observed} with $M_{ij}$ noisy queries and we predict its true score. \PKPS with a
-single query matches the accuracy that the raw sample mean reaches at roughly five
-queries, whether or not the queries are paired; DKPS denoises only when paired (dashed).
-At large budgets the sample mean becomes precise enough to overtake the embedding's
-residual bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
+single query matches the accuracy that the sample score reaches at roughly five queries,
+whether or not the queries are paired; DKPS denoises only when paired (dashed). At large
+budgets the sample score becomes precise enough to overtake the embedding's residual
+bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 
 \begin{figure}[t]
 \centering
@@ -508,7 +507,7 @@ true full-evaluation score when each model answers $m$ unpaired queries per obse
 ($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
 $p_{\mathrm{task}}$. IRT is poorly identified without a shared item block and is omitted
 from (b, c); its value is annotated. \textbf{(d--g)} Per-cell difference $\Delta=$
-sample $-$ Ensemble MAE (red $=$ Ensemble better) by dataset, budget, cohort, and
+Sample score $-$ Ensemble MAE (red $=$ Ensemble better) by dataset, budget, cohort, and
 coverage, with the other levers fixed at their sweep median; $\blacktriangledown$ marks
 the per-row mean.}
 \label{fig:qe}
@@ -518,10 +517,10 @@ the per-row mean.}
 Figure~\ref{fig:qe} shows MAE as a function of the query budget $m$. Each model answers
 its own independently sampled queries (the real-data analogue of $\rho{=}0$; IRT is
 poorly identified in this regime) and we predict the true full-evaluation score. At small
-budgets the embedding-based methods are substantially more accurate than the raw mean: at
-$m{=}1$, \PKPS attains $0.136$ and the ensemble $0.132$ versus $0.292$ for the sample,
-so \PKPS with one query matches the sample at four. As the budget grows, the raw mean
-eventually overtakes the embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$);
+budgets the embedding-based methods are substantially more accurate than the sample
+score: at $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.132$ versus $0.292$, so
+\PKPS with one query matches the sample score at four. As the budget grows, the sample
+score eventually overtakes the embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$);
 the ensemble follows the better of its two components throughout. Panels (b, c) vary the
 cohort and coverage: \PKPS improves steadily ($0.157\!\to\!0.124$,
 $0.154\!\to\!0.128$; $35$--$37\%$ on the second suite) while DKPS, which cannot use
@@ -545,13 +544,13 @@ levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.
 The same embedding also predicts cells that were \emph{never run}.
 Figure~\ref{fig:completion} shows MAE on missing cells when a fraction
 $p_{\mathrm{task}}$ of cells is observed (each at depth $p_{\mathrm{query}}$), against
-the LRMC baseline (the sample mean is unavailable for missing cells). LRMC requires many rows to estimate its factors and degrades when models are
+the LRMC baseline (the sample score is unavailable for missing cells). LRMC requires many rows to estimate its factors and degrades when models are
 scarce: at $n{=}10$ its MAE is $0.139$ versus $0.120$ for \PKPS
 (Figure~\ref{fig:completion}, dashed). At the full cohort ($n{=}93$, solid) \PKPS
 slightly edges LRMC ($0.103$ vs.\ $0.105$) and the ensemble performs best ($0.099$).
 
-\paragraph{The per-cell wins are broad but tail-driven.} The ensemble beats the raw
-sample on most cells, with the largest gains at the smallest budgets and on the
+\paragraph{The per-cell gains are broad but tail-driven.} The Ensemble outperforms the
+sample score on most cells, with the largest gains at the smallest budgets and on the
 rich-response datasets (Figure~\ref{fig:qe}d--g); the win over LRMC is modest but
 stays positive in the mean across datasets, cohorts, coverage, and query depth
 (Figure~\ref{fig:completion}e--h).
@@ -559,7 +558,7 @@ stays positive in the mean across datasets, cohorts, coverage, and query depth
 \paragraph{Both applications replicate on the Every Eval Ever suite.} The second suite
 shows the same qualitative behavior with a larger completion margin
 (Table~\ref{tab:suite}; lever sweeps in Appendix~\ref{app:eee}): at $m{=}1$ \PKPS
-attains a third of the sample's error ($0.076$ vs.\ $0.224$), and on missing cells the
+attains a third of the sample score's error ($0.076$ vs.\ $0.224$), and on missing cells the
 ensemble outperforms LRMC at \emph{every} operating point, including the full cohort
 ($0.069$ vs.\ $0.096$ at $n{=}45$). We attribute the larger margin to the higher
 effective rank of this suite's score matrix. Table~\ref{tab:suite} collects both
@@ -579,15 +578,19 @@ sharply while \PKPS does not. The same embedding supports both applications we s
 denoising cheap evaluations and completing never-run cells, and the ensemble performs at
 least as well as either channel alone.
 
-\paragraph{Limitations and future work.} \PKPS embeds every observed response and query
-(embedder effects not ablated); the block-diagonal instantiation disables cross-domain
-bridging (a shared response space is untested); the affinity is quadratic in queries per
-model pair.
-Theorem~\ref{thm:qeff}(ii) is existential (no rate in $n$), and the strict margin of
-(i) at intermediate $\rho$ rests on a bandwidth improving on exact matching, which we
-establish empirically, not by a lower bound. Finally, per-cell wins over score-only baselines are modest on dense
-low-rank matrices and decisive in the sparse, noisy, unpaired regime that motivates the
-problem.
+\paragraph{Limitations and future work.} We close with the current limitations and the
+extensions they suggest. First, \PKPS embeds every observed response and query with a
+single fixed embedder; we did not ablate this choice, and embedding functions are known
+to have a nonnegligible effect at small budgets \citep{dkps_qeff}. Second, the
+block-diagonal instantiation on the HELM suite disables bridging across response domains;
+a shared response space that would let responses in one domain inform another remains
+untested. Third, the affinity is quadratic in the number of queries per model pair,
+though one response-kernel pass serves the whole bandwidth grid. Fourth,
+Theorem~\ref{thm:qeff}(ii) is existential (it provides no rate in $n$), and the strict
+margin of (i) at intermediate $\rho$ rests on a bandwidth improving on exact matching,
+which we establish empirically rather than by a lower bound. Finally, per-cell gains over
+score-only baselines are modest on dense low-rank matrices; they are decisive in the
+sparse, noisy, unpaired regime that motivates the problem.
 
 \subsubsection*{Reproducibility statement}
 All methods are released as a documented Python package (the \PKPS estimator, matrix
@@ -701,7 +704,7 @@ difficulties by maximum likelihood (L-BFGS) on the largest fully-observed
 (model $\times$ item) block, per-model ability by bounded scalar MLE, clipped to
 $[-4,4]$. The sample baseline is the cell's own $m$-query mean.
 
-\paragraph{Ensemble.} On observed cells, the sample mean is shrunk toward the \PKPS
+\paragraph{Ensemble.} On observed cells, the sample score is shrunk toward the \PKPS
 estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\hat p(1-\hat p)/m)$ on
 the sample, where $e^2_{\PKPS}$ is the embedding's depth-weighted disagreement with the
 observed samples of that model; on missing cells, \PKPS and LRMC are blended
@@ -796,7 +799,7 @@ zai-org/glm-5-fp8.\par}
 \centering
 \includegraphics[width=\textwidth]{fig_eee_query_efficiency.pdf}
 \caption{Query-efficient evaluation on the Every Eval Ever suite ($45$ models, $16$
-tasks; MAE against the full-depth score, $\pm1$ SEM over $16$ seeds). The protocol
+tasks; MAE against the true full-evaluation score, $\pm1$ SEM over $16$ seeds). The protocol
 matches Figure~\ref{fig:qe}. \PKPS and the Ensemble are the most accurate at every
 budget; DKPS trails because the query pools are unpaired, and IRT is poorly
 identified.}

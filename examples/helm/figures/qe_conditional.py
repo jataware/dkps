@@ -18,7 +18,7 @@ import pandas as pd
 from scipy.stats import gaussian_kde
 
 XL = (-0.12, 0.34)
-XLAB = 'sample $-$ ensemble (per cell)'
+XLAB = 'Sample score $-$ Ensemble (per cell)'
 DS = [('MATH', 'math'), ('MedQA', 'med_qa'), ('LegalB', 'legalbench'), ('WMT', 'wmt_14')]
 
 
