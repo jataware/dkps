@@ -92,11 +92,12 @@ unpaired.
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded
 responses. \PKPS compares every response of one model to every response of another,
-weighting each comparison by the similarity of the queries that produced it: the affinity
-between two models is a product of a query kernel and a response kernel, normalized by
+weighting each comparison by the similarity of the queries that produced it: the
+similarity between two models is a product of a query kernel and a response kernel,
+normalized by
 the total query-kernel mass, so that two models are not deemed dissimilar merely because
 they answered different sets of queries (Figure~\ref{fig:concept}). Models are embedded
-from these affinities by classical multidimensional scaling, and paired DKPS is recovered
+from these similarities by classical multidimensional scaling, and paired DKPS is recovered
 exactly when the query kernel is the identity (Section~\ref{sec:method}).
 Table~\ref{tab:suite} previews our main results.
 
@@ -215,9 +216,13 @@ adds the response-level signal, which can be ensembled with matrix completion.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-Both paired DKPS and \PKPS summarize the $n$ models of Section~\ref{sec:setting} in an
-$n\times n$ affinity matrix $A$ (defined below). The squared distance between two models is
-$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
+Classical MDS consumes a distance matrix between the $n$ models of
+Section~\ref{sec:setting}. When all models share a query set, the distance can be taken
+directly between average embedded responses \citep{dkps_qeff}; when query sets differ,
+there is nothing to subtract. Kernel comparisons \emph{across} two query sets remain
+well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
+similarity matrix $A$ (defined below) and induce the squared distance
+$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$). The $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
 (\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
@@ -225,11 +230,11 @@ $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$), and their $d$-dimensional
 \label{eq:mds}
 \end{equation}
 so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
-and \PKPS differ only in the affinity $A$.
+and \PKPS differ only in the similarity $A$.
 
 With all $n$
 models answering the same $m$ queries
-($Q_1=\dots=Q_n$), DKPS uses the identity-matched affinity
+($Q_1=\dots=Q_n$), DKPS uses the identity-matched similarity
 $A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
 with response $j$ of model $b$, so the design must be paired.
 
@@ -330,7 +335,7 @@ over the draw of a target model from the model population.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_a$. The \emph{population affinity} is
+$P_a$. The \emph{population similarity} is
 $A^*_{ab}=\mathbb{E}[k_Q(u,u')\,k_R(x_a,x_b)]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
 $P_a$ and $P_b$ independent, the population squared distances are
 $D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, and the \emph{population perspectives}
@@ -410,7 +415,7 @@ nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for $n
 large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
 $\mathrm{MSE}\le\epsilon$, and no step involves $\rho$---exact matching, by contrast,
 retains only the $\rho M_{ij}$ shared pairs, so the same argument degrades as
-$\rho\to0$. For (ii), with no shared queries every identity-matched affinity is an
+$\rho\to0$. For (ii), with no shared queries every identity-matched similarity is an
 empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
 error is at least the score variance; (i) supplies a bandwidth attaining
 $\epsilon<v$. (iii) is model selection: the $\delta$ member of the grid coincides with
@@ -424,7 +429,7 @@ from paired DKPS is information-theoretic---with no shared queries, a paired-DKP
 prediction cannot depend on the target's responses at all (ii); and that
 cross-validation extends the comparison safely to every pairing fraction (iii). Only
 (iii) is a model-selection guarantee: (i) rests on the concentration of the
-self-normalized product-kernel affinity, in which the population overlap $\kappa$
+self-normalized product-kernel similarity, in which the population overlap $\kappa$
 replaces the pairing fraction $\rho$ (Proposition~\ref{prop:conc}), and (ii) is an
 impossibility result for exact matching. In the synthetic experiments below, a bridging
 bandwidth improves on exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e),
@@ -599,7 +604,7 @@ single fixed embedder; we did not ablate this choice, and embedding functions ar
 to have a nonnegligible effect at small budgets \citep{dkps_qeff}. Second, the
 block-diagonal instantiation on the HELM suite disables bridging across response domains;
 a shared response space that would let responses in one domain inform another remains
-untested. Third, the affinity is quadratic in the number of queries per model pair,
+untested. Third, computing $A$ is quadratic in the number of queries per model pair,
 though one response-kernel pass serves the whole bandwidth grid. Fourth,
 Theorem~\ref{thm:qeff}(i) is existential (it provides no rate in $n$), and the strict
 margin of (iii) at intermediate $\rho$ rests on a bandwidth improving on exact matching,
@@ -905,7 +910,7 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
 distribution over embedded queries; write $z=(u,x_a(u))$ for an embedded query--response
 pair (response noise included) and $P_a$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
-$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population affinity
+$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population similarity
 \[
 A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
 \qquad z\sim P_a,\; z'\sim P_b \text{ independent},
@@ -1033,7 +1038,7 @@ where its distance is undefined (Section~\ref{sec:method}).
 \paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
-Eq.~\ref{eq:A} affinity row to $T$ (the standard out-of-sample MDS coordinate), and let
+Eq.~\ref{eq:A} similarity row to $T$ (the standard out-of-sample MDS coordinate), and let
 $\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
 selected bandwidth is $\hat\sigma=\arg\min_{\sigma\in\Sigma}\hat L(\sigma)$ with
 $\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_\sigma(f_i)-y_i)^2$. Conditional on
