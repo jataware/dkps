@@ -21,9 +21,9 @@
 \renewcommand{\bottomfraction}{0.6}
 \renewcommand{\textfraction}{0.05}
 \renewcommand{\floatpagefraction}{0.9}
-\setlength{\textfloatsep}{9pt plus 2pt minus 3pt}
+\setlength{\textfloatsep}{7pt plus 2pt minus 3pt}
 \setlength{\intextsep}{8pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{5pt}
+\setlength{\abovecaptionskip}{4pt}
 
 \newcommand{\PKPS}{PKPS\xspace}
 \usepackage{xspace}
@@ -448,7 +448,7 @@ exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_synthetic.pdf}
+\includegraphics[width=0.96\textwidth]{fig_synthetic.pdf}
 \caption{Score MAE on the synthetic benchmark as each lever of the observation process
 is varied ($\pm1$ SEM over $50$ seeds; DKPS green, \PKPS red, sample score gray;
 fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
@@ -510,8 +510,8 @@ Section~\ref{sec:method}.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[3pt]
-\includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
+\includegraphics[width=0.96\textwidth]{fig_suite_query_efficiency.pdf}\\[2pt]
+\includegraphics[width=0.96\textwidth]{fig_qe_conditional.pdf}
 \caption{Query-efficient evaluation on the HELM suite. \textbf{(a--c)} MAE against the
 true full-evaluation score when each model answers $m$ unpaired queries per observed cell
 ($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
@@ -545,8 +545,8 @@ bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[3pt]
-\includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
+\includegraphics[width=0.96\textwidth]{fig_suite_completion.pdf}\\[2pt]
+\includegraphics[width=0.96\textwidth]{fig_completion_conditional.pdf}
 \caption{Matrix completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
 ($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
 query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
