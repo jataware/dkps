@@ -165,9 +165,8 @@ design) is a special case.
 Each query is an element of at least one of $T$ \emph{tasks}, with
 $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$ and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the
 collection of queries from task $t$ that model $i$ has responded to and let
-$m_{i}^{(t)}:=|Q^{(t)}_{i}|$. Each response receives a score in $[0,1]$, and $y(f,Q)$
-denotes model $f$'s mean per-query score over a query collection $Q$; $\sigma_q^2$
-denotes the per-query score variance. Finally, let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be
+$m_{i}^{(t)}:=|Q^{(t)}_{i}|$. Let $y(f,Q)$ denote model $f$'s mean per-query score over
+a query collection $Q$. Finally, let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be
 model $i$'s \emph{true score} on task $t$. The goal of \emph{benchmark prediction} is
 to estimate $y_{i}^{(t)}$.
 
@@ -418,8 +417,9 @@ improves on exact matching.
 \end{theorem}
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
-The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, so by
-Theorem~\ref{thm:qeff}(i), \PKPS-CV is query-efficient relative to the sample score
+The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
+$\sigma_q^2$ is the per-query score variance, so by Theorem~\ref{thm:qeff}(i), \PKPS-CV
+is query-efficient relative to the sample score
 whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
 \end{corollary}
 \begin{proof}[Proof sketch]
