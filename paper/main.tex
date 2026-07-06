@@ -54,11 +54,10 @@ score matrix imputation---across two large benchmark suites.
 Generative models are evaluated on an ever-growing collection of benchmarks spanning
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
 all of them is often prohibitively expensive: a modern release reports scores on more
-than $40$ benchmarks, the same evaluations are run many more times before release---to
-track training, compare design choices, and select checkpoints---and a full suite can
-cost thousands of dollars and days of wall-clock time per run \citep{benchpress}. As a
-result, models are evaluated on different subsets of tasks and on different subsets of
-queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
+than $40$ benchmarks, the same evaluations are re-run many times before release to track
+training and select checkpoints, and a full suite can cost thousands of dollars and days
+of wall-clock time per run \citep{benchpress}. As a result, models are evaluated on
+different subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
 finds only $23\%$ of the score matrix filled \citep{benchpress}. Within a curated
 benchmark, every model is forced to answer an identical set of queries---but this
 controlled setting is the exception. Arena-style platforms score each model on the
@@ -70,7 +69,8 @@ task) score matrix is sparse, its entries are noisy averages over few queries, a
 responses that produced it are \emph{unpaired}: comparing models in general requires
 using responses to different queries. Predicting the matrix's missing and true entries
 would let practitioners reuse cached evaluations instead of paying to re-run them
-\citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
+\citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}; for deprecated models that
+can no longer be queried, prediction from cached responses is the only option.
 
 Two lines of work aim to reduce this cost by predicting scores rather than computing
 them. Efficient benchmarking extrapolates a task's full score from a small scored subset of its
@@ -102,7 +102,7 @@ normalized by
 the total query-kernel mass, so that two models are not deemed dissimilar merely because
 they answered different sets of queries (Figure~\ref{fig:concept}). Models are embedded
 from these comparisons by classical multidimensional scaling, and paired DKPS is recovered
-exactly when the query kernel is the identity (Section~\ref{sec:method}).
+exactly when the query kernel is the identity (Section~\ref{sec:method});
 Table~\ref{tab:suite} previews our main results.
 
 \paragraph{Contributions.} We make two primary contributions.
@@ -206,9 +206,8 @@ also][]{rasch1960, metabench}; \citet{vivek2024anchor} cluster items by cross-mo
 agreement and score only the cluster centers; \citet{bean2025scales} select items using
 cognitive-scale embeddings; \citet{li2024active} select items adaptively via reinforcement
 learning; and \citet{perlitz2024efficient} analyze the cost--reliability tradeoff of
-benchmark designs. Relatedly, \citet{ilyas2022datamodels} predict a model's outputs as a
-function of its training data, \citet{prabhu2024lifelong} reuse past evaluations in
-lifelong benchmarks, and \citet{dkps_qeff} predict held-out scores from cached responses.
+benchmark designs. Closest to us, \citet{dkps_qeff} predict held-out scores from cached
+responses.
 On the completion end, \citet{benchpress} observe that the (model $\times$ task) score
 matrix is approximately rank-two and complete it in logit space \citep[see
 also][]{candes2009exact, mazumder2010softimpute, koren2009matrix}. These methods use only
@@ -227,9 +226,8 @@ there is nothing to subtract. Kernel comparisons \emph{across} two query sets re
 well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
 comparison matrix $A$ (defined below) and induce the squared distance
 $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$)---the usual conversion of an inner
-product to a distance, $\|\phi_a-\phi_b\|^2=\langle\phi_a,\phi_a\rangle+
-\langle\phi_b,\phi_b\rangle-2\langle\phi_a,\phi_b\rangle$, with $A_{ab}$ in the
-role of an inner product between the models' response behaviors. The $d$-dimensional
+product to a squared distance, with $A_{ab}$ in the role of an inner product between the
+models' response behaviors. The $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
 (\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
@@ -441,9 +439,8 @@ cross-validation extends the comparison safely to every pairing fraction (iii). 
 (iii) is a model-selection guarantee: (i) rests on the concentration of the
 self-normalized product-kernel comparison, in which the population overlap $\kappa$
 replaces the pairing fraction $\rho$ (Proposition~\ref{prop:conc}), and (ii) is an
-impossibility result for exact matching. In the synthetic experiments below, a bridging
-bandwidth improves on exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e),
-so the strict case of (iii) is typical.
+impossibility result for exact matching. Empirically, a bridging bandwidth improves on
+exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
 \centering
@@ -614,8 +611,7 @@ single fixed embedder; we did not ablate this choice, and embedding functions ar
 to have a nonnegligible effect at small budgets \citep{dkps_qeff}. Second, the
 block-diagonal instantiation on the HELM suite disables bridging across response domains;
 a shared response space that would let responses in one domain inform another remains
-untested. Third, computing $A$ is quadratic in the number of queries per model pair,
-though one response-kernel pass serves the whole bandwidth grid. Fourth,
+untested. Third, computing $A$ is quadratic in the number of queries per model pair. Fourth,
 Theorem~\ref{thm:qeff}(i) is existential (it provides no rate in $n$), and the strict
 margin of (iii) at intermediate $\rho$ rests on a bandwidth improving on exact matching,
 which we establish empirically rather than by a lower bound. Finally, per-cell gains over
