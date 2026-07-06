@@ -54,17 +54,18 @@ Generative models are evaluated on an ever-growing collection of benchmarks span
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
 all of them is often prohibitively expensive. As a result, models are evaluated on different
 subsets of tasks and on different subsets of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
-finds only $23\%$ of the score matrix filled \citep{benchpress}. This sparsity is not an
-artifact of curation; it is a consequence of how evaluations are collected. Arena-style
-platforms score each model on the conversations its users generate \citep{chiang2024chatbot};
-contamination-aware benchmarks refresh their items, so models evaluated in different
-months answer different questions \citep{white2024livebench}; and cost-driven subsampling
-gives each evaluation run its own item subset \citep{perlitz2024efficient}. The resulting
-(model $\times$ task) score matrix is sparse, its entries are noisy averages over few
-queries, and the responses beneath it are \emph{unpaired}: two models rarely answer the
-same queries. Predicting the missing and true entries of this matrix would let
-practitioners reuse cached evaluations instead of paying to re-run them
-\citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}.
+finds only $23\%$ of the score matrix filled \citep{benchpress}. The responses beneath
+the observed scores are, moreover, \emph{unpaired}: two models rarely answer the same
+queries. This is not an artifact of curation but a consequence of how evaluations are
+collected: arena-style platforms score each model on the conversations its users generate
+\citep{chiang2024chatbot}; contamination-aware benchmarks refresh their items, so models
+evaluated in different months answer different questions \citep{white2024livebench}; and
+cost-driven subsampling gives each evaluation run its own item subset
+\citep{perlitz2024efficient}. The resulting (model $\times$ task) score matrix is
+sparse, its entries are noisy averages over few queries, and the responses that produced
+it are unpaired. Predicting its missing and true entries would let practitioners reuse
+cached evaluations instead of paying to re-run them \citep{polo2024tinybenchmarks,
+vivek2024anchor, benchpress}.
 
 Two lines of work aim to reduce this cost by predicting scores rather than computing
 them. Efficient benchmarking extrapolates a task's full score from a small scored subset of its
@@ -89,9 +90,14 @@ unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded
-responses. \PKPS compares responses to \emph{similar}---rather than only
-identical---queries, so every unpaired response contributes and paired DKPS is recovered
-as a special case (Section~\ref{sec:method}).
+responses. \PKPS compares every response of one model to every response of another,
+weighting each comparison by the similarity of the queries that produced it: the affinity
+between two models is a product of a query kernel and a response kernel, normalized by
+the total query-kernel mass, so that two models are not deemed dissimilar merely because
+they answered different sets of queries (Figure~\ref{fig:concept}). Models are embedded
+from these affinities by classical multidimensional scaling, and paired DKPS is recovered
+exactly when the query kernel is the identity (Section~\ref{sec:method}).
+Table~\ref{tab:suite} previews our main results.
 
 \paragraph{Contributions.} We make two primary contributions.
 \begin{enumerate}
