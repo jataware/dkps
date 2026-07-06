@@ -93,11 +93,11 @@ In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)
 collection of low-dimensional representations of models based on their embedded
 responses. \PKPS compares every response of one model to every response of another,
 weighting each comparison by the similarity of the queries that produced it: the
-similarity between two models is a product of a query kernel and a response kernel,
+comparison between two models is a product of a query kernel and a response kernel,
 normalized by
 the total query-kernel mass, so that two models are not deemed dissimilar merely because
 they answered different sets of queries (Figure~\ref{fig:concept}). Models are embedded
-from these similarities by classical multidimensional scaling, and paired DKPS is recovered
+from these comparisons by classical multidimensional scaling, and paired DKPS is recovered
 exactly when the query kernel is the identity (Section~\ref{sec:method}).
 Table~\ref{tab:suite} previews our main results.
 
@@ -221,7 +221,7 @@ Section~\ref{sec:setting}. When all models share a query set, the distance can b
 directly between average embedded responses \citep{dkps_qeff}; when query sets differ,
 there is nothing to subtract. Kernel comparisons \emph{across} two query sets remain
 well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
-similarity matrix $A$ (defined below) and induce the squared distance
+comparison matrix $A$ (defined below) and induce the squared distance
 $D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$)---the usual conversion of an inner
 product to a distance, $\|\phi_a-\phi_b\|^2=\langle\phi_a,\phi_a\rangle+
 \langle\phi_b,\phi_b\rangle-2\langle\phi_a,\phi_b\rangle$, with $A_{ab}$ in the
@@ -233,11 +233,11 @@ role of an inner product between the models' response behaviors. The $d$-dimensi
 \label{eq:mds}
 \end{equation}
 so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
-and \PKPS differ only in the similarity $A$.
+and \PKPS differ only in the comparison matrix $A$.
 
 With all $n$
 models answering the same $m$ queries
-($Q_1=\dots=Q_n$), DKPS uses the identity-matched similarity
+($Q_1=\dots=Q_n$), DKPS uses the identity-matched comparison
 $A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
 with response $j$ of model $b$, so the design must be paired. With a linear $k_R$ the
 induced distance is exactly the mean squared distance between aligned responses,
@@ -341,7 +341,7 @@ over the draw of a target model from the model population.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_a$. The \emph{population similarity} is
+$P_a$. The \emph{population comparison} is
 $A^*_{ab}=\mathbb{E}[k_Q(u,u')\,k_R(x_a,x_b)]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
 $P_a$ and $P_b$ independent, the population squared distances are
 $D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, and the \emph{population perspectives}
@@ -421,7 +421,7 @@ nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for $n
 large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
 $\mathrm{MSE}\le\epsilon$, and no step involves $\rho$---exact matching, by contrast,
 retains only the $\rho M_{ij}$ shared pairs, so the same argument degrades as
-$\rho\to0$. For (ii), with no shared queries every identity-matched similarity is an
+$\rho\to0$. For (ii), with no shared queries every identity-matched comparison is an
 empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
 error is at least the score variance; (i) supplies a bandwidth attaining
 $\epsilon<v$. (iii) is model selection: the $\delta$ member of the grid coincides with
@@ -435,7 +435,7 @@ from paired DKPS is information-theoretic---with no shared queries, a paired-DKP
 prediction cannot depend on the target's responses at all (ii); and that
 cross-validation extends the comparison safely to every pairing fraction (iii). Only
 (iii) is a model-selection guarantee: (i) rests on the concentration of the
-self-normalized product-kernel similarity, in which the population overlap $\kappa$
+self-normalized product-kernel comparison, in which the population overlap $\kappa$
 replaces the pairing fraction $\rho$ (Proposition~\ref{prop:conc}), and (ii) is an
 impossibility result for exact matching. In the synthetic experiments below, a bridging
 bandwidth improves on exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e),
@@ -916,7 +916,7 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
 distribution over embedded queries; write $z=(u,x_a(u))$ for an embedded query--response
 pair (response noise included) and $P_a$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
-$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population similarity
+$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
 A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
 \qquad z\sim P_a,\; z'\sim P_b \text{ independent},
@@ -1044,7 +1044,7 @@ where its distance is undefined (Section~\ref{sec:method}).
 \paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
-Eq.~\ref{eq:A} similarity row to $T$ (the standard out-of-sample MDS coordinate), and let
+Eq.~\ref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
 $\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
 selected bandwidth is $\hat\sigma=\arg\min_{\sigma\in\Sigma}\hat L(\sigma)$ with
 $\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_\sigma(f_i)-y_i)^2$. Conditional on
