@@ -54,7 +54,7 @@ def _cv_bandwidth(Zs, sample_mat, obs, k=8):
 
 
 def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8, predictor='knn',
-             fixed_sig_idx=None, ens_mode='precision', resp_kernel='linear', disjoint=False,
+             fixed_sig_idx=None, ens_mode='cv', resp_kernel='linear', disjoint=False,
              dump_cells=False):
     (resp_X, Qu, qid_code, model_id, task_id, query_id,
      score_mat, models_all, tasks, groups, row_score, qmed) = data
@@ -271,7 +271,7 @@ def main():
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
     ap.add_argument('--mds_dim', type=int, default=8)   # matches dkps_qeff and the completion pipeline
     ap.add_argument('--predictor', choices=['knn', 'ols'], default='knn')
-    ap.add_argument('--ens_mode', choices=['precision', 'mM', 'cv'], default='precision')
+    ap.add_argument('--ens_mode', choices=['precision', 'mM', 'cv'], default='cv')
     ap.add_argument('--resp_kernel', choices=['linear', 'rbf'], default='linear')
     ap.add_argument('--disjoint', action='store_true',
                     help='enforce disjoint query sets across models (exact rho=0)')

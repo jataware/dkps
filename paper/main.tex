@@ -141,8 +141,8 @@ Sample score       & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ &
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
 LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
 DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
-\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{\underline{0.120}}$ & $\underline{0.103}$ & $\mathbf{\underline{0.171}}$ & $\mathbf{0.076}$ & $\underline{0.058}$ & $\mathbf{\underline{0.082}}$ & $\underline{0.070}$ & $\mathbf{\underline{0.108}}$ \\
-Ensemble           & $\mathbf{0.132}$ & $\mathbf{0.077}$ & $\mathbf{\underline{0.120}}$ & $\mathbf{0.099}$ & $\mathbf{\underline{0.171}}$ & $\underline{0.084}$ & $\mathbf{0.052}$ & $\mathbf{\underline{0.082}}$ & $\mathbf{0.069}$ & $\mathbf{\underline{0.108}}$ \\
+\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{\underline{0.120}}$ & $\underline{0.103}$ & $\mathbf{\underline{0.171}}$ & $\underline{0.076}$ & $\underline{0.058}$ & $\mathbf{\underline{0.082}}$ & $\underline{0.070}$ & $\mathbf{\underline{0.108}}$ \\
+Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{\underline{0.120}}$ & $\mathbf{0.099}$ & $\mathbf{\underline{0.171}}$ & $\mathbf{0.073}$ & $\mathbf{0.049}$ & $\mathbf{\underline{0.082}}$ & $\mathbf{0.069}$ & $\mathbf{\underline{0.108}}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -309,19 +309,15 @@ perspective versus a low-rank factorization), so performance differences are att
 to the representation. We found matching the per-task standardization to be important:
 without it, the model offset is dominated by the tasks with the largest logit variance.
 
-The ensemble combines the \PKPS estimate with whichever score
-signal is available for a cell, weighting each channel in proportion to its estimated
-reliability. On an \emph{observed}
-cell, the score signal is the cell's own sample score, shrunk toward the \PKPS estimate
-by the weight $\sigma_q^2/(\sigma_q^2+e_{\PKPS}^2)$, the ratio of sample noise variance
-to total disagreement with \PKPS; the sample score therefore receives more weight as the
-number of queries grows, and the embedding receives more weight when the sample is noisy.
-On a \emph{missing} cell, the score signal is LRMC \citep{benchpress}, blended with
-\PKPS by a weight cross-validated on observed scores. All weights are computed from
-observed data alone: the sample variance is estimated as $\tilde p(1-\tilde p)/m$ with
-$\tilde p$ the \PKPS estimate of the cell's score (the raw plug-in is degenerate at
-small $m$), and $e_{\PKPS}^2$ as the depth-weighted disagreement with the observed
-samples, debiased by the sample noise. No weight uses the held-out scores we report.
+The ensemble combines the \PKPS estimate with whichever score signal is available for
+a cell. On an \emph{observed} cell, the score signal is the cell's own sample score, and
+the blend weight is a scalar fit by the same leave-one-family-out cross-validation as the
+regressor, against the reference models' cached full scores; the fitted weight grows with
+the budget, so the sample score dominates as queries accumulate. On a \emph{missing}
+cell, the score signal is LRMC \citep{benchpress}, blended with \PKPS by a weight
+cross-validated on observed scores. No weight uses the scores of the family being
+predicted. (A closed-form inverse-variance weighting performs slightly worse at every
+budget; Appendix~\ref{app:abl}.)
 
 \subsection{Query efficiency}
 \label{sec:qeff}
@@ -533,7 +529,7 @@ Figure~\ref{fig:qe} shows MAE as a function of the query budget $m$. Each model 
 its own independently sampled queries (the real-data analogue of $\rho{=}0$; IRT is
 poorly identified in this regime) and we predict the true full-evaluation score. At small
 budgets the embedding-based methods are substantially more accurate than the sample
-score: at $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.132$ versus $0.292$, so
+score: at $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$, so
 \PKPS with one query matches the sample score at four. As the budget grows, the sample
 score eventually overtakes the embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$);
 the ensemble follows the better of its two components throughout. Panels (b, c) vary the
@@ -576,11 +572,13 @@ shows the same qualitative behavior with a larger completion margin
 attains a third of the sample score's error ($0.076$ vs.\ $0.224$), and on missing cells the
 ensemble outperforms LRMC at \emph{every} operating point, including the full cohort
 ($0.069$ vs.\ $0.096$ at $n{=}45$). Table~\ref{tab:suite} collects both
-applications on both suites; the ensemble is best or tied nearly everywhere.
+applications on both suites; the ensemble is best or tied in every column.
 
-\paragraph{The results are insensitive to representation hyperparameters.} Varying the
-MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
+\paragraph{The results are insensitive to representation and pipeline choices.} Varying
+the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
+Ablations of the regression head, the response kernel, the ensemble weighting rule, and
+the incidental query overlap in the EEE pools are in Appendix~\ref{app:abl}.
 
 \section{Discussion}
 In this paper we introduced the \PKPS, which compares models through their responses
@@ -718,14 +716,14 @@ difficulties by maximum likelihood (L-BFGS) on the largest fully-observed
 (model $\times$ item) block, per-model ability by bounded scalar MLE, clipped to
 $[-4,4]$. The sample baseline is the cell's own $m$-query mean.
 
-\paragraph{Ensemble.} On observed cells, the sample score is shrunk toward the \PKPS
-estimate with per-cell precision weight $e^2_{\PKPS}/(e^2_{\PKPS}+\tilde p(1-\tilde
-p)/m)$ on the sample, where $\tilde p$ is the \PKPS estimate of the cell's score
-(clipped to $[10^{-3},1-10^{-3}]$; the raw sample plug-in is degenerate at small $m$) and
-$e^2_{\PKPS}$ is the embedding's depth-weighted squared disagreement with the model's
-observed samples, debiased by the sample noise and floored at $10^{-6}$; on missing
-cells, \PKPS and LRMC are blended with a weight fit by held-out cross-validation against
-observed scores. No quantity ever uses the held-out full-eval scores.
+\paragraph{Ensemble.} On observed cells, the prediction is $\alpha\,\hat
+y_{\mathrm{sample}}+(1-\alpha)\,\hat y_{\PKPS}$ with a scalar $\alpha$ per held-out
+family, selected on a $21$-point grid by leave-one-family-out validation against the
+other families' cached full scores (the same information the regressor trains on); on
+missing cells, \PKPS and LRMC are blended with a weight fit by held-out cross-validation
+against observed scores. No quantity ever uses the scores of the family being predicted.
+Appendix~\ref{app:abl} compares this rule to a closed-form inverse-variance weighting
+and to the fixed $m/M$ schedule of \citet{dkps_qeff}.
 
 \paragraph{Sweeps and reporting.}\begin{sloppypar} All real-data sweeps use $16$ seeds; curves and table
 entries report the per-seed mean over tasks, then the mean ($\pm1$ SEM) over seeds. Query
@@ -862,6 +860,41 @@ multiplier ($\delta$ $=$ exact matching); dotted lines mark the cross-validated
 selection, which matches the best fixed choice on both suites.}
 \label{fig:sens}
 \end{figure}
+
+\section{Pipeline ablations}
+\label{app:abl}
+
+Each ablation repeats the query-efficiency budget sweep ($16$ seeds, both suites)
+with one pipeline choice changed; all other settings match Appendix~\ref{app:details}.
+
+\paragraph{Ensemble weighting.} We compare the paper's cross-validated scalar weight
+against two alternatives: a closed-form inverse-variance rule (the sample score weighted
+by $e^2_{\PKPS}/(e^2_{\PKPS}+\tilde p(1-\tilde p)/m)$ per cell, with $\tilde p$ the
+\PKPS estimate and $e^2_{\PKPS}$ the depth-weighted, noise-debiased disagreement with
+the observed samples) and the fixed schedule $\alpha=m/M$ of \citet{dkps_qeff}. The
+cross-validated weight is best at every budget on both suites: on HELM it improves on the
+inverse-variance rule from $0.132$ to $0.125$ at $m{=}1$ and from $0.077$ to $0.073$ at
+$m{=}8$; on EEE from $0.084$ to $0.073$ and from $0.052$ to $0.049$. The $m/M$ schedule
+trails both on HELM ($0.096$ at $m{=}8$) and is close to the cross-validated weight on
+EEE, where the small pools ($M{=}32$) let $m/M$ reach $1$.
+
+\paragraph{Regression head.} Replacing the distance-weighted $k$-NN head with ordinary
+least squares helps slightly on HELM ($0.132$ vs.\ $0.136$ at $m{=}1$; $0.080$ vs.\
+$0.085$ at $m{=}32$), consistent with \citet{dkps_qeff}, but hurts on EEE, increasingly
+so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $k$-NN as the robust
+default across suites.
+
+\paragraph{Response kernel.} An RBF response kernel in place of the linear one changes
+\PKPS's MAE by at most $0.003$ at every budget on both suites; the linear choice is
+justified by the block-diagonal factorization (Section~\ref{sec:setup}) at no accuracy
+cost.
+
+\paragraph{Incidental overlap.} The EEE pools share ${\sim}10\%$ of items across
+models by chance. Enforcing exactly disjoint query sets (true $\rho=0$) changes \PKPS
+by at most $0.005$ at $m\le8$ ($0.080$ vs.\ $0.076$ at $m{=}1$), and IRT becomes
+inapplicable outright---no shared item block exists. At $m\ge16$ the disjointness
+constraint exhausts the $32$-item pools and mechanically shortens the sample score's
+effective depth, so comparisons there reflect the constraint rather than the methods.
 
 \section{Proofs of Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}}
 \label{app:proof}
