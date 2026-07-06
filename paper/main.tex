@@ -156,33 +156,35 @@ Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{\underline{0
 \subsection{Problem setting and notation}
 \label{sec:setting}
 For our purposes, a \emph{model} is a random mapping $f:\mathcal{Q}\to\mathcal{X}$
-from a query space to a response space; the response $f(q)$ is an independent sample from
+from a query space to a response space. The response $f(q)$ is an independent sample from
 $P_{q}$. In the evaluation setting, we observe $n$ models $f_1,\dots,f_n$, where each
 model responds to a (potentially different) collection of queries
 $Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
-design) is a special case. Two fixed embedding functions,
-$\mathrm{embed}_R:\mathcal{X}\to\mathbb{R}^{p}$ and
-$\mathrm{embed}_Q:\mathcal{Q}\to\mathbb{R}^{p'}$, map responses and queries to
-vectors. For
-$q_j\in Q_i$ we write
-$x_{ij}=\tfrac1r\sum_{k=1}^{r}\mathrm{embed}_R\!\big(f_i(q_j)^{(k)}\big)$ for the
-average of the $r$ sampled response embeddings and $u_j=\mathrm{embed}_Q(q_j)$ for the
-embedded query.
+design) is a special case.
 
 Each query is an element of at least one of $T$ \emph{tasks}, with
 $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$ and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the
 collection of queries from task $t$ that model $i$ has responded to and let
-$m_{i}^{(t)}:=|Q^{(t)}_{i}|$. Each response receives a score in $[0,1]$; $y(f,Q)$ denotes
-the mean per-query score of model $f$ over a query collection $Q$, and $\sigma_q^2$ the
-per-query score variance. Finally, let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s
-\emph{true score} on task $t$; the observed \emph{sample score} is $y(f_i,Q_i^{(t)})$.
-The goal of \emph{benchmark prediction} is to estimate $y_{i}^{(t)}$, given the
-observed responses and the \emph{reference} models' known full scores: cells with
-$m_i^{(t)}>0$ constitute \emph{denoising}, cells with $m_i^{(t)}=0$ \emph{completion}. We write $y_i$ when a single task is in view. Two properties of the
-design recur throughout: \emph{coverage}, the fraction of cells with $m_i^{(t)}>0$, and
-\emph{pairing}, the fraction $\rho$ of a cell's queries shared across models; curated
-leaderboards sit near $\rho\approx1$, while deployed evaluation sits near
-$\rho\approx0$.
+$m_{i}^{(t)}:=|Q^{(t)}_{i}|$. Each response receives a score in $[0,1]$, and $y(f,Q)$
+denotes model $f$'s mean per-query score over a query collection $Q$; $\sigma_q^2$
+denotes the per-query score variance. Finally, let $y_{i}^{(t)}:=y(f_{i},Q^{(t)})$ be
+model $i$'s \emph{true score} on task $t$. The goal of \emph{benchmark prediction} is
+to estimate $y_{i}^{(t)}$.
+
+We consider two instances of the benchmark prediction problem: i) estimate $y_{i}^{(t)}$
+with $m_{i}^{(t)}>0$ (\emph{query efficiency}) and ii) estimate $y_{i}^{(t)}$ with
+$m_{i}^{(t)}=0$ (\emph{matrix completion}). For both instances we assume access to
+$\{f_{i}(q):q\in Q_{i}\}$ and to embedding functions
+$g_{\mathcal{Q}}:\mathcal{Q}\to\mathbb{R}^{p'}$ and
+$g_{\mathcal{X}}:\mathcal{X}\to\mathbb{R}^{p}$; both also use the known true scores of
+previously evaluated \emph{reference} models. For $q_j\in Q_i$ we write
+$x_{ij}=\tfrac1r\sum_{k=1}^{r}g_{\mathcal{X}}\big(f_i(q_j)^{(k)}\big)$ for the average
+of $r$ sampled response embeddings and $u_j=g_{\mathcal{Q}}(q_j)$ for the embedded
+query; the observed \emph{sample score} is $y(f_i,Q_i^{(t)})$. We write $y_i$ when a
+single task is in view. Two properties of the design recur throughout: \emph{coverage},
+the fraction of cells with $m_i^{(t)}>0$, and \emph{pairing}, the fraction $\rho$ of a
+cell's queries shared across models; curated leaderboards sit near $\rho\approx1$,
+while deployed evaluation sits near $\rho\approx0$.
 
 \section{Related work}
 \label{sec:related}
@@ -465,9 +467,9 @@ when paired.}
 \section{Experiments}
 \label{sec:experiments}
 We evaluate \PKPS on synthetic data, where every lever of the observation process can be
-swept, and on two heterogeneous benchmark suites. Throughout, the two prediction problems
-of Section~\ref{sec:setting} structure the experiments: denoising observed cells (query
-efficiency) and predicting missing ones (completion).
+swept, and on two heterogeneous benchmark suites. Throughout, the two instances of
+Section~\ref{sec:setting} structure the experiments: query efficiency ($m_i^{(t)}>0$)
+and matrix completion ($m_i^{(t)}=0$).
 
 \subsection{Evaluation setup}
 \label{sec:setup}
