@@ -185,8 +185,10 @@ $m_{i}^{(t)}$: an evaluation is \emph{sparse} when few cells have $m_{i}^{(t)}>0
 fraction with $m_{i}^{(t)}>0$ is the \emph{coverage}) or when the observed $m_{i}^{(t)}$
 are small relative to $M^{(t)}$, and \emph{unpaired} when the cross-model overlaps
 $m_{ij}^{(t)}:=|Q_{i}^{(t)}\cap Q_{j}^{(t)}|$ are small relative to the $m_{i}^{(t)}$.
-We write $\rho$ for the shared fraction (\emph{pairing}); curated leaderboards sit near
-$\rho\approx1$, while deployed evaluation sits near $\rho\approx0$.
+The shared fraction $\rho_{ij}^{(t)}:=m_{ij}^{(t)}/m_{i}^{(t)}$ (\emph{pairing}) is a
+property of a model pair; when the design is homogeneous we suppress the indices and
+write $\rho$. Curated leaderboards sit near $\rho\approx1$, while deployed evaluation
+sits near $\rho\approx0$.
 
 \section{Related work}
 \label{sec:related}
