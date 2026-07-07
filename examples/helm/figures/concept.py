@@ -258,24 +258,6 @@ fig.legend(handles=[Line2D([0], [0], marker='s', ls='', mfc=RED, mec='white', ms
            loc='lower center', bbox_to_anchor=(xc, 0.125), bbox_transform=fig.transFigure,
            ncol=3, frameon=False, fontsize=9.5, handletextpad=0.2, columnspacing=1.0)
 
-# ---- flow arrows + the product-kernel formula: make the pipeline explicit -------------
-# (a) data -> (b,c) kernel weights -> (d,e) embedding & prediction. The arrows carry the
-# left-to-right process; the strip below the matrices shows WHAT they feed (Eq. 2: one
-# entry of the n x n model affinity, k_Q weighting k_R), and the strip below the 2x2
-# block names the remaining steps.
-from matplotlib.patches import FancyArrowPatch
-pc = axC.get_position(); pr2 = axR.get_position(); pe_ = axEmb.get_position()
-ymid = (pc.y0 + pc.y1) / 2
-yhi = pc.y0 + 0.80 * (pc.y1 - pc.y0)         # arrow 1 rides high, clear of (b)'s ylabel
-for xa, xb, ya in [(pe_.x1 + 0.004, pc.x0 - 0.012, yhi),             # (a) -> (b|c)
-                   (mcax.get_position().x1 + 0.006, x0 - 0.012, ymid)]:  # (b|c) -> (d|e)
-    fig.add_artist(FancyArrowPatch((xa, ya), (xb, ya), transform=fig.transFigure,
-                                   arrowstyle='-|>', mutation_scale=13, color='#94a3b8',
-                                   lw=1.3, zorder=1))
-fig.text((pc.x0 + pr2.x1) / 2, 0.040,
-         r"$A_{ii'}=\sum_{j,l}k_Q(q_j,q_l)\,k_R(x_{ij},x_{i'l})\;/\;\sum_{j,l}k_Q(q_j,q_l)$",
-         ha='center', va='top', fontsize=9.2, color='#334155')
-
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_concept.{ext}', dpi=200, bbox_inches='tight')
 print('wrote results-pkps-rd1/fig_concept.png')
