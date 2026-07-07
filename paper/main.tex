@@ -171,10 +171,10 @@ and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the collection of queries from ta
 that model $i$ has responded to and let $m_{i}^{(t)}:=|Q^{(t)}_{i}|$. The sparsity and
 unpairedness of a task are functions of the $\{m_{i}^{(t)}\}$: it is \emph{sparse} when
 few models have $m_{i}^{(t)}>0$, and \emph{unpaired} when the cross-model overlaps
-$m_{ij}^{(t)}:=|Q_{i}^{(t)}\cap Q_{j}^{(t)}|$ are small. We let
-$\rho_{ij}^{(t)}:=m_{ij}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
-model pair and note that $\rho_{ij}\approx1$ for all pairs in highly curated
-leaderboards and $\rho_{ij}\approx0$ in deployed evaluation settings.
+$m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
+$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
+model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
+leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
 
 Finally, let $y_i^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s score on task $t$. For
 $m_i^{(t)}>0$ we observe $y(f_{i},Q_i^{(t)})$. The goal of \emph{benchmark prediction}
@@ -227,13 +227,13 @@ directly between average embedded responses \citep{dkps_qeff}; when query sets d
 there is nothing to subtract. Kernel comparisons \emph{across} two query sets remain
 well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
 comparison matrix $A$ (defined below) and induce the squared distance
-$D^2(a,b)=A_{aa}+A_{bb}-2A_{ab}$ (clamped at $0$)---the usual conversion of an inner
-product to a squared distance, with $A_{ab}$ in the role of an inner product between the
+$D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ (clamped at $0$)---the usual conversion of an inner
+product to a squared distance, with $A_{ii'}$ in the role of an inner product between the
 models' response behaviors. The $d$-dimensional
 \emph{representations} are the classical-multidimensional-scaling minimizer
 \begin{equation}
 (\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
-\sum_{i,k=1}^{n}\big(\|z_i-z_k\|-D(i,k)\big)^2,
+\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2,
 \label{eq:mds}
 \end{equation}
 so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
@@ -242,19 +242,19 @@ and \PKPS differ only in the comparison matrix $A$.
 With all $n$
 models answering the same $m$ queries
 ($Q_1=\dots=Q_n$), DKPS uses the identity-matched comparison
-$A_{ab}=\tfrac{1}{m}\sum_j k_R(x_{aj},x_{bj})$: response $j$ of model $a$ is paired only
-with response $j$ of model $b$, so the design must be paired. With a linear $k_R$ the
+$A_{ii'}=\tfrac{1}{m}\sum_j k_R(x_{ij},x_{i'j})$: response $j$ of model $i$ is paired only
+with response $j$ of model $i'$, so the design must be paired. With a linear $k_R$ the
 induced distance is exactly the mean squared distance between aligned responses,
-$D^2(a,b)=\tfrac1m\sum_j\|x_{aj}-x_{bj}\|^2$.
+$D^2(i,i')=\tfrac1m\sum_j\|x_{ij}-x_{i'j}\|^2$.
 
 \PKPS replaces
 identity matching with a query kernel $k_Q$:
 \begin{equation}
-A_{ab} = \frac{\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)\, k_R(x_{aj},x_{bl})}
-              {\sum_{j\in Q_a}\sum_{l\in Q_b} k_Q(q_j,q_l)},
+A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)\, k_R(x_{ij},x_{i'l})}
+              {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)},
 \label{eq:A}
 \end{equation}
-where $Q_a$ is the query set of model $a$. Each term is normalized by its own query-kernel
+Each term is normalized by its own query-kernel
 mass, so models that answered different numbers of queries, or entirely different
 queries, remain comparable; responses to similar queries contribute even across tasks, so
 unpaired evaluations are used (Figure~\ref{fig:concept}). Paired DKPS is the special case
@@ -269,7 +269,7 @@ $k_R$ makes the kernel factorize across response domains
 normalizes each pair by its own kernel mass, $A$ is only approximately an inner
 product and need not be positive semidefinite---hence the clamp on $D^2$, and classical
 MDS embeds the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as is
-standard. $A_{ab}$ costs $|Q_a||Q_b|$ kernel terms per pair, and one response-kernel
+standard. $A_{ii'}$ costs $|Q_i||Q_{i'}|$ kernel terms per pair, and one response-kernel
 pass serves the whole bandwidth grid.
 
 \begin{figure}[t]
@@ -292,10 +292,10 @@ correlated with score (MAE $0.07$).}
 \PKPS is a strict generalization of DKPS. With $k_Q=\delta$ only equal queries lying in
 both query sets survive the double sum of Eq.~\ref{eq:A}, so it reduces to paired DKPS
 over the shared queries,
-$A_{ab}=\tfrac{1}{|Q_a\cap Q_b|}\sum_{q\in Q_a\cap Q_b}k_R(x_{aq},x_{bq})$; since the RBF
+$A_{ii'}=\tfrac{1}{|Q_i\cap Q_{i'}|}\sum_{q\in Q_i\cap Q_{i'}}k_R(x_{iq},x_{i'q})$; since the RBF
 kernel converges pointwise to $\delta$ as $\sigma\!\to\!0$, DKPS is also the
 small-bandwidth limit. Conversely, for any strictly positive $k_Q$ the normalizer is
-positive for any nonempty query sets, so $A_{ab}$ is defined even on disjoint sets, where
+positive for any nonempty query sets, so $A_{ii'}$ is defined even on disjoint sets, where
 paired DKPS is undefined. Between these limits, the bandwidth $\sigma$ controls the
 tradeoff between exact matching and bridging.
 
@@ -344,11 +344,11 @@ the machinery of \citet{dkps_qeff}; MSE denotes mean squared error over the draw
 target model from the model population.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
-Let each model $a$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_a$. The \emph{population comparison} is
-$A^*_{ab}=\mathbb{E}[k_Q(u,u')\,k_R(x_a,x_b)]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
-$P_a$ and $P_b$ independent, the population squared distances are
-$D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, and the \emph{population perspectives}
+Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
+$P_i$. The \emph{population comparison} is
+$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
+$P_i$ and $P_{i'}$ independent, the population squared distances are
+$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
 $\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
 Gram matrix $B^*$ of $D^{*2}$.
 \end{definition}
@@ -367,7 +367,7 @@ neighbors once the cohort is large; in practice it suggests that a large, divers
 reference population may be needed. Both conditions mirror \citet{dkps_qeff}.
 \begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
 Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
-bounded below, $\kappa=\inf_{a,b}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
+bounded below, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
 spectral gap $\lambda_d>0$.
 \end{assumption}
 Boundedness and the spectral gap are standard conditions in spectral-embedding
@@ -425,7 +425,7 @@ nearest-neighbor error splits into two estimation terms and the population
 nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for $n$
 large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
 $\mathrm{MSE}\le\epsilon$, and no step involves $\rho$---exact matching, by contrast,
-retains only the $\rho M_{ij}$ shared pairs, so the same argument degrades as
+retains only the $\rho m$ shared pairs, so the same argument degrades as
 $\rho\to0$. For (ii), with no shared queries every identity-matched comparison is an
 empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
 error is at least the score variance; (i) supplies a bandwidth attaining
@@ -916,35 +916,35 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \section{Proofs of Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}}
 \label{app:proof}
 
-\paragraph{Population quantities.} Queries for model $a$ are drawn i.i.d.\ from a design
-distribution over embedded queries; write $z=(u,x_a(u))$ for an embedded query--response
-pair (response noise included) and $P_a$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
+\paragraph{Population quantities.} Queries for model $i$ are drawn i.i.d.\ from a design
+distribution over embedded queries; write $z=(u,x_i(u))$ for an embedded query--response
+pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
-A^*_{ab}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_a(u),x_b(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
-\qquad z\sim P_a,\; z'\sim P_b \text{ independent},
+A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
+\qquad z\sim P_i,\; z'\sim P_{i'} \text{ independent},
 \]
-population squared distances $D^{*2}(a,b)=A^*_{aa}+A^*_{bb}-2A^*_{ab}$, the centered Gram
+population squared distances $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, the centered Gram
 matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
 population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
 which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:reg} (cf.\ Definition~\ref{def:pop}).
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
-Under Assumption~\ref{ass:reg}, for models $a,b$ with $\min(|Q_a|,|Q_b|)\ge m$ and any
+Under Assumption~\ref{ass:reg}, for models $i,i'$ with $\min(|Q_i|,|Q_{i'}|)\ge m$ and any
 $\delta\in(0,1)$: with probability at least $1-\delta$,
 \[
-|A_{ab}-A^*_{ab}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
+|A_{ii'}-A^*_{ii'}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
 \qquad t_m(\delta)=\bar B\sqrt{\frac{\log(4/\delta)}{2m}},\quad \bar B=\max(2B_R,1),
 \]
 provided $t_m(\delta)\le\kappa/2$.
 \end{lemma}
 \begin{proof}
 \begin{sloppypar}
-The numerator $N=\frac{1}{|Q_a||Q_b|}\sum_{j,l}k_Q(u_j,u'_l)\,k_R(x_{aj},x_{bl})$ and
-denominator $Z=\frac{1}{|Q_a||Q_b|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\ref{eq:A} are
-two-sample $U$-statistics of order $(1,1)$ in the i.i.d.\ pairs $z_j\sim P_a$,
-$z'_l\sim P_b$, with kernels of range at most $2B_R$ and $1$ respectively (response noise
+The numerator $N=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)\,k_R(x_{ij},x_{i'l})$ and
+denominator $Z=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\ref{eq:A} are
+two-sample $U$-statistics of order $(1,1)$ in the i.i.d.\ pairs $z_j\sim P_i$,
+$z'_l\sim P_{i'}$, with kernels of range at most $2B_R$ and $1$ respectively (response noise
 enters only through the bounded kernel argument, so the number of responses per query may
 stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
 \citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
@@ -953,7 +953,7 @@ both ranges, a union bound gives $|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\d
 jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by Assumption~\ref{ass:reg} and $t_m(\delta)\le\kappa/2$,
 we have $Z\ge\kappa/2$, and
 \[
-|A_{ab}-A^*_{ab}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
+|A_{ii'}-A^*_{ii'}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
 \;\le\;\frac{|N-N^*|}{Z}+\frac{|N^*|\,|Z-Z^*|}{ZZ^*}
 \;\le\;\frac{2\,t_m(\delta)}{\kappa}+\frac{2B_R\,t_m(\delta)}{\kappa^2}
 \;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
@@ -964,7 +964,7 @@ using $|N^*|\le B_R$ and $\kappa\le1$.
 
 \begin{lemma}[Perspective perturbation]
 \label{lem:pert}
-Let $\varepsilon_\infty=\max_{a,b}|A_{ab}-A^*_{ab}|$. There is an orthogonal
+Let $\varepsilon_\infty=\max_{i,i'}|A_{ii'}-A^*_{ii'}|$. There is an orthogonal
 $W\in\mathbb{R}^{d\times d}$ such that
 \[
 \max_i\;\|\hat\psi_i-W\psi_i\|\;\le\;
@@ -1039,9 +1039,9 @@ relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
 Corollary~\ref{cor:sample}.
 
 \paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
-pairs enter the double sum, so the $U$-statistic runs over the $\rho M_{ij}$ shared queries
-and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho M_{ij})^{-1/2}\big)$: DKPS's
-guarantee requires $\rho M_{ij}\to\infty$ and vacates in the unpaired limit $\rho\to0$,
+pairs enter the double sum, so the $U$-statistic runs over the $\rho m$ shared queries
+and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKPS's
+guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
 \paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} Split the reference models into a training
