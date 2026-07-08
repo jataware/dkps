@@ -23,16 +23,18 @@ from .geometry import pairwise_query_dist_tensor  # noqa: E402
 RESULTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
 
 
-def load_paired_core():
-    helm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            '..', '..', 'examples', 'helm')
-    cwd = os.getcwd()
-    os.chdir(helm_dir)
-    try:
-        (resp_X, Qu, qid_code, model_id, task_id, query_id,
-         score_mat, models, tasks, groups, row_score, qmed) = H.load_suite()
-    finally:
-        os.chdir(cwd)
+def load_paired_core(data=None):
+    if data is None:
+        helm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                '..', '..', 'examples', 'helm')
+        cwd = os.getcwd()
+        os.chdir(helm_dir)
+        try:
+            data = H.load_suite()
+        finally:
+            os.chdir(cwd)
+    (resp_X, Qu, qid_code, model_id, task_id, query_id,
+     score_mat, models, tasks, groups, row_score, qmed) = data
     n = len(models)
     m2i = {mm: i for i, mm in enumerate(models)}
 
