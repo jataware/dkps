@@ -56,8 +56,12 @@ def run_seed(P, query_emb, categories, seed, eval_frac=0.2, sigma_fractions=(0.1
     P_anchor = P[anchor_idx]
     sigmas = sigma_grid(query_emb[anchor_idx], sigma_fractions, rng)
 
-    # Distance matrices: static once, query-aware per (eval query, sigma).
+    # Distance matrices: static once, task-localized per category,
+    # query-aware per (eval query, sigma).
     D_static = weighted_dist_matrix(P_anchor, np.ones(len(anchor_idx)))
+    cats_anchor = np.asarray(categories)[anchor_idx]
+    D_task = {c: weighted_dist_matrix(P_anchor, (cats_anchor == c).astype(float))
+              for c in np.unique(cats_anchor)}
     D_qa = {}
     for name, s in sigmas.items():
         W = rbf_weights(query_emb[anchor_idx], query_emb[eval_idx], s)   # (q, m_a)
@@ -74,7 +78,8 @@ def run_seed(P, query_emb, categories, seed, eval_frac=0.2, sigma_fractions=(0.1
         rand_err = off.mean(axis=1)
         oracle_err = off.min(axis=1)
         for t in range(n):
-            picks = {'static': route_nearest(D_static, t)}
+            picks = {'static': route_nearest(D_static, t),
+                     'task': route_nearest(D_task[categories[q]], t)}
             for name in sigmas:
                 picks[name] = route_nearest(D_qa[name][qi], t)
             for method, r in picks.items():
