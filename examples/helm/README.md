@@ -1,9 +1,11 @@
-# PKPS on the HELM suite
+# PKPS on the HELM and EEE suites
 
-Real-data experiments for **Product Kernel Perspective Spaces (PKPS)** on a
-heterogeneous 18-task, 93-model suite (MATH, WMT-14, MedQA, LegalBench). This
-directory reproduces the two real-data results in the paper: query-efficient
-evaluation and matrix completion. The PKPS method itself lives in the top-level
+Real-data experiments for the **Product Kernel Perspective Space (PKPS)** on
+two suites: HELM (18 tasks x 93 models: MATH, WMT-14, MedQA, LegalBench;
+largely paired) and Every Eval Ever (16 tasks x 45 modern models; unpaired by
+construction, ~10% incidental overlap). This directory reproduces the two
+real-data results in the paper -- query-efficient evaluation and matrix
+completion -- on both suites, plus the appendix ablations. The PKPS method itself lives in the top-level
 `dkps/` package (`dkps.unpaired_dkps.ProductKernelPerspectiveSpace`), with the
 baselines (`matrix_completion_predict`, IRT) in `dkps.baselines`; this directory
 is their application to HELM.
@@ -17,14 +19,19 @@ data/          data acquisition and preparation
   extract.py     parse raw HELM dumps into per-task score + response tables
   embed_*.py     embed responses / queries (Gemini, one-hot)
   export_wmt.py  score WMT translations
+  eee.py         download the Every Eval Ever datastore (manifest -> parquets)
+  embed_eee.py   pool + embed the EEE suite (32-query pools per cell)
 pipeline/      core library (imported, not run directly)
   loaders.py       load the (model x task) score + embedding tensors
   perspective.py   PKPS embedding + matrix-completion crossfit
   crossval.py      leak-free joint-observation CV loader
   query_select.py  query-efficiency helpers (dense block, leave-one-out regression)
   baselines.py     APW baseline (IRT and matrix completion live in the dkps package)
-experiments/   runnable drivers
+experiments/   runnable drivers (all take --suite {helm,eee})
   query_efficiency.py          Result 1: predict the full score from m queries/cell
+                               ablation flags: --predictor {knn,ols},
+                               --ens_mode {cv,precision,mM}, --resp_kernel
+                               {linear,rbf}, --disjoint (exact rho=0)
   completion.py                Result 2: predict never-run (model, task) cells
   dump_*_conditional.py        per-cell dumps for the conditional figures
 figures/       paper-figure scripts (read result CSVs, write PDF/PNG)
@@ -49,9 +56,16 @@ python experiments/query_efficiency.py --sweep budget --n_seeds 16
 python figures/query_efficiency.py
 ```
 
+EEE runs mirror the HELM commands with `--suite eee` (results in
+`results-eee-rd1/` and `results-eee-unified/`); the appendix ablations write to
+`results-abl/` and the sensitivity sweeps to `results-sens/`. The observed-cell
+ensemble weight is a scalar per held-out family chosen by leave-one-family-out
+CV (see the Pipeline ablations appendix for the alternatives).
+
 The synthetic study (paper Figure 2) is generated separately from
-`experiments/unpaired/` at the repo root. Raw data, results, and embeddings are
-large and git-ignored; see `data/download/` to fetch the HELM datasets.
+`experiments/unpaired/` at the repo root; the routing paper's experiments live
+in `experiments/routing/` (own README). Raw data, results, and embeddings are
+large and git-ignored; see `data/download/` and `data/eee.py` to fetch them.
 
 ---
 
