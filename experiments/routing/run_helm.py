@@ -23,7 +23,7 @@ from .geometry import pairwise_query_dist_tensor  # noqa: E402
 RESULTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
 
 
-def load_paired_core(data=None):
+def load_paired_core(data=None, with_scores=False):
     if data is None:
         helm_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', '..', 'examples', 'helm')
@@ -51,13 +51,17 @@ def load_paired_core(data=None):
     m_q = len(qkeys)
 
     X = np.zeros((n, m_q, resp_X.shape[1]), dtype=np.float32)
+    S = np.zeros((n, m_q), dtype=np.float32)
     code_of = np.zeros(m_q, dtype=int)
     for task, query, mi, row, code in key.itertuples(index=False):
         j = q2j[(task, query)]
         X[mi, j] = resp_X[row]
+        S[mi, j] = row_score[row]
         code_of[j] = code
     query_emb = Qu[code_of].astype(np.float32)
     categories = np.array([t for (t, _) in qkeys])
+    if with_scores:
+        return X, query_emb, categories, models, S
     return X, query_emb, categories, models
 
 
