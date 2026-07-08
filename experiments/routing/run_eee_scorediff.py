@@ -20,7 +20,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from .run_eee import RESULTS, load_eee_rows, localized_stats
+from .run_eee import (RESULTS, batched_localized_stats, load_eee_rows,
+                      localized_stats)
 
 FRACTIONS = (0.25, 0.5, 1.0, 2.0)
 
@@ -80,21 +81,30 @@ def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
     grand = float(np.concatenate(list(pair_e.values())).mean())
     sigmas = {f'{f:g}x': f * qmed for f in FRACTIONS}
 
+    model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
+    eval_groups = list(rows[is_eval_row].groupby(['task', 'query']))
+    Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in eval_groups])
+    D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1)
+    D2 = D2 - D2.min(axis=1, keepdims=True)
+    batched = {name: batched_localized_stats(
+                   Xa, sa, model_groups, n,
+                   np.exp(-D2 / (2.0 * s ** 2)).astype(np.float32))
+               for name, s in sigmas.items()}
+    task_stats = {tn: localized_stats(Xa, sa, (task_a == tn).astype(float), model_a, n)
+                  for tn in np.unique(task_a)}
+    static_stats = localized_stats(Xa, sa, np.ones(len(Xa)), model_a, n)
+
     out = []
-    for (t_name, q), g in rows[is_eval_row].groupby(['task', 'query']):
+    for gi, ((t_name, q), g) in enumerate(eval_groups):
         resp_models = g['model'].to_numpy()
-        u_star = Qu[g['code'].iloc[0]]
+        u_star = Ue[gi]
         s_real = g['score'].to_numpy()
         r = len(resp_models)
         E = np.abs(s_real[:, None] - s_real[None, :])
 
-        d2 = ((ua - u_star) ** 2).sum(axis=1)
-        stats = {}
-        for name, s in sigmas.items():
-            w = np.exp(-(d2 - d2.min()) / (2.0 * s ** 2))
-            stats[name] = localized_stats(Xa, sa, w, model_a, n)
-        stats['task'] = localized_stats(Xa, sa, (task_a == t_name).astype(float), model_a, n)
-        stats['static'] = localized_stats(Xa, sa, np.ones(len(Xa)), model_a, n)
+        stats = {name: (B[0][gi], B[1][gi], B[2][gi]) for name, B in batched.items()}
+        stats['task'] = task_stats[t_name]
+        stats['static'] = static_stats
 
         for ti in range(r):
             cand = [c for c in range(r) if c != ti]

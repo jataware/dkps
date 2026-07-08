@@ -54,6 +54,28 @@ def load_eee_rows():
     return resp_X.astype(np.float32), Qu.astype(np.float32), rows, models, qmed
 
 
+def batched_localized_stats(Xa, sa, model_groups, n, W):
+    """Batched per-model weighted means for a stack of weightings.
+
+    W : (q, R) weights over anchor rows. Returns phi (q, n, d) float32,
+    shat (q, n), ok (q, n). Per-model BLAS matmuls instead of np.add.at.
+    """
+    q, R = W.shape
+    d = Xa.shape[1]
+    phi = np.zeros((q, n, d), dtype=np.float32)
+    shat = np.zeros((q, n))
+    den = np.zeros((q, n))
+    for m, idx in enumerate(model_groups):
+        Wm = W[:, idx]
+        den[:, m] = Wm.sum(axis=1)
+        phi[:, m, :] = Wm @ Xa[idx]
+        shat[:, m] = Wm @ sa[idx]
+    okm = den > 1e-12
+    phi[okm] /= den[okm][:, None]
+    shat[okm] /= den[okm]
+    return phi, shat, okm
+
+
 def localized_stats(X, scores, w, model_of, n):
     """Per-model weighted mean embedding and weighted mean score."""
     denom = np.bincount(model_of, weights=w, minlength=n)
@@ -134,22 +156,37 @@ def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
 
     sigmas = {f'qa-{f:g}x': f * qmed for f in FRACTIONS}
 
-    mim_rows, sc_rows = [], []
+    model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
     edf = rows[is_eval_row]
-    for (t_name, q), g in edf.groupby(['task', 'query']):
+    eval_groups = list(edf.groupby(['task', 'query']))
+
+    # batched weights for every eval query at once, one matrix per sigma
+    Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in eval_groups])
+    D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1) \
+        if len(ua) * len(Ue) * ua.shape[1] < 2e9 else None
+    if D2 is None:
+        from scipy.spatial.distance import cdist
+        D2 = cdist(Ue, ua, 'sqeuclidean')
+    D2 = D2 - D2.min(axis=1, keepdims=True)
+    batched = {name: batched_localized_stats(
+                   Xa, sa, model_groups, n,
+                   np.exp(-D2 / (2.0 * s ** 2)).astype(np.float32))
+               for name, s in sigmas.items()}
+    # task and static geometries: one weighting each, computed once
+    task_stats = {tn: localized_stats(Xa, sa, (task_a == tn).astype(float), model_a, n)
+                  for tn in np.unique(task_a)}
+    static_stats = localized_stats(Xa, sa, np.ones(len(Xa)), model_a, n)
+
+    mim_rows, sc_rows = [], []
+    for gi, ((t_name, q), g) in enumerate(eval_groups):
         resp_models = g['model'].to_numpy()
         Xq = X[g.index.to_numpy()]
-        u_star = Qu[g['code'].iloc[0]]
+        u_star = Ue[gi]
         s_real = g['score'].to_numpy()
 
-        # geometries: per-sigma localized, task-localized, static
-        geoms = {}
-        d2 = ((ua - u_star) ** 2).sum(axis=1)
-        for name, s in sigmas.items():
-            w = np.exp(-(d2 - d2.min()) / (2.0 * s ** 2))
-            geoms[name] = localized_stats(Xa, sa, w, model_a, n)
-        geoms['task'] = localized_stats(Xa, sa, (task_a == t_name).astype(float), model_a, n)
-        geoms['static'] = localized_stats(Xa, sa, np.ones(len(Xa)), model_a, n)
+        geoms = {name: (B[0][gi], B[1][gi], B[2][gi]) for name, B in batched.items()}
+        geoms['task'] = task_stats[t_name]
+        geoms['static'] = static_stats
 
         # ---- mimicry among responders
         E = np.sqrt(((Xq[:, None] - Xq[None, :]) ** 2).sum(-1))   # (r, r)
