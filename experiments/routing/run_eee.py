@@ -66,6 +66,42 @@ def localized_stats(X, scores, w, model_of, n):
     return phi, s, ok
 
 
+def build_pair_overlap(X, Qu, rows, anchor_mask):
+    """For each model pair, the anchor queries BOTH answered: query embeddings
+    and realized pairwise response distances. This is all a response-free
+    direct-regression router can train on."""
+    pair_u, pair_e = {}, {}
+    a = rows[anchor_mask]
+    for (_, _), g in a.groupby(['task', 'query']):
+        ms = g['model'].to_numpy()
+        if len(ms) < 2:
+            continue
+        Xg = X[g.index.to_numpy()]
+        u = Qu[g['code'].iloc[0]]
+        for i in range(len(ms)):
+            for k in range(i + 1, len(ms)):
+                key = (min(ms[i], ms[k]), max(ms[i], ms[k]))
+                e = float(np.linalg.norm(Xg[i] - Xg[k]))
+                pair_u.setdefault(key, []).append(u)
+                pair_e.setdefault(key, []).append(e)
+    return ({k: np.stack(v) for k, v in pair_u.items()},
+            {k: np.asarray(v) for k, v in pair_e.items()})
+
+
+def rf_predict(pair_u, pair_e, grand_mean, t_model, c_model, u_star, sigma):
+    """Kernel regression of realized pairwise error on the query embedding,
+    over the pair's shared anchor queries; sigma=None -> uniform (rf-static)."""
+    key = (min(t_model, c_model), max(t_model, c_model))
+    if key not in pair_e:
+        return grand_mean
+    e = pair_e[key]
+    if sigma is None:
+        return float(e.mean())
+    d2 = ((pair_u[key] - u_star) ** 2).sum(axis=1)
+    w = np.exp(-(d2 - d2.min()) / (2.0 * sigma ** 2))
+    return float((w * e).sum() / w.sum())
+
+
 def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
     rng = np.random.default_rng(seed)
     resp = rows.groupby(['task', 'query'])['model'].nunique()
@@ -85,6 +121,11 @@ def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
     model_a = rows['model'].to_numpy()[anchor]
     task_a = rows['task'].to_numpy()[anchor]
     ua = Qu[rows['code'].to_numpy()[anchor]]
+
+    pair_u, pair_e = build_pair_overlap(X, Qu, rows, anchor)
+    grand_mean = float(np.concatenate(list(pair_e.values())).mean())
+    rf_sigmas = {'rf-0.5x': 0.5 * qmed, 'rf-1x': 1.0 * qmed, 'rf-2x': 2.0 * qmed,
+                 'rf-static': None}
 
     sigmas = {f'qa-{f:g}x': f * qmed for f in FRACTIONS}
 
@@ -115,6 +156,11 @@ def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
                 D = np.linalg.norm(phi[resp_models[cand]] - phi[resp_models[ti]], axis=1)
                 D[~ok[resp_models[cand]]] = np.inf
                 mim_rows.append((seed, t_name, q, name, float(errs[int(np.argmin(D))])))
+            for name, s in rf_sigmas.items():
+                pred = np.array([rf_predict(pair_u, pair_e, grand_mean,
+                                            resp_models[ti], resp_models[c], u_star, s)
+                                 for c in cand])
+                mim_rows.append((seed, t_name, q, name, float(errs[int(np.argmin(pred))])))
             mim_rows.append((seed, t_name, q, 'random', float(errs.mean())))
             mim_rows.append((seed, t_name, q, 'oracle', float(errs.min())))
 
