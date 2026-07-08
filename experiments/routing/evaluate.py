@@ -52,6 +52,9 @@ def run_seed(P, query_emb, categories, seed, eval_frac=0.2, sigma_fractions=(0.1
     m, n, _ = P.shape
     rng = np.random.default_rng(seed)
     anchor_idx, eval_idx = stratified_split(categories, eval_frac, rng)
+    # LOQO invariant: geometries may only be built from anchor queries; no
+    # model's response to an evaluation query may enter any geometry.
+    assert len(np.intersect1d(anchor_idx, eval_idx)) == 0
 
     P_anchor = P[anchor_idx]
     sigmas = sigma_grid(query_emb[anchor_idx], sigma_fractions, rng)

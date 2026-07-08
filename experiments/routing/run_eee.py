@@ -116,6 +116,11 @@ def run_seed(X, Qu, rows, n, qmed, seed, n_eval=300):
                             for t, q in zip(rows['task'], rows['query'])])
 
     anchor = ~is_eval_row
+    # LOQO invariant: every row of every model on an eval query is excluded
+    # from phi, s-hat, and the pair-overlap index.
+    assert not np.any(anchor & is_eval_row)
+    assert all((t, q) not in eval_keys
+               for t, q in zip(rows['task'][anchor], rows['query'][anchor]))
     Xa = X[anchor]
     sa = rows['score'].to_numpy()[anchor]
     model_a = rows['model'].to_numpy()[anchor]
