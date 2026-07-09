@@ -277,9 +277,9 @@ def fig_ablations():
     d1 = df2[df2.variant == 'r1']
     EPS = np.array([0.5])
 
-    fig, axes = plt.subplots(2, 2, figsize=(9.6, 7.2))
+    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.4))
 
-    ax = axes[0, 0]                                # pairing overlap
+    ax = axes[0]                                   # pairing overlap
     xs = [100, 50, 0]
     for pool, ls in (('le13b', '-'), ('all', '--')):
         for meth, key in (('pairdev', 'pairdev'), ('qa', 'qa')):
@@ -301,7 +301,7 @@ def fig_ablations():
     ax.legend(fontsize=7.5, frameon=False)
     ax.grid(alpha=0.3)
 
-    ax = axes[0, 1]                                # anchor cache density
+    ax = axes[1]                                   # anchor cache density
     for pool, ls in (('le13b', '-'), ('all', '--')):
         sub = df1[(df1.pool == pool) & (df1.method == 'qa-0.25x')]
         xs, ys = [], []
@@ -316,7 +316,7 @@ def fig_ablations():
     ax.legend(fontsize=7.5, frameon=False)
     ax.grid(alpha=0.3)
 
-    ax = axes[1, 0]                                # candidate scaling
+    ax = axes[2]                                   # candidate scaling
     ks, vol, odev = [], [], []
     for pool, K in [(f'k{k}', k) for k in (2, 4, 8, 16, 32, 64)] \
             + [('all', 137)]:
@@ -339,7 +339,7 @@ def fig_ablations():
                  'the floor keeps falling')
     ax.grid(alpha=0.3)
 
-    ax = axes[1, 1]                                # flagship rank
+    ax = axes[3]                                   # flagship rank
     width = 0.35
     ranks = ('r1', 'r5', 'rmed')
     lbl = ('best', '5th best', 'median')
@@ -362,7 +362,7 @@ def fig_ablations():
     ax.grid(alpha=0.3, axis='y')
 
     fig.suptitle(r'Ablations at contract ($\varepsilon$=0.5, '
-                 r'$\alpha$=10%), 3-5 seeds', y=1.0)
+                 r'$\alpha$=10%), 3-5 seeds', y=1.06)
     fig.tight_layout()
     _save(fig, 'fig3_ablations')
 
