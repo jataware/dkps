@@ -318,18 +318,29 @@ def run_combined_cost(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
             D2 = D2 - D2.min(axis=1, keepdims=True)
             W = np.exp(-D2 / (2.0 * (0.25 * med) ** 2)).astype(np.float32)
             phi, shat, okm = batched_localized_stats(Xa, sa, model_groups, n, W)
+            # static (uniform-weight) behavioral geometry, and the anchor
+            # global score mean (the "pick the leaderboard-best cheap model"
+            # baseline -- the one score practitioners actually have)
+            phi_st, _, ok_st = batched_localized_stats(
+                Xa, sa, model_groups, n, np.ones((1, len(Xa)), np.float32))
+            gmean_a = pd.Series(sa).groupby(pd.Series(model_a)).mean()
 
-            recs = {m: ([], [], [], []) for m in
-                    ('qa', 'qa-score', 'cascade', 'random')}
+            recs = {m: ([], [], [], [], []) for m in
+                    ('qa', 'qa-score', 'cascade', 'static', 'lead', 'random')}
             for gi, (q, g) in enumerate(eval_groups):
                 suite = g['suite'].iloc[0]
                 t_name = g['task'].iloc[0]
                 flag = flags[suite]
-                ms = set(g['model'].to_numpy())
+                gm = g['model'].to_numpy()
+                ms = set(gm)
                 avail = sorted(ms & pool_c)
-                srow = dict(zip(g['model'].to_numpy(),
-                                g['score'].to_numpy()))
+                srow = dict(zip(gm, g['score'].to_numpy()))
                 f_sc = srow[flag]
+                # realized behavioral deviation of each responder vs flagship
+                Xq = X[g.index.to_numpy()]
+                x_flag = Xq[list(gm).index(flag)]
+                devrow = {m: float(np.linalg.norm(Xq[i] - x_flag))
+                          for i, m in enumerate(gm)}
                 d = np.linalg.norm(phi[gi][avail] - phi[gi][flag], axis=1)
                 d[~okm[gi][avail]] = np.inf
                 r_qa = avail[int(np.argmin(d))]
@@ -341,22 +352,159 @@ def run_combined_cost(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
                 av_means = [float(tm.get(a, -np.inf)) for a in avail]
                 r_cs = avail[int(np.argmax(av_means))]
                 g_cs = float(tm.get(flag, 0.0) - max(av_means))
+                d_st = np.linalg.norm(phi_st[0][avail] - phi_st[0][flag],
+                                      axis=1)
+                d_st[~ok_st[0][avail]] = np.inf
+                r_st = avail[int(np.argmin(d_st))]
+                r_ld = avail[int(np.argmax(
+                    [float(gmean_a.get(a, -np.inf)) for a in avail]))]
                 r_rd = avail[rng.integers(0, len(avail))]
                 for name, r, conf in (('qa', r_qa, float(np.min(d))),
                                       ('qa-score', r_qs, g_qs),
                                       ('cascade', r_cs, g_cs),
+                                      ('static', r_st, float(rng.random())),
+                                      ('lead', r_ld, float(rng.random())),
                                       ('random', r_rd, float(rng.random()))):
                     recs[name][0].append(conf)
                     recs[name][1].append(srow[r])
                     recs[name][2].append(f_sc)
-                    recs[name][3].append(suite)
-            for name, (conf, sub_s, fl_s, sus) in recs.items():
-                conf, sub_s, fl_s = map(np.asarray, (conf, sub_s, fl_s))
+                    recs[name][3].append(devrow[r])
+                    recs[name][4].append(suite)
+            for name, (conf, sub_s, fl_s, dev, sus) in recs.items():
+                conf, sub_s, fl_s, dev = map(np.asarray,
+                                             (conf, sub_s, fl_s, dev))
                 curve = policy_curve(conf, sub_s, fl_s)
-                for f, v in zip(FRACS, curve):
+                dcurve = policy_curve(conf, dev, np.zeros_like(dev))
+                for f, v, dv in zip(FRACS, curve, dcurve):
                     out.append((pool_name, seed, name, float(f), v,
-                                float(fl_s.mean())))
+                                float(fl_s.mean()), dv))
     return pd.DataFrame(out, columns=['pool', 'seed', 'method',
+                                      'offload_frac', 'policy_score',
+                                      'flagship_score', 'policy_dev'])
+
+
+def run_scarcity(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
+                 coverages=(0.0, 0.01, 0.03, 0.1, 0.3, 1.0), n_eval=400):
+    """Score-scarcity sweep on the combined pool: candidates' anchor rows are
+    scored only at coverage c (the flagship's own history stays scored -- the
+    operator serves and audits it). Real caches are raw responses; per-query
+    scores are the expensive benchmark artifact. qa never sees a score, so it
+    is flat in c; qa-score and cascade degrade toward it. c = 0 is the
+    cold-start setting: a new candidate with responses but no evaluations.
+    When a router has no scored anchors for any available candidate it
+    abstains (random pick, ordered last)."""
+    from .run_combined import load_combined
+    from .run_eee import batched_localized_stats
+    X, Qu, rows, n, names = load_combined()
+    sizes = [parse_params(nm.split(':', 1)[1]) for nm in names]
+    suite_of_model = [nm.split(':', 1)[0] for nm in names]
+
+    out = []
+    for pool_name, cap in pools:
+        pool = {i for i in range(n) if sizes[i] is not None and sizes[i] <= cap}
+        for seed in range(seeds):
+            rng = np.random.default_rng(seed)
+            gmean = rows.groupby('model')['score'].mean()
+            flags = {}
+            for su in ('helm', 'eee'):
+                idx = [i for i in range(n) if suite_of_model[i] == su]
+                flags[su] = int(gmean.loc[idx].idxmax())
+            pool_c = pool - set(flags.values())
+
+            resp = rows.groupby('query')['model'].agg(set)
+            suite_q = rows.drop_duplicates('query').set_index('query')['suite']
+            elig = [q for q, ms in resp.items()
+                    if flags[suite_q[q]] in ms and len(ms & pool_c) >= 1]
+            take = rng.choice(len(elig), size=min(n_eval, len(elig)),
+                              replace=False)
+            eval_q = {elig[i] for i in take}
+            is_eval = rows['query'].isin(eval_q).to_numpy()
+            anchor_m = ~is_eval
+            assert not rows['query'][anchor_m].isin(eval_q).any()
+
+            Xa = X[anchor_m]
+            sa = rows['score'].to_numpy()[anchor_m]
+            model_a = rows['model'].to_numpy()[anchor_m]
+            task_a = rows['task'].to_numpy()[anchor_m]
+            ua = Qu[rows['code'].to_numpy()[anchor_m]]
+            model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
+            i = rng.integers(0, len(ua), 20000)
+            k = rng.integers(0, len(ua), 20000)
+            keep = i != k
+            med = float(np.median(np.linalg.norm(
+                ua[i[keep]] - ua[k[keep]], axis=1)))
+
+            eval_groups = list(rows[is_eval].groupby('query'))
+            Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in eval_groups])
+            D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1)
+            D2 = D2 - D2.min(axis=1, keepdims=True)
+            W = np.exp(-D2 / (2.0 * (0.25 * med) ** 2)).astype(np.float32)
+            phi, _, okm = batched_localized_stats(Xa, sa, model_groups, n, W)
+
+            flag_set = set(flags.values())
+            for cov in coverages:
+                # per-candidate scored subsample; flagship history fully scored
+                groups_c = []
+                for m, idx_m in enumerate(model_groups):
+                    if m in flag_set:
+                        groups_c.append(idx_m)
+                    else:
+                        k_m = int(round(cov * len(idx_m)))
+                        groups_c.append(rng.choice(idx_m, size=k_m,
+                                                   replace=False)
+                                        if k_m else idx_m[:0])
+                _, shat_c, ok_c = batched_localized_stats(
+                    Xa, sa, groups_c, n, W)
+                sc_mask = np.zeros(len(Xa), dtype=bool)
+                sc_mask[np.concatenate([g for g in groups_c
+                                        if len(g)]).astype(int)] = True
+                tmean_c = {tn: pd.Series(sa[sc_mask & (task_a == tn)]).groupby(
+                              pd.Series(model_a[sc_mask & (task_a == tn)])
+                           ).mean() for tn in np.unique(task_a)}
+
+                recs = {m: ([], [], []) for m in
+                        ('qa', 'qa-score', 'cascade', 'random')}
+                for gi, (q, g) in enumerate(eval_groups):
+                    suite = g['suite'].iloc[0]
+                    t_name = g['task'].iloc[0]
+                    flag = flags[suite]
+                    gm = g['model'].to_numpy()
+                    avail = sorted(set(gm) & pool_c)
+                    srow = dict(zip(gm, g['score'].to_numpy()))
+                    f_sc = srow[flag]
+                    d = np.linalg.norm(phi[gi][avail] - phi[gi][flag], axis=1)
+                    d[~okm[gi][avail]] = np.inf
+                    r_qa = avail[int(np.argmin(d))]
+                    sv = shat_c[gi][avail].copy()
+                    sv[~ok_c[gi][avail]] = -np.inf
+                    if np.isfinite(sv).any():
+                        r_qs = avail[int(np.argmax(sv))]
+                        g_qs = float(shat_c[gi][flag] - sv.max())
+                    else:                        # abstain: keep on flagship
+                        r_qs, g_qs = avail[rng.integers(0, len(avail))], np.inf
+                    tm = tmean_c[t_name]
+                    av = [float(tm.get(a, -np.inf)) for a in avail]
+                    if np.isfinite(av).any():
+                        r_cs = avail[int(np.argmax(av))]
+                        g_cs = float(tm.get(flag, 0.0) - max(av))
+                    else:
+                        r_cs, g_cs = avail[rng.integers(0, len(avail))], np.inf
+                    r_rd = avail[rng.integers(0, len(avail))]
+                    for name, r, conf in (('qa', r_qa, float(np.min(d))),
+                                          ('qa-score', r_qs, g_qs),
+                                          ('cascade', r_cs, g_cs),
+                                          ('random', r_rd,
+                                           float(rng.random()))):
+                        recs[name][0].append(conf)
+                        recs[name][1].append(srow[r])
+                        recs[name][2].append(f_sc)
+                for name, (conf, sub_s, fl_s) in recs.items():
+                    conf, sub_s, fl_s = map(np.asarray, (conf, sub_s, fl_s))
+                    curve = policy_curve(conf, sub_s, fl_s)
+                    for f, v in zip(FRACS, curve):
+                        out.append((pool_name, seed, float(cov), name,
+                                    float(f), v, float(fl_s.mean())))
+    return pd.DataFrame(out, columns=['pool', 'seed', 'coverage', 'method',
                                       'offload_frac', 'policy_score',
                                       'flagship_score'])
 
