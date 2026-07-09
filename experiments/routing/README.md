@@ -102,6 +102,29 @@ profile 0.617 / random 0.670, oracle 0.400. Score routing on EEE (realized
 score of pick, higher better): oracle 0.978, task 0.904, qa 0.900,
 static 0.898, random 0.808.
 
+## Cost-aware offloading (the paper's economic frame)
+
+`run_cost_routing.py`: flagship = anchor-best model; each router proposes a
+substitute and an offload ordering; curves = realized score retention vs
+offload fraction, per size-capped candidate pool (name-parsed parameter count
+as cost proxy). The label-free **qa-score** router (localized score
+regression: substitute = argmax predicted score, ordering = predicted
+flagship-substitute gap) dominates:
+
+| HELM, <=13B pool          | offload @ >=99% retention | bill cut @ 25x prices |
+|---------------------------|--------------------------:|----------------------:|
+| qa-score (label-free)     |                   **70%** |               **67%** |
+| cascade (task labels)     |                       40% |                   38% |
+| qa / task*                |                       20% |                   19% |
+| static / random / profile |                     0-10% |                 0-10% |
+
+Flagships: HELM `gemini-1.5-pro-002` (vs 8-9B substitutes: ~10-25x per-token
+gap); EEE `gemini-3-1-pro-preview`, where modern small models sustain >=99%
+retention only to ~10% offload -- the 2026 frontier gap is wider. With an
+UNRESTRICTED pool there is no tradeoff at all: per-task specialists beat the
+flagship (104.6% retention at full offload) -- there is no best model, only
+best-per-task.
+
 ## Findings
 
 1. **Label-free routing matches — and on the merged pool beats — task-labeled
