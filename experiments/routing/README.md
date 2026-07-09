@@ -79,6 +79,8 @@ run_profile_baseline.py score-profile baseline
 dim_sweep.py            response/query dimension sweep (metric fixed full-dim)
 query_dim_fine.py       low-d query PCA hypothesis test (per-dim bandwidths)
 run_*_scorediff.py      side-study: |score difference| objective
+run_cost_routing.py     cost-aware offloading: retention/deviation curves,
+                        score-scarcity sweep, tolerance/conformal gate
 ```
 
 All runnable from the repo root: `pixi run python -m experiments.routing.<name>`.
