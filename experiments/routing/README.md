@@ -81,6 +81,14 @@ query_dim_fine.py       low-d query PCA hypothesis test (per-dim bandwidths)
 run_*_scorediff.py      side-study: |score difference| objective
 run_cost_routing.py     cost-aware offloading: retention/deviation curves,
                         score-scarcity sweep, tolerance/conformal gate
+lever_sweep.py          lever sweep 1: bandwidth, pool cap, cache density,
+                        estimator ceilings, calibration size
+lever_sweep2.py         lever sweep 2: pairing overlap, candidate scaling,
+                        flagship rank, novel tasks, UCB gate
+gap_close.py            confidence-estimator ladder qa -> pd-cal -> pairdev
+                        (headline table)
+fig_paper.py            paper figures (concept, contract + savings,
+                        ablations); helivan.io palette
 ```
 
 All runnable from the repo root: `pixi run python -m experiments.routing.<name>`.
