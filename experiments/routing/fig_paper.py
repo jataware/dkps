@@ -24,9 +24,11 @@ from .run_cost_routing import parse_params
 from .run_helm import RESULTS
 
 FIGDIR = os.path.join(RESULTS, 'figures')
-C = {'pairdev': '#e11d48', 'qa': '#2563eb', 'oracle': '#94a3b8',
-     'flag': '#e11d48', 'pickA': '#2563eb', 'pickB': '#f59e0b',
-     'grey': '#9ca3af', 'slate1': '#7f9cbd', 'slate2': '#4a6d8c'}
+# helivan.io palette: deep-blue monochrome + one bright accent
+C = {'pairdev': '#114471', 'qa': '#3596ff', 'oracle': '#afbec6',
+     'flag': '#090f20', 'pickA': '#3596ff', 'pickB': '#00477d',
+     'grey': '#9ca3af', 'slate1': '#93aacc', 'slate2': '#114471',
+     'panel': '#f6f7f9', 'edge': '#afbec6'}
 
 plt.rcParams.update({
     'font.family': 'sans-serif',
@@ -35,16 +37,17 @@ plt.rcParams.update({
     'axes.labelsize': 9,
     'axes.spines.top': False,
     'axes.spines.right': False,
-    'axes.edgecolor': '#334155',
-    'axes.labelcolor': '#1e293b',
-    'axes.titlecolor': '#0f172a',
-    'xtick.color': '#475569',
-    'ytick.color': '#475569',
+    'axes.edgecolor': '#486884',
+    'axes.labelcolor': '#213c66',
+    'axes.titlecolor': '#0a2245',
+    'text.color': '#213c66',
+    'xtick.color': '#486884',
+    'ytick.color': '#486884',
     'legend.frameon': False,
     'legend.fontsize': 8,
-    'grid.color': '#cbd5e1',
+    'grid.color': '#e5e7eb',
     'grid.linewidth': 0.6,
-    'grid.alpha': 0.5,
+    'grid.alpha': 0.9,
     'figure.facecolor': 'white',
 })
 
@@ -154,9 +157,10 @@ def fig_concept():
         ax.scatter(pts[others, 0], pts[others, 1], s=26, color=C['grey'],
                    alpha=0.55, linewidths=0, zorder=2,
                    label='cached models')
+        ax.set_facecolor(C['panel'])
         # dashed link flagship -> this query's nearest
         ax.plot([pts[-1, 0], pts[near, 0]], [pts[-1, 1], pts[near, 1]],
-                ls=(0, (2, 3)), color='#64748b', lw=1.1, zorder=3)
+                ls=(0, (2, 3)), color='#486884', lw=1.1, zorder=3)
         for j, key, m, off in ((iA, 'pickA', mA, (9, 9)),
                                (iB, 'pickB', mB, (9, -14))):
             is_near = j == near
@@ -179,7 +183,7 @@ def fig_concept():
         ax.set_yticks([])
         for sp in ax.spines.values():
             sp.set_visible(True)
-            sp.set_color('#e2e8f0')
+            sp.set_color(C['edge'])
         ax.margins(0.10)
     import matplotlib.lines as mlines
     handles = [
