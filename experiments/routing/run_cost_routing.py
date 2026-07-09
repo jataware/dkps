@@ -100,10 +100,22 @@ def run_helm(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0), ('all', None))):
 
         # --- qa: localized distance flagship <-> candidates, per eval query
         W = rbf_weights(U[a_idx], U[e_idx], SIGMA_FRACTION * med)
+        Wn = W / W.sum(axis=1, keepdims=True)
         D_qa = weighted_dist_matrix(P[a_idx], W)                   # (q, n, n)
         d_qa = D_qa[:, flag, :][:, cand]                           # (q, n-1)
         pick_qa = cand[d_qa.argmin(axis=1)]
         conf_qa = d_qa.min(axis=1)
+        # qa-cal: scale-free ordering (min / mean distance) so one-hot and
+        # text domains are comparable under a single threshold (label-free)
+        conf_qacal = d_qa.min(axis=1) / d_qa.mean(axis=1)
+
+        # --- qa-score: label-free analog of the cascade -- localized score
+        # regression per model; substitute = argmax predicted score in pool,
+        # ordering = predicted flagship - substitute gap
+        shat = Wn @ S[:, a_idx].T                                  # (q, n)
+        pick_qs = cand[shat[:, cand].argmax(axis=1)]
+        conf_qs = shat[np.arange(len(e_idx)), flag] \
+            - shat[np.arange(len(e_idx)), pick_qs]
 
         # --- static
         D_st = weighted_dist_matrix(P[a_idx], np.ones(len(a_idx)))
@@ -144,6 +156,8 @@ def run_helm(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0), ('all', None))):
         conf_rd = rng.random(len(e_idx))
 
         for name, pick, conf in (('qa', pick_qa, conf_qa),
+                                 ('qa-cal', pick_qa, conf_qacal),
+                                 ('qa-score', pick_qs, conf_qs),
                                  ('task*', pick_tk, conf_tk),
                                  ('cascade', pick_cs, conf_cs),
                                  ('static', pick_st, conf_st),
@@ -159,8 +173,106 @@ def run_helm(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0), ('all', None))):
                                        'flagship_score'])
 
 
+def run_eee_cost(seeds=5, pools=(('le5b', 5.0), ('le30b', 30.0)), n_eval=300):
+    """Cost-aware offloading on the unpaired EEE suite. Candidates per eval
+    query = the query's responders within the size-capped pool; flagship must
+    be a responder (its pools define the eval set)."""
+    from .run_eee import (batched_localized_stats, load_eee_rows,
+                          localized_stats)
+    X, Qu, rows, models, qmed = load_eee_rows()
+    n = len(models)
+    sizes = [parse_params(mm) for mm in models]
+    out = []
+    for pool_name, cap in pools:
+        pool = {i for i in range(n) if sizes[i] is not None and sizes[i] <= cap}
+        for seed in range(seeds):
+            rng = np.random.default_rng(seed)
+            # flagship by anchor-agnostic overall mean (fixed across seeds)
+            gmean = rows.groupby('model')['score'].mean()
+            flag = int(gmean.idxmax())
+            pool_c = pool - {flag}
+
+            # eval queries: flagship responded AND >=1 pool responder
+            resp = rows.groupby(['task', 'query'])['model'].agg(set)
+            elig = [(tq, ms) for tq, ms in resp.items()
+                    if flag in ms and len(ms & pool_c) >= 1]
+            take = rng.choice(len(elig), size=min(n_eval, len(elig)),
+                              replace=False)
+            eval_keys = {elig[i][0] for i in take}
+            is_eval = np.array([(t, q) in eval_keys
+                                for t, q in zip(rows['task'], rows['query'])])
+            anchor_m = ~is_eval
+            Xa = X[anchor_m]
+            sa = rows['score'].to_numpy()[anchor_m]
+            model_a = rows['model'].to_numpy()[anchor_m]
+            task_a = rows['task'].to_numpy()[anchor_m]
+            ua = Qu[rows['code'].to_numpy()[anchor_m]]
+            model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
+            tasks = sorted(set(task_a))
+            tmean = {tn: pd.Series(sa[task_a == tn]).groupby(
+                        pd.Series(model_a[task_a == tn])).mean()
+                     for tn in tasks}
+
+            eval_groups = list(rows[is_eval].groupby(['task', 'query']))
+            Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in eval_groups])
+            D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1)
+            D2 = D2 - D2.min(axis=1, keepdims=True)
+            W = np.exp(-D2 / (2.0 * (SIGMA_FRACTION * 2 * qmed) ** 2)).astype(np.float32)
+            phi, shat, okm = batched_localized_stats(Xa, sa, model_groups, n, W)
+
+            recs = {m: ([], [], []) for m in
+                    ('qa', 'qa-score', 'cascade', 'random')}
+            for gi, ((t_name, q), g) in enumerate(eval_groups):
+                ms = set(g['model'].to_numpy())
+                avail = sorted((ms & pool_c))
+                srow = dict(zip(g['model'].to_numpy(), g['score'].to_numpy()))
+                f_sc = srow[flag]
+                # qa: nearest available in localized geometry
+                d = np.linalg.norm(phi[gi][avail] - phi[gi][flag], axis=1)
+                d[~okm[gi][avail]] = np.inf
+                r_qa = avail[int(np.argmin(d))]
+                # qa-score: argmax predicted score, gap ordering
+                sv = shat[gi][avail].copy(); sv[~okm[gi][avail]] = -np.inf
+                r_qs = avail[int(np.argmax(sv))]
+                g_qs = float(shat[gi][flag] - shat[gi][r_qs])
+                # cascade: best available by anchor task mean, gap ordering
+                tm = tmean[t_name]
+                av_means = [float(tm.get(a, -np.inf)) for a in avail]
+                r_cs = avail[int(np.argmax(av_means))]
+                g_cs = float(tm.get(flag, 0.0) - max(av_means))
+                # random
+                r_rd = avail[rng.integers(0, len(avail))]
+                for name, r, conf in (('qa', r_qa, float(np.min(d))),
+                                      ('qa-score', r_qs, g_qs),
+                                      ('cascade', r_cs, g_cs),
+                                      ('random', r_rd, float(rng.random()))):
+                    recs[name][0].append(conf)
+                    recs[name][1].append(srow[r])
+                    recs[name][2].append(f_sc)
+            for name, (conf, sub_s, fl_s) in recs.items():
+                conf, sub_s, fl_s = map(np.asarray, (conf, sub_s, fl_s))
+                curve = policy_curve(conf, sub_s, fl_s)
+                for f, v in zip(FRACS, curve):
+                    out.append((pool_name, seed, name, float(f), v,
+                                float(fl_s.mean())))
+    return (pd.DataFrame(out, columns=['pool', 'seed', 'method',
+                                       'offload_frac', 'policy_score',
+                                       'flagship_score']),
+            models[flag], {models[i]: sizes[i] for i in sorted(pool)})
+
+
 def main():
     os.makedirs(RESULTS, exist_ok=True)
+    eee_df, eee_flag, eee_pool = run_eee_cost()
+    eee_df.to_parquet(os.path.join(RESULTS, 'cost_routing_eee.parquet'))
+    eee_df = eee_df.assign(retention=eee_df.policy_score / eee_df.flagship_score)
+    print(f'EEE flagship: {eee_flag}; example pool: {eee_pool}')
+    for pool, sub in eee_df.groupby('pool'):
+        piv = sub.groupby(['method', 'offload_frac'])['retention'].mean().unstack()
+        piv.to_csv(os.path.join(RESULTS, f'cost_routing_eee_{pool}.csv'))
+        print(f'\n== EEE pool {pool}: retention (%) ==')
+        print((100 * piv).round(2).to_string())
+
     df = run_helm()
     df.to_parquet(os.path.join(RESULTS, 'cost_routing_helm.parquet'))
     df = df.assign(retention=df.policy_score / df.flagship_score)
@@ -169,10 +281,14 @@ def main():
         piv.to_csv(os.path.join(RESULTS, f'cost_routing_helm_{pool}.csv'))
         print(f'\n== pool {pool}: score retention (%) by offload fraction ==')
         print((100 * piv).round(2).to_string())
-        print('max offload at >= 99% retention:')
+        print('max offload at >= 99% retention, and bill reduction at')
+        print('flagship/substitute price ratios R in {10, 25, 50}:')
         for meth in piv.index:
             okm = piv.loc[meth][piv.loc[meth] >= 0.99]
-            print(f'  {meth:8s} {(okm.index.max() if len(okm) else 0.0):.0%}')
+            f = float(okm.index.max()) if len(okm) else 0.0
+            save = {R: f * (1 - 1 / R) for R in (10, 25, 50)}
+            print(f'  {meth:9s} offload {f:4.0%} | save '
+                  + ' '.join(f'{save[R]:4.0%}@{R}x' for R in (10, 25, 50)))
 
 
 if __name__ == '__main__':
