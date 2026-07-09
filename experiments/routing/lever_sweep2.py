@@ -84,6 +84,43 @@ def pairdev_est(Xa, code_a, model_groups, flag, n, W, min_shared=3):
     return hat, nsh
 
 
+def softdev_est(Xa, ua, model_groups, flag, n, W, delta, knn=8,
+                cap=4000):
+    """Soft-pairdev: the PKPS-native deviation estimator. Each anchor
+    response of model m is compared with the flagship's responses to the
+    knn most SIMILAR (not identical) queries, RBF-coupled at bandwidth
+    delta; the coupled deviations are then localized to q* as in pairdev.
+    Needs no shared queries -- the finite-delta member of the family."""
+    q = W.shape[0]
+    f_idx = model_groups[flag]
+    uf = ua[f_idx]
+    Xf = Xa[f_idx]
+    hat = np.full((q, n), np.inf)
+    for m in range(n):
+        idx_m = model_groups[m]
+        if m == flag or len(idx_m) == 0 or len(f_idx) == 0:
+            continue
+        if len(idx_m) > cap:
+            idx_m = idx_m[np.linspace(0, len(idx_m) - 1, cap).astype(int)]
+        um = ua[idx_m]
+        D2 = ((um[:, None, :] - uf[None, :, :]) ** 2).sum(-1)
+        k = min(knn, D2.shape[1])
+        nn = np.argpartition(D2, k - 1, axis=1)[:, :k]
+        rows_i = np.arange(len(idx_m))[:, None]
+        Kd = np.exp(-D2[rows_i, nn] / (2.0 * delta ** 2))
+        devs = np.linalg.norm(Xa[idx_m][:, None, :] - Xf[nn], axis=2)
+        sK = Kd.sum(axis=1)
+        okj = sK > 1e-12
+        if not okj.any():
+            continue
+        dtilde = (Kd[okj] * devs[okj]).sum(axis=1) / sK[okj]
+        Wm = W[:, np.asarray(idx_m)[okj]]
+        s = Wm.sum(axis=1)
+        okq = s > 1e-12
+        hat[okq, m] = (Wm[okq] @ dtilde) / s[okq]
+    return hat
+
+
 def _prep(X, Qu, rows, n, names):
     sizes = [parse_params(nm.split(':', 1)[1]) for nm in names]
     suite_of = [nm.split(':', 1)[0] for nm in names]
@@ -295,6 +332,15 @@ def collect_pairing(X, Qu, rows, n, names, seed, alignment, n_hold=800,
         X, Qu, rows, anchor_m, hold_groups, n, rng)
     phi, shat, neff, ok = batched_stats2(Xa, sa, model_groups, n, W)
     hat, nsh = pairdev_est(Xa, code_a, model_groups, flag, n, W)
+    ua = Qu[code_a]
+    ii = rng.integers(0, len(ua), 20000)
+    kk = rng.integers(0, len(ua), 20000)
+    kpp = ii != kk
+    med = float(np.median(np.linalg.norm(ua[ii[kpp]] - ua[kk[kpp]],
+                                         axis=1)))
+    soft = {f'soft-{c:g}x': softdev_est(Xa, ua, model_groups, flag, n, W,
+                                        delta=c * med)
+            for c in (0.05, 0.15)}
 
     out = []
     for gi, (q, g) in enumerate(hold_groups):
@@ -323,6 +369,14 @@ def collect_pairing(X, Qu, rows, n, names, seed, alignment, n_hold=800,
                 out.append(base + ('pairdev', float(np.min(hv)), np.nan,
                                    np.nan, np.nan, np.nan, devrow[r_pd],
                                    srow[r_pd], srow[flag]))
+            for sname, shat_m in soft.items():
+                sv = shat_m[gi][avail]
+                if not np.isfinite(sv).any():
+                    continue
+                r_sf = avail[int(np.argmin(sv))]
+                out.append(base + (sname, float(np.min(sv)), np.nan,
+                                   np.nan, np.nan, np.nan, devrow[r_sf],
+                                   srow[r_sf], srow[flag]))
             out.append(base + ('oracle-conf', devrow[r], np.nan, np.nan,
                                np.nan, np.nan, devrow[r], srow[r],
                                srow[flag]))
