@@ -261,8 +261,121 @@ def run_eee_cost(seeds=5, pools=(('le5b', 5.0), ('le30b', 30.0)), n_eval=300):
             models[flag], {models[i]: sizes[i] for i in sorted(pool)})
 
 
+def run_combined_cost(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
+                      n_eval=400):
+    """Cost-aware offloading on the COMBINED unlabeled pool. One shared
+    router (joint geometry, no task/suite labels); per-suite flagships (the
+    expensive tier serving that traffic) since the suites share no queries.
+    Candidates per eval query = its responders within the size-capped pool.
+    Orderings are score-denominated (comparable across suites)."""
+    from .run_combined import load_combined
+    from .run_eee import batched_localized_stats
+    X, Qu, rows, n, names = load_combined()
+    sizes = [parse_params(nm.split(':', 1)[1]) for nm in names]
+    suite_of_model = [nm.split(':', 1)[0] for nm in names]
+
+    out = []
+    for pool_name, cap in pools:
+        pool = {i for i in range(n) if sizes[i] is not None and sizes[i] <= cap}
+        for seed in range(seeds):
+            rng = np.random.default_rng(seed)
+            gmean = rows.groupby('model')['score'].mean()
+            flags = {}
+            for su in ('helm', 'eee'):
+                idx = [i for i in range(n) if suite_of_model[i] == su]
+                flags[su] = int(gmean.loc[idx].idxmax())
+            pool_c = pool - set(flags.values())
+
+            resp = rows.groupby('query')['model'].agg(set)
+            suite_q = rows.drop_duplicates('query').set_index('query')['suite']
+            elig = [q for q, ms in resp.items()
+                    if flags[suite_q[q]] in ms and len(ms & pool_c) >= 1]
+            take = rng.choice(len(elig), size=min(n_eval, len(elig)),
+                              replace=False)
+            eval_q = {elig[i] for i in take}
+            is_eval = rows['query'].isin(eval_q).to_numpy()
+            anchor_m = ~is_eval
+            assert not rows['query'][anchor_m].isin(eval_q).any()
+
+            Xa = X[anchor_m]
+            sa = rows['score'].to_numpy()[anchor_m]
+            model_a = rows['model'].to_numpy()[anchor_m]
+            task_a = rows['task'].to_numpy()[anchor_m]
+            ua = Qu[rows['code'].to_numpy()[anchor_m]]
+            model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
+            i = rng.integers(0, len(ua), 20000)
+            k = rng.integers(0, len(ua), 20000)
+            keep = i != k
+            med = float(np.median(np.linalg.norm(
+                ua[i[keep]] - ua[k[keep]], axis=1)))
+            tmean = {tn: pd.Series(sa[task_a == tn]).groupby(
+                        pd.Series(model_a[task_a == tn])).mean()
+                     for tn in np.unique(task_a)}
+
+            eval_groups = list(rows[is_eval].groupby('query'))
+            Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in eval_groups])
+            D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1)
+            D2 = D2 - D2.min(axis=1, keepdims=True)
+            W = np.exp(-D2 / (2.0 * (0.25 * med) ** 2)).astype(np.float32)
+            phi, shat, okm = batched_localized_stats(Xa, sa, model_groups, n, W)
+
+            recs = {m: ([], [], [], []) for m in
+                    ('qa', 'qa-score', 'cascade', 'random')}
+            for gi, (q, g) in enumerate(eval_groups):
+                suite = g['suite'].iloc[0]
+                t_name = g['task'].iloc[0]
+                flag = flags[suite]
+                ms = set(g['model'].to_numpy())
+                avail = sorted(ms & pool_c)
+                srow = dict(zip(g['model'].to_numpy(),
+                                g['score'].to_numpy()))
+                f_sc = srow[flag]
+                d = np.linalg.norm(phi[gi][avail] - phi[gi][flag], axis=1)
+                d[~okm[gi][avail]] = np.inf
+                r_qa = avail[int(np.argmin(d))]
+                sv = shat[gi][avail].copy()
+                sv[~okm[gi][avail]] = -np.inf
+                r_qs = avail[int(np.argmax(sv))]
+                g_qs = float(shat[gi][flag] - shat[gi][r_qs])
+                tm = tmean[t_name]
+                av_means = [float(tm.get(a, -np.inf)) for a in avail]
+                r_cs = avail[int(np.argmax(av_means))]
+                g_cs = float(tm.get(flag, 0.0) - max(av_means))
+                r_rd = avail[rng.integers(0, len(avail))]
+                for name, r, conf in (('qa', r_qa, float(np.min(d))),
+                                      ('qa-score', r_qs, g_qs),
+                                      ('cascade', r_cs, g_cs),
+                                      ('random', r_rd, float(rng.random()))):
+                    recs[name][0].append(conf)
+                    recs[name][1].append(srow[r])
+                    recs[name][2].append(f_sc)
+                    recs[name][3].append(suite)
+            for name, (conf, sub_s, fl_s, sus) in recs.items():
+                conf, sub_s, fl_s = map(np.asarray, (conf, sub_s, fl_s))
+                curve = policy_curve(conf, sub_s, fl_s)
+                for f, v in zip(FRACS, curve):
+                    out.append((pool_name, seed, name, float(f), v,
+                                float(fl_s.mean())))
+    return pd.DataFrame(out, columns=['pool', 'seed', 'method',
+                                      'offload_frac', 'policy_score',
+                                      'flagship_score'])
+
+
 def main():
     os.makedirs(RESULTS, exist_ok=True)
+    cdf = run_combined_cost()
+    cdf.to_parquet(os.path.join(RESULTS, 'cost_routing_combined.parquet'))
+    cdf = cdf.assign(retention=cdf.policy_score / cdf.flagship_score)
+    for pool, sub in cdf.groupby('pool'):
+        piv = sub.groupby(['method', 'offload_frac'])['retention'].mean().unstack()
+        piv.to_csv(os.path.join(RESULTS, f'cost_routing_combined_{pool}.csv'))
+        print(f'\n== COMBINED pool {pool}: retention (%) ==')
+        print((100 * piv).round(2).to_string())
+        print('max offload at >= 99% retention:')
+        for meth in piv.index:
+            okm = piv.loc[meth][piv.loc[meth] >= 0.99]
+            print(f'  {meth:9s} {(okm.index.max() if len(okm) else 0.0):.0%}')
+
     eee_df, eee_flag, eee_pool = run_eee_cost()
     eee_df.to_parquet(os.path.join(RESULTS, 'cost_routing_eee.parquet'))
     eee_df = eee_df.assign(retention=eee_df.policy_score / eee_df.flagship_score)

@@ -48,7 +48,7 @@ def load_combined():
         H.pca_reduce_elbow = orig
         os.chdir(cwd)
 
-    frames, Xs, Qs = [], [], []
+    frames, Xs, Qs, all_names = [], [], [], []
     n_off, code_off = 0, 0
     dims = [helm[0].shape[1], eee[0].shape[1]]
     for si, (suite, data) in enumerate((('helm', helm), ('eee', eee))):
@@ -67,6 +67,7 @@ def load_combined():
         pad[:, off:off + dims[si]] = resp_X
         Xs.append(pad)
         Qs.append(np.asarray(Qu, dtype=np.float64))
+        all_names.extend(f'{suite}:{mm}' for mm in models)
         n_off += len(models)
         code_off += len(Qu)
 
@@ -74,7 +75,7 @@ def load_combined():
     X = np.concatenate(Xs)
     Qu_raw = np.concatenate(Qs)                       # joint raw Gemini space
     Qu = pca_to(Qu_raw, D_Q).astype(np.float32)
-    return X, Qu, rows, n_off
+    return X, Qu, rows, n_off, all_names
 
 
 def run_seed(X, Qu, rows, n, seed, n_eval=400):
@@ -142,7 +143,7 @@ def run_seed(X, Qu, rows, n, seed, n_eval=400):
 
 def main():
     os.makedirs(RESULTS, exist_ok=True)
-    X, Qu, rows, n = load_combined()
+    X, Qu, rows, n, _names = load_combined()
     print(f'combined: {len(rows)} rows, {n} models, '
           f'{rows["query"].nunique()} queries, {rows["task"].nunique()} '
           f'hidden tasks, X dim {X.shape[1]}, Qu {Qu.shape}')
