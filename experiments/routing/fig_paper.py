@@ -24,7 +24,29 @@ from .run_cost_routing import parse_params
 from .run_helm import RESULTS
 
 FIGDIR = os.path.join(RESULTS, 'figures')
-C = {'pairdev': '#d62728', 'qa': '#1f77b4', 'oracle': '0.45'}
+C = {'pairdev': '#e11d48', 'qa': '#2563eb', 'oracle': '#94a3b8',
+     'flag': '#e11d48', 'pickA': '#2563eb', 'pickB': '#f59e0b',
+     'grey': '#9ca3af', 'slate1': '#7f9cbd', 'slate2': '#4a6d8c'}
+
+plt.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.size': 9,
+    'axes.titlesize': 10,
+    'axes.labelsize': 9,
+    'axes.spines.top': False,
+    'axes.spines.right': False,
+    'axes.edgecolor': '#334155',
+    'axes.labelcolor': '#1e293b',
+    'axes.titlecolor': '#0f172a',
+    'xtick.color': '#475569',
+    'ytick.color': '#475569',
+    'legend.frameon': False,
+    'legend.fontsize': 8,
+    'grid.color': '#cbd5e1',
+    'grid.linewidth': 0.6,
+    'grid.alpha': 0.5,
+    'figure.facecolor': 'white',
+})
 
 
 def _save(fig, name):
@@ -43,14 +65,14 @@ def fig_concept():
     _, suite_of, gmean, ranked = _prep(X, Qu, rows, n, names)
     flag = ranked['helm'][0]
     pool = {i for i in range(n) if suite_of[i] == 'helm'
-            and sizes[i] is not None and sizes[i] <= 13.0}
+            and sizes[i] is not None and sizes[i] <= 40.0} - {flag}
 
     rng = np.random.default_rng(0)
     helm = rows[rows.suite == 'helm']
     resp = helm.groupby('query')['model'].agg(set)
     full = [q for q, ms in resp.items() if pool | {flag} <= ms]
     tasks = helm.drop_duplicates('query').set_index('query')['task']
-    cand_q = list(rng.choice(full, size=40, replace=False))
+    cand_q = list(rng.choice(full, size=120, replace=False))
 
     is_hold = rows['query'].isin(cand_q).to_numpy()
     anchor_m = ~is_hold
@@ -93,36 +115,88 @@ def fig_concept():
         d2 = np.linalg.norm(pts[:-1] - pts[-1], axis=1)
         return mods[int(np.argmin(d2))] == picks[gi]
 
-    qa_i, qb_i, A, B = None, None, None, None
+    def legibility(A, B, iA, iB):
+        # smallest separation among the highlighted relations, in span units
+        span = max(np.ptp(np.concatenate([A, B]), axis=0))
+        gaps = []
+        for pts in (A, B):
+            gaps.append(np.linalg.norm(pts[iA] - pts[iB]))
+            gaps += [np.linalg.norm(pts[j] - pts[-1]) for j in (iA, iB)]
+        return min(gaps) / span
+
+    best = (-1.0, None)
     for a in range(len(order)):
         for b in range(a + 1, len(order)):
             if dset(order[a][1]) == dset(order[b][1]) \
                     or picks[a] == picks[b]:
                 continue
-            A, B = project(a, b)
-            if faithful(A, a) and faithful(B, b):
-                qa_i, qb_i = a, b
-                break
-        if qa_i is not None:
-            break
-    assert qa_i is not None, 'no projection-faithful query pair found'
+            Pa, Pb = project(a, b)
+            if not (faithful(Pa, a) and faithful(Pb, b)):
+                continue
+            ia, ib = mods.index(picks[a]), mods.index(picks[b])
+            score = legibility(Pa, Pb, ia, ib)
+            if score > best[0]:
+                best = (score, (a, b, Pa, Pb))
+    assert best[1] is not None, 'no projection-faithful query pair found'
+    qa_i, qb_i, A, B = best[1]
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.4, 3.6))
+    mA, mB = picks[qa_i], picks[qb_i]
+    iA, iB = mods.index(mA), mods.index(mB)
+
+    def short(m):
+        s = names[m].split(':', 1)[1]
+        return s if len(s) <= 26 else s[:24] + '…'
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.0, 4.0))
     for ax, pts, gi in ((axes[0], A, qa_i), (axes[1], B, qb_i)):
         near = mods.index(picks[gi])
-        ax.scatter(pts[:-1, 0], pts[:-1, 1], s=42, color='0.62',
-                   zorder=2, label='candidate models')
-        ax.scatter(*pts[-1], marker='*', s=340, color=C['pairdev'],
-                   zorder=4, label='flagship')
-        ax.scatter(*pts[near], s=130, facecolors='none',
-                   edgecolors=C['qa'], linewidths=2.2, zorder=3,
-                   label='nearest candidate')
-        ax.set_title(f'query from {dset(order[gi][1])}', fontsize=10)
+        others = [j for j in range(len(mods) - 1) if j not in (iA, iB)]
+        ax.scatter(pts[others, 0], pts[others, 1], s=26, color=C['grey'],
+                   alpha=0.55, linewidths=0, zorder=2,
+                   label='cached models')
+        # dashed link flagship -> this query's nearest
+        ax.plot([pts[-1, 0], pts[near, 0]], [pts[-1, 1], pts[near, 1]],
+                ls=(0, (2, 3)), color='#64748b', lw=1.1, zorder=3)
+        for j, key, m, off in ((iA, 'pickA', mA, (9, 9)),
+                               (iB, 'pickB', mB, (9, -14))):
+            is_near = j == near
+            ax.scatter(*pts[j], s=120 if is_near else 90, color=C[key],
+                       edgecolors='white', linewidths=1.2, zorder=5)
+            if is_near:
+                ax.scatter(*pts[j], s=340, facecolors='none',
+                           edgecolors=C[key], linewidths=1.6, zorder=4)
+            ax.annotate(short(m), pts[j], textcoords='offset points',
+                        xytext=off, fontsize=7.5, color=C[key],
+                        fontweight='bold' if is_near else 'normal')
+        ax.scatter(*pts[-1], marker='*', s=430, color=C['flag'],
+                   edgecolors='white', linewidths=0.8, zorder=6,
+                   label='flagship')
+        ax.annotate(short(flag), pts[-1], textcoords='offset points',
+                    xytext=(-10, -14), fontsize=7.5, color=C['flag'],
+                    ha='right')
+        ax.set_title(f'query from {dset(order[gi][1])}')
         ax.set_xticks([])
         ax.set_yticks([])
-    axes[0].legend(loc='lower left', frameon=False, fontsize=8)
-    fig.suptitle('The same cached models, localized to two queries: '
-                 'the substitute nearest the flagship changes', y=1.02)
+        for sp in ax.spines.values():
+            sp.set_visible(True)
+            sp.set_color('#e2e8f0')
+        ax.margins(0.10)
+    import matplotlib.lines as mlines
+    handles = [
+        mlines.Line2D([], [], marker='*', ls='', ms=15, color=C['flag'],
+                      label='flagship'),
+        mlines.Line2D([], [], marker='o', ls='', ms=8, color=C['pickA'],
+                      label=f'nearest for the {dset(order[qa_i][1])} query'),
+        mlines.Line2D([], [], marker='o', ls='', ms=8, color=C['pickB'],
+                      label=f'nearest for the {dset(order[qb_i][1])} query'),
+        mlines.Line2D([], [], marker='o', ls='', ms=6, color=C['grey'],
+                      alpha=0.55, label='other cached models'),
+    ]
+    fig.legend(handles=handles, loc='lower center', ncol=4,
+               bbox_to_anchor=(0.5, -0.04))
+    fig.suptitle('One response cache, two queries: the localized geometry '
+                 'reranks the substitutes', y=1.0)
+    fig.tight_layout(rect=[0, 0.04, 1, 0.97])
     _save(fig, 'fig1_concept')
 
 
@@ -265,8 +339,8 @@ def fig_ablations():
     width = 0.35
     ranks = ('r1', 'r5', 'rmed')
     lbl = ('best', '5th best', 'median')
-    for j, (pool, col) in enumerate((('le13b', '#7f9cbd'),
-                                     ('all', '#4a6d8c'))):
+    for j, (pool, col) in enumerate((('le13b', C['slate1']),
+                                     ('all', C['slate2']))):
         ys = []
         for rk in ranks:
             sub = df2[(df2.pool == pool) & (df2.variant == rk)
