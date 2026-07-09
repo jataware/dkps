@@ -509,6 +509,171 @@ def run_scarcity(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
                                       'flagship_score'])
 
 
+def run_tolerance(seeds=5, pools=(('le13b', 13.0), ('le40b', 40.0)),
+                  n_eval=400, n_cal=400):
+    """Tolerance-gated offloading: serve the substitute only when PREDICTED
+    behavioral deviation is within a tolerance eps. The qa confidence
+    (localized flagship-candidate distance) is mapped to expected realized
+    deviation by isotonic regression on a disjoint calibration split,
+    held out of the geometry exactly like eval queries (leak-free). The
+    contract is per-query; baselines have no per-query error signal, so at a
+    matched offload fraction they serve an arbitrary subset. Returns
+    per-decision records; policy curves are computed by the caller."""
+    from sklearn.isotonic import IsotonicRegression  # noqa: F401 (caller)
+    from .run_combined import load_combined
+    from .run_eee import batched_localized_stats
+    X, Qu, rows, n, names = load_combined()
+    sizes = [parse_params(nm.split(':', 1)[1]) for nm in names]
+    suite_of_model = [nm.split(':', 1)[0] for nm in names]
+
+    out = []
+    for pool_name, cap in pools:
+        pool = {i for i in range(n) if sizes[i] is not None and sizes[i] <= cap}
+        for seed in range(seeds):
+            rng = np.random.default_rng(seed)
+            gmean = rows.groupby('model')['score'].mean()
+            flags = {}
+            for su in ('helm', 'eee'):
+                idx = [i for i in range(n) if suite_of_model[i] == su]
+                flags[su] = int(gmean.loc[idx].idxmax())
+            pool_c = pool - set(flags.values())
+
+            resp = rows.groupby('query')['model'].agg(set)
+            suite_q = rows.drop_duplicates('query').set_index('query')['suite']
+            elig = [q for q, ms in resp.items()
+                    if flags[suite_q[q]] in ms and len(ms & pool_c) >= 1]
+            k_hold = min(n_eval + n_cal, len(elig))
+            take = rng.choice(len(elig), size=k_hold, replace=False)
+            eval_q = {elig[i] for i in take[:k_hold // 2]}
+            cal_q = {elig[i] for i in take[k_hold // 2:]}
+            hold_q = eval_q | cal_q
+            is_hold = rows['query'].isin(hold_q).to_numpy()
+            anchor_m = ~is_hold
+            assert not rows['query'][anchor_m].isin(hold_q).any()
+
+            Xa = X[anchor_m]
+            sa = rows['score'].to_numpy()[anchor_m]
+            model_a = rows['model'].to_numpy()[anchor_m]
+            ua = Qu[rows['code'].to_numpy()[anchor_m]]
+            model_groups = [np.flatnonzero(model_a == m) for m in range(n)]
+            i = rng.integers(0, len(ua), 20000)
+            k = rng.integers(0, len(ua), 20000)
+            keep = i != k
+            med = float(np.median(np.linalg.norm(
+                ua[i[keep]] - ua[k[keep]], axis=1)))
+
+            hold_groups = list(rows[is_hold].groupby('query'))
+            Ue = np.stack([Qu[g['code'].iloc[0]] for _, g in hold_groups])
+            D2 = ((Ue[:, None, :] - ua[None, :, :]) ** 2).sum(-1)
+            D2 = D2 - D2.min(axis=1, keepdims=True)
+            W = np.exp(-D2 / (2.0 * (0.25 * med) ** 2)).astype(np.float32)
+            phi, _, okm = batched_localized_stats(Xa, sa, model_groups, n, W)
+            phi_st, _, ok_st = batched_localized_stats(
+                Xa, sa, model_groups, n, np.ones((1, len(Xa)), np.float32))
+            gmean_a = pd.Series(sa).groupby(pd.Series(model_a)).mean()
+
+            for gi, (q, g) in enumerate(hold_groups):
+                suite = g['suite'].iloc[0]
+                flag = flags[suite]
+                gm = g['model'].to_numpy()
+                avail = sorted(set(gm) & pool_c)
+                srow = dict(zip(gm, g['score'].to_numpy()))
+                Xq = X[g.index.to_numpy()]
+                x_flag = Xq[list(gm).index(flag)]
+                devrow = {m: float(np.linalg.norm(Xq[i] - x_flag))
+                          for i, m in enumerate(gm)}
+                d = np.linalg.norm(phi[gi][avail] - phi[gi][flag], axis=1)
+                d[~okm[gi][avail]] = np.inf
+                r_qa = avail[int(np.argmin(d))]
+                d_st = np.linalg.norm(phi_st[0][avail] - phi_st[0][flag],
+                                      axis=1)
+                d_st[~ok_st[0][avail]] = np.inf
+                r_st = avail[int(np.argmin(d_st))]
+                r_ld = avail[int(np.argmax(
+                    [float(gmean_a.get(a, -np.inf)) for a in avail]))]
+                r_rd = avail[rng.integers(0, len(avail))]
+                out.append((pool_name, seed,
+                            'eval' if q in eval_q else 'cal', suite, q,
+                            float(np.min(d)),
+                            devrow[r_qa], srow[r_qa],
+                            devrow[r_ld], srow[r_ld],
+                            devrow[r_st], srow[r_st],
+                            devrow[r_rd], srow[r_rd],
+                            srow[flag]))
+    return pd.DataFrame(out, columns=[
+        'pool', 'seed', 'split', 'suite', 'query', 'conf',
+        'dev_qa', 's_qa', 'dev_ld', 's_ld', 'dev_st', 's_st',
+        'dev_rd', 's_rd', 's_flag'])
+
+
+def tolerance_curves(df, eps_grid=(0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5)):
+    """Per (pool, seed): calibrate conf -> expected deviation on the cal
+    split, gate eval offloading at each eps. Baselines offload a random
+    subset of matched size (expectations computed in closed form)."""
+    from sklearn.isotonic import IsotonicRegression
+    rows = []
+    for (pool, seed), sub in df.groupby(['pool', 'seed']):
+        cal = sub[sub.split == 'cal']
+        ev = sub[sub.split == 'eval'].reset_index(drop=True)
+        iso = IsotonicRegression(out_of_bounds='clip')
+        iso.fit(cal['conf'].to_numpy(), cal['dev_qa'].to_numpy())
+        pred = iso.predict(ev['conf'].to_numpy())
+        flag = ev['s_flag'].to_numpy()
+        for eps in eps_grid:
+            off = pred <= eps
+            f = float(off.mean())
+            rec = {'pool': pool, 'seed': seed, 'eps': eps, 'frac': f}
+            dv, sc = ev['dev_qa'].to_numpy(), ev['s_qa'].to_numpy()
+            rec['qa_dev'] = float(dv[off].mean()) if off.any() else 0.0
+            rec['qa_viol'] = float((dv[off] > eps).mean()) if off.any() else 0.0
+            rec['qa_ret'] = float(np.where(off, sc, flag).mean()
+                                  / flag.mean())
+            for b in ('ld', 'st', 'rd'):
+                dv, sc = ev[f'dev_{b}'].to_numpy(), ev[f's_{b}'].to_numpy()
+                # random subset of matched size: per-query offload prob = f
+                rec[f'{b}_dev'] = float(dv.mean())
+                rec[f'{b}_viol'] = float((dv > eps).mean())
+                rec[f'{b}_ret'] = float((f * sc + (1 - f) * flag).mean()
+                                        / flag.mean())
+            rows.append(rec)
+    return pd.DataFrame(rows)
+
+
+def conformal_gate(df, eps_grid=(0.1, 0.2, 0.3, 0.5),
+                   alphas=(0.05, 0.10, 0.20), min_prefix=20):
+    """Conformal-style gate on run_tolerance decisions: per (pool, seed,
+    eps, alpha), the largest confidence cutoff whose calibration-split
+    violation rate P(dev > eps | conf <= t) stays <= alpha (requiring a
+    minimally stable prefix; abstain otherwise). Baselines cannot target
+    (eps, alpha) at all -- their violation rate is a fixed population
+    property of the pick, reported at matched volume."""
+    rows = []
+    for (pool, seed), sub in df.groupby(['pool', 'seed']):
+        cal = sub[sub.split == 'cal'].sort_values('conf')
+        ev = sub[sub.split == 'eval']
+        conf_sorted = cal['conf'].to_numpy()
+        for eps in eps_grid:
+            bad = (cal['dev_qa'].to_numpy() > eps).astype(float)
+            cum_viol = np.cumsum(bad) / np.arange(1, len(bad) + 1)
+            for alpha in alphas:
+                ok = np.flatnonzero(cum_viol <= alpha)
+                ok = ok[ok >= min_prefix - 1]
+                t = conf_sorted[ok.max()] if len(ok) else -np.inf
+                off = ev['conf'].to_numpy() <= t
+                dv, sc = ev['dev_qa'].to_numpy(), ev['s_qa'].to_numpy()
+                fl = ev['s_flag'].to_numpy()
+                rows.append({
+                    'pool': pool, 'seed': seed, 'eps': eps, 'alpha': alpha,
+                    'frac': float(off.mean()),
+                    'viol': (float((dv[off] > eps).mean())
+                             if off.any() else 0.0),
+                    'ret': float(np.where(off, sc, fl).mean() / fl.mean()),
+                    'ld_viol': float((ev['dev_ld'].to_numpy() > eps).mean()),
+                    'rd_viol': float((ev['dev_rd'].to_numpy() > eps).mean()),
+                })
+    return pd.DataFrame(rows)
+
+
 def main():
     os.makedirs(RESULTS, exist_ok=True)
     cdf = run_combined_cost()
