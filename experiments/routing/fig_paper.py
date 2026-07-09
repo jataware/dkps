@@ -223,23 +223,27 @@ def _vol_curve(sub, eps_grid, alpha=0.10):
 
 
 def fig_contract():
-    df = pd.read_parquet(os.path.join(RESULTS, 'lever2_conf.parquet'))
-    d1 = df[df.variant == 'r1']
+    d1 = pd.concat(
+        [pd.read_parquet(os.path.join(RESULTS, f'gap_close{s}.parquet'))
+         for s in ('_1600', '_1600b')], ignore_index=True)
     eps_grid = np.arange(0.15, 0.75, 0.05)
-    rd_dev = d1[(d1.pool == 'le13b') & (d1.method == 'random')
-                & (d1.split == 'eval')]['dev'].median()
+    lev = pd.read_parquet(os.path.join(RESULTS, 'lever2_conf.parquet'))
+    rd_dev = lev[(lev.pool == 'le13b') & (lev.method == 'random')
+                 & (lev.split == 'eval')]['dev'].median()
+    METHS = (('pd-cal', C['pairdev'], 2.2),
+             ('pairdev', '#486884', 1.2),
+             ('qa', C['qa'], 2.0),
+             ('oracle-conf', C['oracle'], 1.2))
 
     fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.8))
     ax = axes[0]
     for pool, ls in (('le13b', '-'), ('all', '--')):
         sub = d1[d1.pool == pool]
-        for meth, key in (('pairdev', 'pairdev'), ('qa', 'qa')):
+        for meth, col, lw in METHS:
             v = _vol_curve(sub[sub.method == meth], eps_grid)
-            ax.plot(eps_grid, 100 * v[:, 0], ls, color=C[key], lw=2,
-                    label=f'{meth} ({pool})')
-        v = _vol_curve(sub[sub.method == 'oracle-conf'], eps_grid)
-        ax.plot(eps_grid, 100 * v[:, 0], ls, color=C['oracle'], lw=1.2,
-                label=f'oracle ({pool})')
+            lbl = 'oracle' if meth == 'oracle-conf' else meth
+            ax.plot(eps_grid, 100 * v[:, 0], ls, color=col, lw=lw,
+                    label=f'{lbl} ({pool})')
     ax.axvline(rd_dev, color='k', lw=0.7, ls=':')
     ax.text(rd_dev + 0.01, 6, 'median deviation of\na random model swap',
             fontsize=7.5)
@@ -247,12 +251,12 @@ def fig_contract():
     ax.set_ylabel(r'certified traffic volume (%)  [$\alpha$ = 10%]')
     ax.set_title('Contract frontier: volume certifiable at\n'
                  r'P(deviation > $\varepsilon$) $\leq$ 10%')
-    ax.legend(fontsize=8, frameon=False, loc='upper left')
+    ax.legend(fontsize=7, frameon=False, loc='upper left', ncol=2)
     ax.grid(alpha=0.3)
 
     ax = axes[1]
     sub = d1[d1.pool == 'le13b']
-    for meth, key in (('pairdev', 'pairdev'), ('qa', 'qa')):
+    for meth, key in (('pd-cal', 'pairdev'), ('qa', 'qa')):
         v = _vol_curve(sub[sub.method == meth], eps_grid)
         for R, lsr in ((25, '-'), (10, ':')):
             ax.plot(eps_grid, 100 * v[:, 0] * (1 - 1 / R), lsr,
