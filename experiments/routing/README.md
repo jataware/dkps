@@ -158,30 +158,37 @@ confidence, so their violation rate at a given eps is a fixed population
 property (e.g. 45% at eps = 0.3) regardless of volume or budget. The
 per-query contract requires a per-query error predictor.
 
-**The confidence estimator ladder** (`gap_close.py`; contract (0.5, 10%),
-combined pool, 15 seeds). A calibrated guarantee ALWAYS requires realized
-deviations on a few hundred of the operator's own queries -- candidate
-generations, bought with compute, no labels. The ladder prices what
-pairing beyond that sample is worth:
+**The confidence estimator ladder** (`gap_close.py`; canonical protocol
+eval 400 / calA 400 / calB 400, `gap_close_p800.parquet`, 15 seeds; ALL
+contract figures and Table 1 source this one protocol). A calibrated
+guarantee ALWAYS requires realized deviations on a few hundred of the
+operator's own queries -- candidate generations, bought with compute, no
+labels. Gate volumes are BIMODAL per seed (typical certification vs
+occasional conservative abstention -- volume 0, contract intact), so
+numbers are median [IQR] with the abstention rate stated; violations are
+over certifying seeds.
 
-| estimator | pairing assumed          | vol <=13B | vol all | viol | ret (all) |
-|-----------|--------------------------|----------:|--------:|-----:|----------:|
-| qa        | none (localized means)   |       18% |     28% |  ok  |     .984  |
-| **pd-cal**| **calibration sample only** |   **36%** | **74%** | **.09** | **.995** |
-| pairdev   | full suite pairing       |       24% |     70% |  ok  |     .986  |
-| oracle    | (cheating reference)     |       83% |     95% |  --  |     .953  |
+| estimator | pairing assumed          | vol <=13B | vol all | abstain | 
+|-----------|--------------------------|----------:|--------:|--------:|
+| qa        | none (localized means)   |       10% |     41% |     40% |
+| pd100     | 100 bought anchors/cand. |        0% |     86% |     33% |
+| **pd-cal**| **calibration sample only** |  **24%** | **90%** | **20%** |
+| pairdev   | full suite pairing       |       52% |     95% |      0% |
+| oracle    | (cheating reference)     |       83% |     93% |      0% |
 
 `pd-cal` regresses realized pairwise deviations on the calibration sample
 itself (split in half: anchors / gate calibration, kept disjoint) and
-BEATS full-suite pairing everywhere -- 400 anchors drawn from the
-operator's own traffic are worth more than ~1400 suite-wide ones. Fully
-unpaired estimators cannot close this gap in principle: the gated quantity
-decomposes as ||mu_m - mu_f||^2 + tr S_m + tr S_f - 2 tr Cov(m, f), and
-the co-movement term is a joint moment invisible to marginals (var-ub,
-the Cov=0 bound, certifies ~0%; the same asymmetry as the score-agreement
-side-study). Assumption box, final: no labels anywhere; candidate caches
-may be pairwise disjoint; one ~400-query calibration sample, which any
-calibrated policy needs and pd-cal simply does not waste.
+reaches within ~5 points of the full-pairing ceiling on the unrestricted
+pool using only that sample (whether it beats pairdev outright depends on
+how much residual suite pairing the protocol leaves -- draw-sensitive,
+reported honestly). Fully unpaired estimators cannot close this gap in
+principle: the gated quantity decomposes as ||mu_m - mu_f||^2 + tr S_m +
+tr S_f - 2 tr Cov(m, f); the co-movement term needs same-query pairs, and
+its unbiased cross-query estimators drown in nuisance variance (var-ub /
+soft-pairdev / debiased soft all certify ~0 on disjoint caches).
+Assumption box, final: no labels anywhere; candidate caches may be
+pairwise disjoint; one ~400-query calibration sample, which any calibrated
+policy needs and pd-cal simply does not waste.
 
 **Aggregate curves (secondary).** At matched offload fractions, qa has the
 lowest behavioral deviation among score-free policies everywhere (<=13B at
