@@ -198,10 +198,32 @@ def fig_concept():
     ]
     fig.legend(handles=handles, loc='lower center', ncol=4,
                bbox_to_anchor=(0.5, -0.04))
-    fig.suptitle('One response cache, two queries: the localized geometry '
-                 'reranks the substitutes', y=1.0)
+    fig.suptitle('One response cache, two queries: the PKPS geometry '
+                 'localized at $q^*$ reranks the substitutes', y=1.0)
     fig.tight_layout(rect=[0, 0.04, 1, 0.97])
     _save(fig, 'fig1_concept')
+
+
+# ---------------------------------------------------------------- helpers
+def _read(*stems):
+    """Concat result parquets; silently skip missing ones (stabilization
+    passes append *_b files as they land)."""
+    dfs = []
+    for s in stems:
+        p = os.path.join(RESULTS, f'{s}.parquet')
+        if os.path.exists(p):
+            dfs.append(pd.read_parquet(p))
+    return pd.concat(dfs, ignore_index=True)
+
+
+def _bar(ax, labels, means, ses, colors, ylabel):
+    x = np.arange(len(labels))
+    ax.bar(x, means, yerr=ses, width=0.62, color=colors, capsize=2,
+           error_kw=dict(lw=0.8))
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=20, ha='right', fontsize=7.5)
+    ax.set_ylabel(ylabel)
+    ax.grid(alpha=0.3, axis='y')
 
 
 # ---------------------------------------------------------------- contract
@@ -270,7 +292,7 @@ def fig_contract():
     ax.legend(fontsize=8, frameon=False, loc='upper left')
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    _save(fig, 'fig2_contract')
+    _save(fig, 'fig3_contract')
 
 
 # --------------------------------------------------------------- ablations
@@ -371,9 +393,391 @@ def fig_ablations():
     _save(fig, 'fig3_ablations')
 
 
+# --------------------------------------------------------------- selection
+def fig2_selection():
+    """PKPS selection minimizes mimicry; difficulty vs target rank,
+    candidate count, and cache density. Pick-deviation units throughout."""
+    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.4))
+
+    ax = axes[0]                       # (a) combined-pool selection quality
+    cm = _read('combined_mimicry')
+    order = [('qa-0.25x', 'PKPS (label-free)', C['qa']),
+             ('task*', 'task* (hidden labels)', C['slate2']),
+             ('static', 'static', C['slate1']),
+             ('random', 'random', C['grey']),
+             ('oracle', 'oracle', C['oracle'])]
+    per = cm[cm.method.isin([m for m, _, _ in order])] \
+        .groupby(['method', 'seed'])['error'].mean().unstack()
+    means = [per.loc[m].mean() for m, _, _ in order]
+    ses = [per.loc[m].std() / np.sqrt(per.shape[1]) for m, _, _ in order]
+    _bar(ax, [l for _, l, _ in order], means, ses,
+         [c for _, _, c in order], 'mimicry error of the pick')
+    ax.set_title('(a) Selection on one unlabeled pool:\n'
+                 'label-free matches hidden task labels')
+
+    d2 = _read('lever2_conf', 'lever2_conf_b')
+    ev = d2[(d2.method == 'qa') & (d2.split == 'eval')]
+
+    ax = axes[1]                       # (b) target rank
+    lbl = {'r1': 'best', 'r5': '5th best', 'rmed': 'median'}
+    for pool, ls in (('le13b', '-'), ('all', '--')):
+        per = ev[ev.pool == pool].groupby(['variant', 'seed'])['dev'] \
+            .mean().unstack().reindex(['r1', 'r5', 'rmed'])
+        ax.errorbar(range(3), per.mean(1),
+                    yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
+                    color=C['qa'], lw=2, ms=4, capsize=2,
+                    label=f'pool {pool}')
+    ax.set_xticks(range(3))
+    ax.set_xticklabels([lbl[v] for v in ('r1', 'r5', 'rmed')])
+    ax.set_xlabel('target model (rank by mean score)')
+    ax.set_ylabel('mimicry error of the pick')
+    ax.set_title('(b) The best model is the\nhardest target to mimic')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    ax = axes[2]                       # (c) candidate count
+    ev1 = d2[(d2.variant == 'r1') & (d2.split == 'eval')]
+    ks, qa_m, qa_s, orc = [], [], [], []
+    for pool, K in [(f'k{k}', k) for k in (2, 4, 8, 16, 32, 64)] \
+            + [('all', 137)]:
+        sq = ev1[(ev1.pool == pool) & (ev1.method == 'qa')]
+        if not len(sq):
+            continue
+        per = sq.groupby('seed')['dev'].mean()
+        ks.append(K)
+        qa_m.append(per.mean())
+        qa_s.append(per.std() / np.sqrt(len(per)))
+        orc.append(ev1[(ev1.pool == pool)
+                       & (ev1.method == 'oracle-pick')]['dev'].mean())
+    ax.errorbar(ks, qa_m, yerr=qa_s, fmt='-o', color=C['qa'], lw=2, ms=4,
+                capsize=2, label='PKPS pick')
+    ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.5, ms=4,
+            label='oracle pick')
+    ax.set_xscale('log', base=2)
+    ax.set_xlabel('candidate models available')
+    ax.set_ylabel('mimicry error of the pick')
+    ax.set_title('(c) More candidates: the floor\nfalls, PKPS follows it')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    ax = axes[3]                       # (d) cache density
+    d1 = _read('lever_decisions', 'lever_decisions_b')
+    sq = d1[(d1.method == 'qa-0.25x') & (d1.split == 'eval')]
+    for pool, ls in (('le13b', '-'), ('all', '--')):
+        per = sq[sq.pool == pool].groupby(['anchor_frac', 'seed'])['dev'] \
+            .mean().unstack()
+        ax.errorbar(100 * per.index, per.mean(1),
+                    yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
+                    color=C['qa'], lw=2, ms=4, capsize=2,
+                    label=f'pool {pool}')
+    ax.set_xlabel('cached responses per model (% of full cache)')
+    ax.set_ylabel('mimicry error of the pick')
+    ax.set_title('(d) Selection quality vs\ncache density')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    _save(fig, 'fig2_selection')
+
+
+# ------------------------------------------------------------------ family
+def _gate_stats(df, pool, methods, eps=0.5, alpha=0.10):
+    from .gap_close import gate2
+    rows = []
+    for meth in methods:
+        sub = df[(df.pool == pool) & (df.method == meth)]
+        if not len(sub):
+            continue
+        per = []
+        for _, ss in sub.groupby('seed'):
+            cc = ss[ss.split == 'cal']['conf'].to_numpy()
+            ce = ss[ss.split == 'eval']['conf'].to_numpy()
+            cc, ce = (np.where(np.isfinite(x), x, 1e6) for x in (cc, ce))
+            off = gate2(cc, ss[ss.split == 'cal']['dev'].to_numpy(), ce,
+                        eps, alpha)
+            dv = ss[ss.split == 'eval']['dev'].to_numpy()
+            per.append((off.mean(),
+                        (dv[off] > eps).mean() if off.any() else 0.0))
+        per = np.asarray(per)
+        rows.append({'method': meth, 'vol': per[:, 0].mean(),
+                     'se': per[:, 0].std() / np.sqrt(len(per)),
+                     'viol': per[:, 1].mean()})
+    if not rows:
+        return pd.DataFrame(columns=['vol', 'se', 'viol']) \
+            .rename_axis('method')
+    return pd.DataFrame(rows).set_index('method')
+
+
+LADDER = [('qa', 'none\n(localized means)', C['qa']),
+          ('var-norm', 'none', C['slate1']),
+          ('var-ub', 'none', C['slate1']),
+          ('pd30', '30 bought\nanchors/cand.', C['slate2']),
+          ('pd100', '100 bought\nanchors/cand.', C['slate2']),
+          ('pd-cal', 'calibration\nsample only', C['pairdev']),
+          ('pairdev', 'full suite\npairing', '#486884'),
+          ('oracle-conf', '(cheats)', C['oracle'])]
+
+
+def fig4_family():
+    """One estimator family, one coupling dial delta."""
+    gc = _read('gap_close_1600', 'gap_close_1600b')
+    fig = plt.figure(figsize=(15.2, 3.6))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.3, 1.0])
+
+    ax = fig.add_subplot(gs[0])        # (a) schematic: the coupling dial
+    ax.axis('off')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.text(0.5, 0.94, r'$\hat D^2(m,f;q^*)=\frac{\sum_{j,l} k_\sigma(q_j,'
+            r'q^*)\,k_\sigma(q_l,q^*)\,k_\delta(q_j,q_l)\,\|x_{mj}-x_{fl}'
+            r'\|^2}{\mathrm{norm}}$', ha='center', fontsize=9)
+    ax.annotate('', xy=(0.95, 0.62), xytext=(0.05, 0.62),
+                arrowprops=dict(arrowstyle='->', color='#486884', lw=1.4))
+    ax.text(0.5, 0.68, r'coupling bandwidth $\delta$', ha='center',
+            fontsize=9, color='#213c66')
+    for x, t, c in ((0.10, r'$\delta\to\infty$' '\nqa, var-ub\n(unpaired '
+                     'means)', C['qa']),
+                    (0.50, r'finite $\delta$' '\nsoft-pairdev\n(similar '
+                     'queries)', C['slate2']),
+                    (0.88, r'$\delta\to 0$' '\npd-cal, pairdev\n(exact '
+                     'pairs)', C['pairdev'])):
+        ax.plot([x], [0.62], 'o', color=c, ms=7)
+        ax.text(x, 0.50, t, ha='center', va='top', fontsize=8, color=c)
+    ax.text(0.5, 0.10, r'other dials: localization $\sigma$;'
+            ' anchor measure (whose queries)', ha='center', fontsize=8,
+            color='#486884')
+    ax.set_title('(a) One family, one pairing dial')
+
+    ax = fig.add_subplot(gs[1])        # (b) ladder bars, 15 seeds
+    st = _gate_stats(gc, 'all', [m for m, _, _ in LADDER])
+    labels, means, ses, cols = [], [], [], []
+    for m, note, c in LADDER:
+        if m not in st.index:
+            continue
+        labels.append('oracle' if m == 'oracle-conf' else m)
+        means.append(100 * st.loc[m, 'vol'])
+        ses.append(100 * st.loc[m, 'se'])
+        cols.append(c)
+    _bar(ax, labels, means, ses, cols, 'certified volume (%)')
+    ax.set_title('(b) Certified volume by member\n'
+                 r'(unrestricted pool, ($\varepsilon$=0.5, $\alpha$=10%), '
+                 '15 seeds)')
+
+    ax = fig.add_subplot(gs[2])        # (c) pairing overlap incl. soft
+    pr = _read('lever2_pairing_softcorr2')
+    xs = [100, 50, 0]
+    for meth, col, lbl in (('pairdev', C['pairdev'], 'pairdev'),
+                           ('soft-0.05x', C['slate2'], 'soft-pairdev'),
+                           ('qa', C['qa'], 'qa')):
+        ys = []
+        for al in ('aligned', 'independent', 'disjoint'):
+            st = _gate_stats(pr[pr.variant == al], 'all', [meth])
+            ys.append(100 * st.loc[meth, 'vol'] if len(st) else np.nan)
+        ax.plot(xs, ys, '-o', color=col, lw=2, ms=4, label=lbl)
+    ax.annotate('pairdev inadmissible;\nsoft earns only its\n'
+                r'$\delta\to0$ content', (0, 4), fontsize=7.5,
+                xytext=(12, 30), arrowprops=dict(arrowstyle='-', lw=0.7))
+    ax.set_xlabel('flagship-candidate anchor overlap (%)')
+    ax.set_ylabel('certified volume (%)')
+    ax.set_title('(c) Exact pairs are the unique\nvariance-zero coupling')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    _save(fig, 'fig4_family')
+
+
+# ------------------------------------------------------------------- price
+def fig5_price():
+    """(a) certified volume vs paired-sample budget with N* prediction;
+    (b) gate validity: achieved violation vs calibration size."""
+    from .gap_close import gate2
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.8))
+
+    ax = axes[0]
+    cur = _read('cal_curve_nested')
+    for pool, ls in (('all', '-'), ('le13b', '--')):
+        sub = cur[cur.pool == pool]
+        per = sub[sub.method == 'pd-cal'].groupby('N')['vol']
+        ax.errorbar(per.mean().index, 100 * per.mean(),
+                    yerr=100 * per.std() / np.sqrt(10), fmt=ls + 'o',
+                    color=C['pairdev'], lw=2.2, ms=3, capsize=2,
+                    label=f'pd-cal ({pool})')
+    per = cur[(cur.pool == 'all') & (cur.method == 'pairdev')] \
+        .groupby('N')['vol']
+    ax.plot(per.mean().index, 100 * per.mean(), ':', color='#486884',
+            lw=1.2, label='full-pairing reference (all)')
+    ax.axvline(2 * 217, color='k', lw=0.8, ls=':')
+    ax.text(2 * 217 + 15, 8, 'predicted knee\n' r'$2N^*=2s^2/(\kappa\tau^2)$',
+            fontsize=7.5)
+    ax.set_xlabel('total paired sample N (anchors + gate calibration)')
+    ax.set_ylabel('certified volume (%)')
+    ax.set_title('(a) The price of certification:\n'
+                 'candidate generations on your own traffic')
+    ax.legend(fontsize=6.5, ncol=2)
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]
+    gc = _read('gap_close_1600', 'gap_close_1600b')
+    sub = gc[(gc.pool == 'all') & (gc.method == 'pd-cal')]
+    for rule, col, lbl in (('emp', C['pairdev'], 'empirical cutoff'),
+                           ('ucb', C['qa'], 'Clopper-Pearson cutoff')):
+        ns, vio, vols = [], [], []
+        for nc in (50, 100, 200, 400):
+            per = []
+            for seed, ss in sub.groupby('seed'):
+                cal = ss[ss.split == 'cal']
+                cal = cal.sample(min(nc, len(cal)), random_state=int(seed))
+                ev = ss[ss.split == 'eval']
+                cc = np.where(np.isfinite(cal.conf), cal.conf, 1e6)
+                ce = np.where(np.isfinite(ev.conf), ev.conf, 1e6)
+                off = gate2(cc, cal['dev'].to_numpy(), ce, 0.5, 0.10,
+                            rule=rule)
+                dv = ev['dev'].to_numpy()
+                per.append(((dv[off] > 0.5).mean() if off.any() else 0.0,
+                            off.mean()))
+            per = np.asarray(per)
+            ns.append(nc)
+            vio.append(per[:, 0].mean())
+            vols.append(per[:, 1].mean())
+        ax.plot(ns, 100 * np.asarray(vio), '-o', color=col, lw=2, ms=4,
+                label=lbl)
+        for x, y, v in zip(ns, 100 * np.asarray(vio), vols):
+            ax.annotate(f'{v:.0%}', (x, y), textcoords='offset points',
+                        xytext=(4, 5), fontsize=6.5, color=col)
+    ax.axhline(10, color='k', lw=0.8, ls=':')
+    ax.text(52, 10.4, r'budget $\alpha$', fontsize=7.5)
+    ax.set_xlabel('gate calibration size')
+    ax.set_ylabel('achieved violation (%)')
+    ax.set_title('(b) Gate validity vs calibration size\n'
+                 '(labels = certified volume at each point)')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    _save(fig, 'fig5_price')
+
+
+# ------------------------------------------------------------- limitations
+def fig6_novel():
+    from .gap_close import gate2
+    nv = _read('lever2_novel')
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.4))
+
+    ax = axes[0]
+    qa = nv[(nv.method == 'qa') & (nv.pool == 'all')]
+    bins = np.linspace(0, np.quantile(qa.conf, 0.99), 40)
+    for split, col, lbl in (('eval-seen', C['qa'], 'seen tasks'),
+                            ('eval-novel', C['pairdev'],
+                             'novel tasks (absent from cache)')):
+        ax.hist(qa[qa.split == split]['conf'], bins=bins, density=True,
+                histtype='stepfilled', alpha=0.45, color=col, label=lbl)
+    ax.set_xlabel('PKPS confidence (predicted deviation)')
+    ax.set_ylabel('density')
+    ax.set_title('(a) Confidence cannot see novelty')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]
+    width = 0.35
+    for j, pool in enumerate(('le13b', 'all')):
+        qa = nv[(nv.method == 'qa') & (nv.pool == pool)]
+        stats = {}
+        for lbl, evs in (('seen', 'eval-seen'), ('novel', 'eval-novel')):
+            per = []
+            for seed, ss in qa.groupby('seed'):
+                cal = ss[ss.split == 'cal']
+                ev = ss[ss.split == evs]
+                off = gate2(cal['conf'].to_numpy(), cal['dev'].to_numpy(),
+                            ev['conf'].to_numpy(), 0.5, 0.10)
+                dv = ev['dev'].to_numpy()
+                per.append((dv[off] > 0.5).mean() if off.any() else 0.0)
+            stats[lbl] = np.mean(per)
+        ax.bar(np.arange(2) + (j - 0.5) * width,
+               [100 * stats['seen'], 100 * stats['novel']], width,
+               color=[C['slate1'], C['slate2']][j], label=f'pool {pool}')
+    ax.axhline(10, color='k', lw=0.8, ls=':')
+    ax.text(-0.42, 10.4, r'budget $\alpha$', fontsize=7.5)
+    ax.set_xticks(range(2))
+    ax.set_xticklabels(['seen-task traffic', 'novel-task traffic'])
+    ax.set_ylabel('achieved violation (%)')
+    ax.set_title('(b) Novel-task traffic breaks the\ncontract silently')
+    ax.legend(fontsize=7.5)
+    ax.grid(alpha=0.3, axis='y')
+
+    fig.tight_layout()
+    _save(fig, 'fig6_novel')
+
+
+# ------------------------------------------------------------------ tables
+T1_META = [
+    ('qa', r'$\infty$ (means only)', 'full cache', 'none'),
+    ('var-norm', r'$\infty$, volatility-scaled', 'full cache', 'none'),
+    ('var-ub', r'$\infty$ (means+variances)', 'full cache', 'none'),
+    ('pd10', '0 (exact)', '10 bought anchors/cand.', '10 generations'),
+    ('pd30', '0 (exact)', '30 bought anchors/cand.', '30 generations'),
+    ('pd100', '0 (exact)', '100 bought anchors/cand.', '100 generations'),
+    ('pd-cal', '0 (exact)', 'calibration sample',
+     'none beyond gate calibration'),
+    ('pairdev', '0 (exact)', 'full paired suite', 'suite pairing'),
+    ('oracle-conf', r'0, at $q^*$', '(peeks at eval)', 'cheating'),
+]
+
+
+def make_tables():
+    from scipy.stats import spearmanr
+    gc = _read('gap_close_1600', 'gap_close_1600b')
+    rows = []
+    for meth, delta, anchors, extra in T1_META:
+        rec = {'member': meth if meth != 'oracle-conf' else 'oracle',
+               'coupling': delta, 'anchors': anchors, 'assumes': extra}
+        for pool in ('le13b', 'all'):
+            st = _gate_stats(gc, pool, [meth])
+            if not len(st):
+                continue
+            rec[f'vol_{pool}'] = f"{100 * st.loc[meth, 'vol']:.0f}%"
+            if pool == 'all':
+                rec['viol'] = f"{st.loc[meth, 'viol']:.2f}"
+                ev = gc[(gc.pool == pool) & (gc.method == meth)
+                        & (gc.split == 'eval')]
+                ce = np.where(np.isfinite(ev.conf), ev.conf, 1e6)
+                rec['spearman'] = f'{spearmanr(ce, ev.dev).statistic:.2f}'
+        rows.append(rec)
+    t1 = pd.DataFrame(rows)
+
+    lv = _read('lever2_conf', 'lever2_conf_b')
+    ev = lv[(lv.variant == 'r1') & (lv.split == 'eval')]
+    rows = []
+    for meth in ('lead', 'random'):
+        rec = {'method': meth}
+        for eps in (0.1, 0.3, 0.5):
+            for pool in ('le13b', 'all'):
+                sub = ev[(ev.pool == pool) & (ev.method == meth)]
+                rec[f'viol@{eps:g} ({pool})'] = \
+                    f'{100 * (sub.dev > eps).mean():.0f}%'
+        rows.append(rec)
+    t2 = pd.DataFrame(rows)
+
+    os.makedirs(os.path.join(RESULTS, 'tables'), exist_ok=True)
+    for name, t in (('table1_family', t1), ('table2_baselines', t2)):
+        t.to_csv(os.path.join(RESULTS, 'tables', f'{name}.csv'),
+                 index=False)
+        with open(os.path.join(RESULTS, 'tables', f'{name}.md'), 'w') as f:
+            f.write(t.to_markdown(index=False))
+        with open(os.path.join(RESULTS, 'tables', f'{name}.tex'), 'w') as f:
+            f.write(t.to_latex(index=False, escape=False))
+        print(f'wrote tables/{name}')
+    return t1, t2
+
+
 def main():
     os.makedirs(FIGDIR, exist_ok=True)
+    fig2_selection()
     fig_contract()
+    fig4_family()
+    fig5_price()
+    fig6_novel()
+    make_tables()
     fig_ablations()
     fig_concept()
 
