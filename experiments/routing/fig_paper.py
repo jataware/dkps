@@ -30,11 +30,13 @@ C = {'pairdev': '#114471', 'qa': '#3596ff', 'oracle': '#afbec6',
      'grey': '#9ca3af', 'slate1': '#93aacc', 'slate2': '#114471',
      'panel': '#f6f7f9', 'edge': '#afbec6'}
 
+# Figures are drawn at FINAL print size (<= 6.9 in full text width), so
+# every font below survives 1:1 in the paper.
 plt.rcParams.update({
     'font.family': 'sans-serif',
-    'font.size': 9,
-    'axes.titlesize': 10,
-    'axes.labelsize': 9,
+    'font.size': 7,
+    'axes.titlesize': 7.5,
+    'axes.labelsize': 7,
     'axes.spines.top': False,
     'axes.spines.right': False,
     'axes.edgecolor': '#486884',
@@ -43,12 +45,16 @@ plt.rcParams.update({
     'text.color': '#213c66',
     'xtick.color': '#486884',
     'ytick.color': '#486884',
+    'xtick.labelsize': 6.5,
+    'ytick.labelsize': 6.5,
     'legend.frameon': False,
-    'legend.fontsize': 8,
+    'legend.fontsize': 6,
     'grid.color': '#e5e7eb',
-    'grid.linewidth': 0.6,
+    'grid.linewidth': 0.5,
     'grid.alpha': 0.9,
     'figure.facecolor': 'white',
+    'lines.linewidth': 1.4,
+    'lines.markersize': 3,
 })
 
 
@@ -150,11 +156,11 @@ def fig_concept():
         s = names[m].split(':', 1)[1]
         return s if len(s) <= 26 else s[:24] + '…'
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.0, 4.0))
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
     for ax, pts, gi in ((axes[0], A, qa_i), (axes[1], B, qb_i)):
         near = mods.index(picks[gi])
         others = [j for j in range(len(mods) - 1) if j not in (iA, iB)]
-        ax.scatter(pts[others, 0], pts[others, 1], s=26, color=C['grey'],
+        ax.scatter(pts[others, 0], pts[others, 1], s=16, color=C['grey'],
                    alpha=0.55, linewidths=0, zorder=2,
                    label='cached models')
         ax.set_facecolor(C['panel'])
@@ -164,19 +170,19 @@ def fig_concept():
         for j, key, m, off in ((iA, 'pickA', mA, (9, 9)),
                                (iB, 'pickB', mB, (9, -14))):
             is_near = j == near
-            ax.scatter(*pts[j], s=120 if is_near else 90, color=C[key],
-                       edgecolors='white', linewidths=1.2, zorder=5)
+            ax.scatter(*pts[j], s=70 if is_near else 52, color=C[key],
+                       edgecolors='white', linewidths=0.9, zorder=5)
             if is_near:
-                ax.scatter(*pts[j], s=340, facecolors='none',
-                           edgecolors=C[key], linewidths=1.6, zorder=4)
+                ax.scatter(*pts[j], s=190, facecolors='none',
+                           edgecolors=C[key], linewidths=1.2, zorder=4)
             ax.annotate(short(m), pts[j], textcoords='offset points',
-                        xytext=off, fontsize=7.5, color=C[key],
+                        xytext=off, fontsize=5.8, color=C[key],
                         fontweight='bold' if is_near else 'normal')
-        ax.scatter(*pts[-1], marker='*', s=430, color=C['flag'],
-                   edgecolors='white', linewidths=0.8, zorder=6,
+        ax.scatter(*pts[-1], marker='*', s=230, color=C['flag'],
+                   edgecolors='white', linewidths=0.7, zorder=6,
                    label='flagship')
         ax.annotate(short(flag), pts[-1], textcoords='offset points',
-                    xytext=(-10, -14), fontsize=7.5, color=C['flag'],
+                    xytext=(-13, -17), fontsize=5.8, color=C['flag'],
                     ha='right')
         ax.set_title(f'query from {dset(order[gi][1])}')
         ax.set_xticks([])
@@ -187,13 +193,13 @@ def fig_concept():
         ax.margins(0.10)
     import matplotlib.lines as mlines
     handles = [
-        mlines.Line2D([], [], marker='*', ls='', ms=15, color=C['flag'],
+        mlines.Line2D([], [], marker='*', ls='', ms=9, color=C['flag'],
                       label='flagship'),
-        mlines.Line2D([], [], marker='o', ls='', ms=8, color=C['pickA'],
+        mlines.Line2D([], [], marker='o', ls='', ms=5, color=C['pickA'],
                       label=f'nearest for the {dset(order[qa_i][1])} query'),
-        mlines.Line2D([], [], marker='o', ls='', ms=8, color=C['pickB'],
+        mlines.Line2D([], [], marker='o', ls='', ms=5, color=C['pickB'],
                       label=f'nearest for the {dset(order[qb_i][1])} query'),
-        mlines.Line2D([], [], marker='o', ls='', ms=6, color=C['grey'],
+        mlines.Line2D([], [], marker='o', ls='', ms=4, color=C['grey'],
                       alpha=0.55, label='other cached models'),
     ]
     fig.legend(handles=handles, loc='lower center', ncol=4,
@@ -218,10 +224,10 @@ def _read(*stems):
 
 def _bar(ax, labels, means, ses, colors, ylabel):
     x = np.arange(len(labels))
-    ax.bar(x, means, yerr=ses, width=0.62, color=colors, capsize=2,
-           error_kw=dict(lw=0.8))
+    ax.bar(x, means, yerr=ses, width=0.62, color=colors, capsize=1.5,
+           error_kw=dict(lw=0.7))
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=20, ha='right', fontsize=7.5)
+    ax.set_xticklabels(labels, rotation=22, ha='right', fontsize=5.8)
     ax.set_ylabel(ylabel)
     ax.grid(alpha=0.3, axis='y')
 
@@ -252,12 +258,11 @@ def fig_contract():
     lev = pd.read_parquet(os.path.join(RESULTS, 'lever2_conf.parquet'))
     rd_dev = lev[(lev.pool == 'le13b') & (lev.method == 'random')
                  & (lev.split == 'eval')]['dev'].median()
-    METHS = (('pd-cal', C['pairdev'], 2.2),
-             ('pairdev', '#486884', 1.2),
-             ('qa', C['qa'], 2.0),
-             ('oracle-conf', C['oracle'], 1.2))
+    METHS = (('pd-cal', C['pairdev'], 1.8),
+             ('qa', C['qa'], 1.4),
+             ('oracle-conf', C['oracle'], 1.0))
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.8))
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.6))
     ax = axes[0]
     for pool, ls in (('le13b', '-'), ('all', '--')):
         sub = d1[d1.pool == pool]
@@ -266,14 +271,14 @@ def fig_contract():
             lbl = 'oracle' if meth == 'oracle-conf' else meth
             ax.plot(eps_grid, 100 * v[:, 0], ls, color=col, lw=lw,
                     label=f'{lbl} ({pool})')
-    ax.axvline(rd_dev, color='k', lw=0.7, ls=':')
+    ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
     ax.text(rd_dev + 0.01, 6, 'median deviation of\na random model swap',
-            fontsize=7.5)
+            fontsize=5.5)
     ax.set_xlabel(r'tolerance $\varepsilon$ (embedding deviation)')
     ax.set_ylabel(r'certified traffic volume (%)  [$\alpha$ = 10%]')
     ax.set_title('Contract frontier: volume certifiable at\n'
                  r'P(deviation > $\varepsilon$) $\leq$ 10%')
-    ax.legend(fontsize=7, frameon=False, loc='upper left', ncol=2)
+    ax.legend(fontsize=6, frameon=False, loc='upper left', ncol=2)
     ax.grid(alpha=0.3)
 
     ax = axes[1]
@@ -282,14 +287,14 @@ def fig_contract():
         v = _vol_curve(sub[sub.method == meth], eps_grid)
         for R, lsr in ((25, '-'), (10, ':')):
             ax.plot(eps_grid, 100 * v[:, 0] * (1 - 1 / R), lsr,
-                    color=C[key], lw=2 if R == 25 else 1.2,
+                    color=C[key], lw=1.6 if R == 25 else 1.0,
                     label=f'{meth}, {R}x price ratio')
-    ax.axvline(rd_dev, color='k', lw=0.7, ls=':')
+    ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
     ax.set_xlabel(r'tolerance $\varepsilon$')
     ax.set_ylabel('flagship bill saved (%)')
     ax.set_title('Money: savings from certified offloading\n'
                  r'($\leq$13B substitutes; score-free)')
-    ax.legend(fontsize=8, frameon=False, loc='upper left')
+    ax.legend(fontsize=6, frameon=False, loc='upper left')
     ax.grid(alpha=0.3)
     fig.tight_layout()
     _save(fig, 'fig3_contract')
@@ -303,7 +308,7 @@ def fig_ablations():
     d1 = df2[df2.variant == 'r1']
     EPS = np.array([0.5])
 
-    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.4))
+    fig, axes = plt.subplots(1, 4, figsize=(6.9, 1.95))
 
     ax = axes[0]                                   # pairing overlap
     xs = [100, 50, 0]
@@ -397,23 +402,25 @@ def fig_ablations():
 def fig2_selection():
     """PKPS selection minimizes mimicry; difficulty vs target rank,
     candidate count, and cache density. Pick-deviation units throughout."""
-    fig, axes = plt.subplots(1, 4, figsize=(15.2, 3.4))
+    fig, axes = plt.subplots(1, 4, figsize=(6.9, 1.95))
 
     ax = axes[0]                       # (a) combined-pool selection quality
     cm = _read('combined_mimicry')
     order = [('qa-0.25x', 'PKPS (label-free)', C['qa']),
-             ('task*', 'task* (hidden labels)', C['slate2']),
+             ('task*', 'task* (hidden labels)', '#114471'),
              ('static', 'static', C['slate1']),
-             ('random', 'random', C['grey']),
-             ('oracle', 'oracle', C['oracle'])]
-    per = cm[cm.method.isin([m for m, _, _ in order])] \
+             ('random', 'random', C['grey'])]
+    per = cm[cm.method.isin([m for m, _, _ in order] + ['oracle'])] \
         .groupby(['method', 'seed'])['error'].mean().unstack()
     means = [per.loc[m].mean() for m, _, _ in order]
     ses = [per.loc[m].std() / np.sqrt(per.shape[1]) for m, _, _ in order]
     _bar(ax, [l for _, l, _ in order], means, ses,
          [c for _, _, c in order], 'mimicry error of the pick')
-    ax.set_title('(a) Selection on one unlabeled pool:\n'
-                 'label-free matches hidden task labels')
+    orc = per.loc['oracle'].mean()
+    ax.axhline(orc, color=C['oracle'], lw=1.2, ls='--')
+    ax.text(len(order) - 0.45, orc + 0.008, 'oracle floor', fontsize=5.5,
+            ha='right', color='#486884')
+    ax.set_title('(a) Label-free matches\nhidden task labels')
 
     d2 = _read('lever2_conf', 'lever2_conf_b')
     ev = d2[(d2.method == 'qa') & (d2.split == 'eval')]
@@ -425,14 +432,14 @@ def fig2_selection():
             .mean().unstack().reindex(['r1', 'r5', 'rmed'])
         ax.errorbar(range(3), per.mean(1),
                     yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
-                    color=C['qa'], lw=2, ms=4, capsize=2,
+                    color=C['qa'], lw=1.4, ms=2.5, capsize=1.5,
                     label=f'pool {pool}')
     ax.set_xticks(range(3))
     ax.set_xticklabels([lbl[v] for v in ('r1', 'r5', 'rmed')])
     ax.set_xlabel('target model (rank by mean score)')
     ax.set_ylabel('mimicry error of the pick')
-    ax.set_title('(b) The best model is the\nhardest target to mimic')
-    ax.legend(fontsize=7.5)
+    ax.set_title('(b) Best model =\nhardest target')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     ax = axes[2]                       # (c) candidate count
@@ -449,15 +456,15 @@ def fig2_selection():
         qa_s.append(per.std() / np.sqrt(len(per)))
         orc.append(ev1[(ev1.pool == pool)
                        & (ev1.method == 'oracle-pick')]['dev'].mean())
-    ax.errorbar(ks, qa_m, yerr=qa_s, fmt='-o', color=C['qa'], lw=2, ms=4,
-                capsize=2, label='PKPS pick')
-    ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.5, ms=4,
+    ax.errorbar(ks, qa_m, yerr=qa_s, fmt='-o', color=C['qa'], lw=1.4,
+                ms=2.5, capsize=1.5, label='PKPS pick')
+    ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.2, ms=2.5,
             label='oracle pick')
     ax.set_xscale('log', base=2)
-    ax.set_xlabel('candidate models available')
+    ax.set_xlabel('candidate models')
     ax.set_ylabel('mimicry error of the pick')
-    ax.set_title('(c) More candidates: the floor\nfalls, PKPS follows it')
-    ax.legend(fontsize=7.5)
+    ax.set_title('(c) Candidate count:\nthe floor falls')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     ax = axes[3]                       # (d) cache density
@@ -468,12 +475,12 @@ def fig2_selection():
             .mean().unstack()
         ax.errorbar(100 * per.index, per.mean(1),
                     yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
-                    color=C['qa'], lw=2, ms=4, capsize=2,
+                    color=C['qa'], lw=1.4, ms=2.5, capsize=1.5,
                     label=f'pool {pool}')
-    ax.set_xlabel('cached responses per model (% of full cache)')
+    ax.set_xlabel('cache size (% of full)')
     ax.set_ylabel('mimicry error of the pick')
-    ax.set_title('(d) Selection quality vs\ncache density')
-    ax.legend(fontsize=7.5)
+    ax.set_title('(d) Cache density')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     fig.tight_layout()
@@ -509,11 +516,11 @@ def _gate_stats(df, pool, methods, eps=0.5, alpha=0.10):
 
 
 LADDER = [('qa', 'none\n(localized means)', C['qa']),
-          ('var-norm', 'none', C['slate1']),
-          ('var-ub', 'none', C['slate1']),
-          ('pd30', '30 bought\nanchors/cand.', C['slate2']),
-          ('pd100', '100 bought\nanchors/cand.', C['slate2']),
-          ('pd-cal', 'calibration\nsample only', C['pairdev']),
+          ('var-norm', 'none', C['grey']),
+          ('var-ub', 'none', C['grey']),
+          ('pd30', '30 bought\nanchors/cand.', C['slate1']),
+          ('pd100', '100 bought\nanchors/cand.', C['slate1']),
+          ('pd-cal', 'calibration\nsample only', '#114471'),
           ('pairdev', 'full suite\npairing', '#486884'),
           ('oracle-conf', '(cheats)', C['oracle'])]
 
@@ -521,30 +528,29 @@ LADDER = [('qa', 'none\n(localized means)', C['qa']),
 def fig4_family():
     """One estimator family, one coupling dial delta."""
     gc = _read('gap_close_1600', 'gap_close_1600b')
-    fig = plt.figure(figsize=(15.2, 3.6))
+    fig = plt.figure(figsize=(6.9, 2.1))
     gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.3, 1.0])
 
     ax = fig.add_subplot(gs[0])        # (a) schematic: the coupling dial
     ax.axis('off')
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.text(0.5, 0.94, r'$\hat D^2(m,f;q^*)=\frac{\sum_{j,l} k_\sigma(q_j,'
+    ax.text(0.5, 0.84, r'$\hat D^2(m,f;q^*)=\frac{\sum_{j,l} k_\sigma(q_j,'
             r'q^*)\,k_\sigma(q_l,q^*)\,k_\delta(q_j,q_l)\,\|x_{mj}-x_{fl}'
-            r'\|^2}{\mathrm{norm}}$', ha='center', fontsize=9)
-    ax.annotate('', xy=(0.95, 0.62), xytext=(0.05, 0.62),
-                arrowprops=dict(arrowstyle='->', color='#486884', lw=1.4))
-    ax.text(0.5, 0.68, r'coupling bandwidth $\delta$', ha='center',
-            fontsize=9, color='#213c66')
-    for x, t, c in ((0.10, r'$\delta\to\infty$' '\nqa, var-ub\n(unpaired '
-                     'means)', C['qa']),
-                    (0.50, r'finite $\delta$' '\nsoft-pairdev\n(similar '
-                     'queries)', C['slate2']),
-                    (0.88, r'$\delta\to 0$' '\npd-cal, pairdev\n(exact '
-                     'pairs)', C['pairdev'])):
-        ax.plot([x], [0.62], 'o', color=c, ms=7)
-        ax.text(x, 0.50, t, ha='center', va='top', fontsize=8, color=c)
-    ax.text(0.5, 0.10, r'other dials: localization $\sigma$;'
-            ' anchor measure (whose queries)', ha='center', fontsize=8,
+            r'\|^2}{\mathrm{norm}}$', ha='center', fontsize=6.5)
+    ax.annotate('', xy=(0.95, 0.60), xytext=(0.05, 0.60),
+                arrowprops=dict(arrowstyle='->', color='#486884', lw=1.1))
+    ax.text(0.5, 0.67, r'coupling bandwidth $\delta$', ha='center',
+            fontsize=6.5, color='#213c66')
+    for x, t, c in ((0.08, r'$\delta\to\infty$' '\nqa, var-ub', C['qa']),
+                    (0.50, r'finite $\delta$' '\nsoft-pairdev',
+                     '#93aacc'),
+                    (0.91, r'$\delta\to 0$' '\npd-cal, pairdev',
+                     '#114471')):
+        ax.plot([x], [0.60], 'o', color=c, ms=4)
+        ax.text(x, 0.49, t, ha='center', va='top', fontsize=5.8, color=c)
+    ax.text(0.5, 0.06, r'other dials: localization $\sigma$;'
+            ' anchor measure (whose queries)', ha='center', fontsize=5.8,
             color='#486884')
     ax.set_title('(a) One family, one pairing dial')
 
@@ -559,28 +565,31 @@ def fig4_family():
         ses.append(100 * st.loc[m, 'se'])
         cols.append(c)
     _bar(ax, labels, means, ses, cols, 'certified volume (%)')
+    for xi, m in enumerate(means):
+        if m < 1.5:
+            ax.text(xi, 1.5, '0', ha='center', fontsize=6,
+                    color='#486884')
     ax.set_title('(b) Certified volume by member\n'
-                 r'(unrestricted pool, ($\varepsilon$=0.5, $\alpha$=10%), '
-                 '15 seeds)')
+                 r'($\varepsilon$=0.5, $\alpha$=10%, 15 seeds)')
 
     ax = fig.add_subplot(gs[2])        # (c) pairing overlap incl. soft
     pr = _read('lever2_pairing_softcorr2')
     xs = [100, 50, 0]
     for meth, col, lbl in (('pairdev', C['pairdev'], 'pairdev'),
-                           ('soft-0.05x', C['slate2'], 'soft-pairdev'),
+                           ('soft-0.05x', '#93aacc', 'soft-pairdev'),
                            ('qa', C['qa'], 'qa')):
         ys = []
         for al in ('aligned', 'independent', 'disjoint'):
             st = _gate_stats(pr[pr.variant == al], 'all', [meth])
             ys.append(100 * st.loc[meth, 'vol'] if len(st) else np.nan)
-        ax.plot(xs, ys, '-o', color=col, lw=2, ms=4, label=lbl)
+        ax.plot(xs, ys, '-o', color=col, lw=1.4, ms=2.5, label=lbl)
     ax.annotate('pairdev inadmissible;\nsoft earns only its\n'
-                r'$\delta\to0$ content', (0, 4), fontsize=7.5,
-                xytext=(12, 30), arrowprops=dict(arrowstyle='-', lw=0.7))
-    ax.set_xlabel('flagship-candidate anchor overlap (%)')
+                r'$\delta\to0$ content', (0, 4), fontsize=5.5,
+                xytext=(10, 28), arrowprops=dict(arrowstyle='-', lw=0.6))
+    ax.set_xlabel('flagship-candidate overlap (%)')
     ax.set_ylabel('certified volume (%)')
-    ax.set_title('(c) Exact pairs are the unique\nvariance-zero coupling')
-    ax.legend(fontsize=7.5)
+    ax.set_title('(c) Exact pairs: the unique\nvariance-zero coupling')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     fig.tight_layout()
@@ -592,29 +601,35 @@ def fig5_price():
     """(a) certified volume vs paired-sample budget with N* prediction;
     (b) gate validity: achieved violation vs calibration size."""
     from .gap_close import gate2
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.8))
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.6))
 
     ax = axes[0]
     cur = _read('cal_curve_nested')
+    ax.axvspan(50, 300, color='#e0edff', alpha=0.55, lw=0)
+    ax.set_ylim(0, 104)
+    ax.text(175, 102, 'gate under-calibrated\n(violation rides '
+            r'$\approx\alpha$)', ha='center', va='top', fontsize=5.5,
+            color='#486884')
     for pool, ls in (('all', '-'), ('le13b', '--')):
         sub = cur[cur.pool == pool]
         per = sub[sub.method == 'pd-cal'].groupby('N')['vol']
         ax.errorbar(per.mean().index, 100 * per.mean(),
                     yerr=100 * per.std() / np.sqrt(10), fmt=ls + 'o',
-                    color=C['pairdev'], lw=2.2, ms=3, capsize=2,
+                    color=C['pairdev'], lw=1.6, ms=2.5, capsize=1.5,
                     label=f'pd-cal ({pool})')
     per = cur[(cur.pool == 'all') & (cur.method == 'pairdev')] \
         .groupby('N')['vol']
     ax.plot(per.mean().index, 100 * per.mean(), ':', color='#486884',
-            lw=1.2, label='full-pairing reference (all)')
-    ax.axvline(2 * 217, color='k', lw=0.8, ls=':')
-    ax.text(2 * 217 + 15, 8, 'predicted knee\n' r'$2N^*=2s^2/(\kappa\tau^2)$',
-            fontsize=7.5)
+            lw=1.0, label='full-pairing reference (all)')
+    ax.axvline(2 * 217, color='k', lw=0.6, ls=':')
+    ax.text(2 * 217 + 18, 44, 'predicted knee\n'
+            r'$2N^*=2s^2/(\kappa\tau^2)$', fontsize=5.5)
     ax.set_xlabel('total paired sample N (anchors + gate calibration)')
     ax.set_ylabel('certified volume (%)')
     ax.set_title('(a) The price of certification:\n'
-                 'candidate generations on your own traffic')
-    ax.legend(fontsize=6.5, ncol=2)
+                 'generations on your own traffic')
+    ax.legend(fontsize=5.8, ncol=1, loc='lower right',
+              bbox_to_anchor=(1.0, 0.0))
     ax.grid(alpha=0.3)
 
     ax = axes[1]
@@ -640,18 +655,18 @@ def fig5_price():
             ns.append(nc)
             vio.append(per[:, 0].mean())
             vols.append(per[:, 1].mean())
-        ax.plot(ns, 100 * np.asarray(vio), '-o', color=col, lw=2, ms=4,
-                label=lbl)
+        ax.plot(ns, 100 * np.asarray(vio), '-o', color=col, lw=1.4,
+                ms=2.5, label=lbl)
         for x, y, v in zip(ns, 100 * np.asarray(vio), vols):
             ax.annotate(f'{v:.0%}', (x, y), textcoords='offset points',
-                        xytext=(4, 5), fontsize=6.5, color=col)
-    ax.axhline(10, color='k', lw=0.8, ls=':')
-    ax.text(52, 10.4, r'budget $\alpha$', fontsize=7.5)
+                        xytext=(4, 4), fontsize=5.5, color=col)
+    ax.axhline(10, color='k', lw=0.6, ls=':')
+    ax.text(52, 10.3, r'budget $\alpha$', fontsize=5.5)
     ax.set_xlabel('gate calibration size')
     ax.set_ylabel('achieved violation (%)')
     ax.set_title('(b) Gate validity vs calibration size\n'
-                 '(labels = certified volume at each point)')
-    ax.legend(fontsize=7.5)
+                 '(labels = certified volume)')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     fig.tight_layout()
@@ -662,7 +677,7 @@ def fig5_price():
 def fig6_novel():
     from .gap_close import gate2
     nv = _read('lever2_novel')
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.4))
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.4))
 
     ax = axes[0]
     qa = nv[(nv.method == 'qa') & (nv.pool == 'all')]
@@ -672,10 +687,16 @@ def fig6_novel():
                              'novel tasks (absent from cache)')):
         ax.hist(qa[qa.split == split]['conf'], bins=bins, density=True,
                 histtype='stepfilled', alpha=0.45, color=col, label=lbl)
+    from sklearn.metrics import roc_auc_score
+    evq = qa[qa.split.str.startswith('eval')]
+    auc = roc_auc_score((evq.split == 'eval-novel').astype(int), evq.conf)
+    ax.text(0.97, 0.55, f'AUC(novel vs seen) = {auc:.2f}\n'
+            'too weak to gate on', transform=ax.transAxes, ha='right',
+            fontsize=5.8, color='#486884')
     ax.set_xlabel('PKPS confidence (predicted deviation)')
     ax.set_ylabel('density')
     ax.set_title('(a) Confidence cannot see novelty')
-    ax.legend(fontsize=7.5)
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     ax = axes[1]
@@ -696,13 +717,13 @@ def fig6_novel():
         ax.bar(np.arange(2) + (j - 0.5) * width,
                [100 * stats['seen'], 100 * stats['novel']], width,
                color=[C['slate1'], C['slate2']][j], label=f'pool {pool}')
-    ax.axhline(10, color='k', lw=0.8, ls=':')
-    ax.text(-0.42, 10.4, r'budget $\alpha$', fontsize=7.5)
+    ax.axhline(10, color='k', lw=0.6, ls=':')
+    ax.text(-0.42, 10.3, r'budget $\alpha$', fontsize=5.5)
     ax.set_xticks(range(2))
     ax.set_xticklabels(['seen-task traffic', 'novel-task traffic'])
     ax.set_ylabel('achieved violation (%)')
-    ax.set_title('(b) Novel-task traffic breaks the\ncontract silently')
-    ax.legend(fontsize=7.5)
+    ax.set_title('(b) Novel-task traffic breaks\nthe contract silently')
+    ax.legend(fontsize=6)
     ax.grid(alpha=0.3, axis='y')
 
     fig.tight_layout()
