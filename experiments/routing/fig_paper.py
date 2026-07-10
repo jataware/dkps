@@ -167,9 +167,9 @@ def fig_concept():
         # dashed link flagship -> this query's nearest
         ax.plot([pts[-1, 0], pts[near, 0]], [pts[-1, 1], pts[near, 1]],
                 ls=(0, (2, 3)), color='#486884', lw=1.1, zorder=3)
-        for j, key, m, off in ((iA, 'pickA', mA, (9, 9)),
-                               (iB, 'pickB', mB, (9, -14))):
+        for j, key, m in ((iA, 'pickA', mA), (iB, 'pickB', mB)):
             is_near = j == near
+            off = (9, 7) if is_near else (9, -13)
             ax.scatter(*pts[j], s=70 if is_near else 52, color=C[key],
                        edgecolors='white', linewidths=0.9, zorder=5)
             if is_near:
