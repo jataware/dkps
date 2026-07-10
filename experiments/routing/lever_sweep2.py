@@ -121,6 +121,91 @@ def softdev_est(Xa, ua, model_groups, flag, n, W, delta, knn=8,
     return hat
 
 
+def within_curve(Xa, ua, idx, rng, knn=8, n_bins=15, cap=4000):
+    """Per-model regression of squared response distance on query
+    distance, from the model's OWN kNN pairs -- the SAME matching
+    procedure as the cross terms, so the curve is supported exactly on
+    the r-range where it is evaluated (unpaired-valid). Returns (bin
+    centers, bin means, r->0 intercept)."""
+    if len(idx) < 20:
+        return None
+    idx = np.asarray(idx)
+    if len(idx) > cap:
+        idx = idx[np.linspace(0, len(idx) - 1, cap).astype(int)]
+    U = ua[idx]
+    D2 = ((U[:, None, :] - U[None, :, :]) ** 2).sum(-1)
+    np.fill_diagonal(D2, np.inf)
+    k = min(knn, len(idx) - 1)
+    nn = np.argpartition(D2, k - 1, axis=1)[:, :k]
+    rows_i = np.arange(len(idx))[:, None]
+    r = np.sqrt(D2[rows_i, nn]).ravel()
+    Xm = Xa[idx]
+    d2 = ((Xm[:, None, :] - Xm[nn]) ** 2).sum(-1).ravel()
+    edges = np.quantile(r, np.linspace(0, 1, n_bins + 1))
+    edges[-1] += 1e-9
+    which = np.clip(np.searchsorted(edges, r, side='right') - 1,
+                    0, n_bins - 1)
+    means = np.array([d2[which == b_].mean() if (which == b_).any()
+                      else np.nan for b_ in range(n_bins)])
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    fin = np.isfinite(means)
+    kf = min(4, int(fin.sum()))
+    coef = np.polyfit(centers[fin][:kf], means[fin][:kf], 1)
+    w0 = max(float(np.polyval(coef, 0.0)), 0.0)
+    return centers, means, w0
+
+
+def _w_at(curve, r):
+    centers, means, _ = curve
+    fin = np.isfinite(means)
+    return np.interp(r, centers[fin], means[fin])
+
+
+def softdev_corr_est(Xa, ua, model_groups, flag, n, W, delta, rng,
+                     knn=8, cap=4000):
+    """Debiased soft-pairdev: cross-query squared deviations minus the
+    within-model query-difference penalties (both models' own-cache
+    curves), plus the r->0 noise floors. Targets the same-query deviation
+    under an additive shared query effect; fully unpaired."""
+    q = W.shape[0]
+    f_idx = model_groups[flag]
+    uf, Xf = ua[f_idx], Xa[f_idx]
+    curves = {m: within_curve(Xa, ua, model_groups[m], rng)
+              for m in range(n)}
+    cf = curves[flag]
+    hat = np.full((q, n), np.inf)
+    if cf is None:
+        return hat
+    for m in range(n):
+        idx_m = model_groups[m]
+        cm = curves[m]
+        if m == flag or len(idx_m) == 0 or len(f_idx) == 0 or cm is None:
+            continue
+        if len(idx_m) > cap:
+            idx_m = idx_m[np.linspace(0, len(idx_m) - 1, cap).astype(int)]
+        um = ua[idx_m]
+        D2 = ((um[:, None, :] - uf[None, :, :]) ** 2).sum(-1)
+        k = min(knn, D2.shape[1])
+        nn = np.argpartition(D2, k - 1, axis=1)[:, :k]
+        rows_i = np.arange(len(idx_m))[:, None]
+        r_nn = np.sqrt(D2[rows_i, nn])
+        Kd = np.exp(-r_nn ** 2 / (2.0 * delta ** 2))
+        d2 = ((Xa[idx_m][:, None, :] - Xf[nn]) ** 2).sum(axis=2)
+        corr = d2 - 0.5 * (_w_at(cm, r_nn) + _w_at(cf, r_nn)) \
+            + 0.5 * (cm[2] + cf[2])
+        corr = np.maximum(corr, 0.0)
+        sK = Kd.sum(axis=1)
+        okj = sK > 1e-12
+        if not okj.any():
+            continue
+        c_j = (Kd[okj] * corr[okj]).sum(axis=1) / sK[okj]
+        Wm = W[:, np.asarray(idx_m)[okj]]
+        s = Wm.sum(axis=1)
+        okq = s > 1e-12
+        hat[okq, m] = np.sqrt((Wm[okq] @ c_j) / s[okq])
+    return hat
+
+
 def _prep(X, Qu, rows, n, names):
     sizes = [parse_params(nm.split(':', 1)[1]) for nm in names]
     suite_of = [nm.split(':', 1)[0] for nm in names]
@@ -341,6 +426,8 @@ def collect_pairing(X, Qu, rows, n, names, seed, alignment, n_hold=800,
     soft = {f'soft-{c:g}x': softdev_est(Xa, ua, model_groups, flag, n, W,
                                         delta=c * med)
             for c in (0.05, 0.15)}
+    soft['soft-corr'] = softdev_corr_est(Xa, ua, model_groups, flag, n,
+                                         W, delta=0.05 * med, rng=rng)
 
     out = []
     for gi, (q, g) in enumerate(hold_groups):
