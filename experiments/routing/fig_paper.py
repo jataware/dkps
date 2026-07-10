@@ -153,8 +153,8 @@ def fig_concept():
     iA, iB = mods.index(mA), mods.index(mB)
 
     def short(m):
-        s = names[m].split(':', 1)[1]
-        return s if len(s) <= 26 else s[:24] + '…'
+        s = names[m].split(':', 1)[1].split('_', 1)[-1]
+        return s if len(s) <= 24 else s[:22] + '…'
 
     fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
     for ax, pts, gi in ((axes[0], A, qa_i), (axes[1], B, qb_i)):
@@ -204,9 +204,7 @@ def fig_concept():
     ]
     fig.legend(handles=handles, loc='lower center', ncol=4,
                bbox_to_anchor=(0.5, -0.04))
-    fig.suptitle('One response cache, two queries: the PKPS geometry '
-                 'localized at $q^*$ reranks the substitutes', y=1.0)
-    fig.tight_layout(rect=[0, 0.04, 1, 0.97])
+    fig.tight_layout(rect=[0, 0.05, 1, 1.0])
     _save(fig, 'fig1_concept')
 
 
@@ -269,15 +267,16 @@ def fig_contract():
         for meth, col, lw in METHS:
             v = _vol_curve(sub[sub.method == meth], eps_grid)
             lbl = 'oracle' if meth == 'oracle-conf' else meth
+            pn = '\u226413B' if pool == 'le13b' else 'unrestr.'
             ax.plot(eps_grid, 100 * v[:, 0], ls, color=col, lw=lw,
-                    label=f'{lbl} ({pool})')
+                    label=f'{lbl} ({pn})')
     ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
     ax.text(rd_dev + 0.01, 6, 'median deviation of\na random model swap',
             fontsize=5.5)
     ax.set_xlabel(r'tolerance $\varepsilon$ (embedding deviation)')
     ax.set_ylabel(r'certified traffic volume (%)  [$\alpha$ = 10%]')
-    ax.set_title('Contract frontier: volume certifiable at\n'
-                 r'P(deviation > $\varepsilon$) $\leq$ 10%')
+    ax.set_title('(a) Contract frontier: volume certifiable\n'
+                 r'at P(deviation > $\varepsilon$) $\leq$ 10%')
     ax.legend(fontsize=6, frameon=False, loc='upper left', ncol=2)
     ax.grid(alpha=0.3)
 
@@ -292,7 +291,7 @@ def fig_contract():
     ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
     ax.set_xlabel(r'tolerance $\varepsilon$')
     ax.set_ylabel('flagship bill saved (%)')
-    ax.set_title('Money: savings from certified offloading\n'
+    ax.set_title('(b) Savings from certified offloading\n'
                  r'($\leq$13B substitutes; score-free)')
     ax.legend(fontsize=6, frameon=False, loc='upper left')
     ax.grid(alpha=0.3)
@@ -416,7 +415,7 @@ def fig2_selection():
     ses = [per.loc[m].std() / np.sqrt(per.shape[1]) for m, _, _ in order]
     _bar(ax, [l for _, l, _ in order], means, ses,
          [c for _, _, c in order], 'mimicry error of the pick')
-    orc = per.loc['oracle'].mean()
+    orc = per.loc['oracle'].mean()  # panels b-d share this ylabel
     ax.axhline(orc, color=C['oracle'], lw=1.2, ls='--')
     ax.text(len(order) - 0.45, orc + 0.008, 'oracle floor', fontsize=5.5,
             ha='right', color='#486884')
@@ -433,11 +432,11 @@ def fig2_selection():
         ax.errorbar(range(3), per.mean(1),
                     yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
                     color=C['qa'], lw=1.4, ms=2.5, capsize=1.5,
-                    label=f'pool {pool}')
+                    label='\u226413B pool' if pool == 'le13b'
+                    else 'unrestricted pool')
     ax.set_xticks(range(3))
     ax.set_xticklabels([lbl[v] for v in ('r1', 'r5', 'rmed')])
     ax.set_xlabel('target model (rank by mean score)')
-    ax.set_ylabel('mimicry error of the pick')
     ax.set_title('(b) Best model =\nhardest target')
     ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
@@ -461,8 +460,9 @@ def fig2_selection():
     ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.2, ms=2.5,
             label='oracle pick')
     ax.set_xscale('log', base=2)
+    ax.set_xticks([2, 8, 32, 128])
+    ax.set_xticklabels(['2', '8', '32', '128'])
     ax.set_xlabel('candidate models')
-    ax.set_ylabel('mimicry error of the pick')
     ax.set_title('(c) Candidate count:\nthe floor falls')
     ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
@@ -476,11 +476,11 @@ def fig2_selection():
         ax.errorbar(100 * per.index, per.mean(1),
                     yerr=per.std(1) / np.sqrt(per.shape[1]), fmt=ls + 'o',
                     color=C['qa'], lw=1.4, ms=2.5, capsize=1.5,
-                    label=f'pool {pool}')
+                    label='\u226413B pool' if pool == 'le13b'
+                    else 'unrestricted pool')
     ax.set_xlabel('cache size (% of full)')
-    ax.set_ylabel('mimicry error of the pick')
     ax.set_title('(d) Cache density')
-    ax.legend(fontsize=6)
+    ax.legend(fontsize=6, loc='lower left')
     ax.grid(alpha=0.3)
 
     fig.tight_layout()
@@ -542,16 +542,16 @@ def fig4_family():
                 arrowprops=dict(arrowstyle='->', color='#486884', lw=1.1))
     ax.text(0.5, 0.67, r'coupling bandwidth $\delta$', ha='center',
             fontsize=6.5, color='#213c66')
-    for x, t, c in ((0.08, r'$\delta\to\infty$' '\nqa, var-ub', C['qa']),
-                    (0.50, r'finite $\delta$' '\nsoft-pairdev',
-                     '#93aacc'),
-                    (0.91, r'$\delta\to 0$' '\npd-cal, pairdev',
-                     '#114471')):
+    for x, y, t, c in ((0.08, 0.49, r'$\delta\to\infty$' '\nqa, var-ub',
+                        C['qa']),
+                       (0.50, 0.27, r'finite $\delta$' '\nsoft-pairdev',
+                        '#93aacc'),
+                       (0.91, 0.49, r'$\delta\to 0$' '\npd-cal, pairdev',
+                        '#114471')):
         ax.plot([x], [0.60], 'o', color=c, ms=4)
-        ax.text(x, 0.49, t, ha='center', va='top', fontsize=5.8, color=c)
-    ax.text(0.5, 0.06, r'other dials: localization $\sigma$;'
-            ' anchor measure (whose queries)', ha='center', fontsize=5.8,
-            color='#486884')
+        ax.text(x, y, t, ha='center', va='top', fontsize=5.8, color=c)
+    ax.text(0.5, 0.02, r'other dials: localization $\sigma$; anchor'
+            ' measure', ha='center', fontsize=5.5, color='#486884')
     ax.set_title('(a) One family, one pairing dial')
 
     ax = fig.add_subplot(gs[1])        # (b) ladder bars, 15 seeds
@@ -616,11 +616,12 @@ def fig5_price():
         ax.errorbar(per.mean().index, 100 * per.mean(),
                     yerr=100 * per.std() / np.sqrt(10), fmt=ls + 'o',
                     color=C['pairdev'], lw=1.6, ms=2.5, capsize=1.5,
-                    label=f'pd-cal ({pool})')
+                    label='pd-cal (unrestricted)' if pool == 'all'
+                    else 'pd-cal (\u226413B)')
     per = cur[(cur.pool == 'all') & (cur.method == 'pairdev')] \
         .groupby('N')['vol']
     ax.plot(per.mean().index, 100 * per.mean(), ':', color='#486884',
-            lw=1.0, label='full-pairing reference (all)')
+            lw=1.0, label='full pairing (unrestricted)')
     ax.axvline(2 * 217, color='k', lw=0.6, ls=':')
     ax.text(2 * 217 + 18, 44, 'predicted knee\n'
             r'$2N^*=2s^2/(\kappa\tau^2)$', fontsize=5.5)
@@ -695,7 +696,7 @@ def fig6_novel():
             fontsize=5.8, color='#486884')
     ax.set_xlabel('PKPS confidence (predicted deviation)')
     ax.set_ylabel('density')
-    ax.set_title('(a) Confidence cannot see novelty')
+    ax.set_title('(a) Confidence carries little novelty signal')
     ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
@@ -716,7 +717,9 @@ def fig6_novel():
             stats[lbl] = np.mean(per)
         ax.bar(np.arange(2) + (j - 0.5) * width,
                [100 * stats['seen'], 100 * stats['novel']], width,
-               color=[C['slate1'], C['slate2']][j], label=f'pool {pool}')
+               color=[C['slate1'], C['slate2']][j],
+               label='\u226413B pool' if pool == 'le13b'
+               else 'unrestricted pool')
     ax.axhline(10, color='k', lw=0.6, ls=':')
     ax.text(-0.42, 10.3, r'budget $\alpha$', fontsize=5.5)
     ax.set_xticks(range(2))
