@@ -86,10 +86,34 @@ lever_sweep.py          lever sweep 1: bandwidth, pool cap, cache density,
 lever_sweep2.py         lever sweep 2: pairing overlap, candidate scaling,
                         flagship rank, novel tasks, UCB gate
 gap_close.py            confidence-estimator ladder qa -> pd-cal -> pairdev
-                        (headline table)
-fig_paper.py            paper figures (concept, contract + savings,
-                        ablations); helivan.io palette
+                        (headline table), sufficiency curve, N* predictor
+fig_paper.py            ALL paper figures + tables; helivan.io palette
 ```
+
+## Paper figure set (ICLR/NeurIPS main track; `fig_paper.py`)
+
+1. `fig1_concept`    PKPS geometry localized at two queries; the nearest
+                     substitute changes with the query
+2. `fig2_selection`  selection minimizes mimicry (combined pool, label-free
+                     matches hidden task labels) + when it is easy: target
+                     rank (the best model is the hardest target), candidate
+                     count (oracle floor falls, PKPS follows), cache density
+3. `fig3_contract`   certified volume vs tolerance at alpha=10% + flagship
+                     bill saved (pd-cal primary, qa, pairdev, oracle)
+4. `fig4_family`     one estimator family, one coupling dial delta:
+                     schematic, 15-seed certified-volume ladder,
+                     pairing-overlap panel with soft-pairdev
+5. `fig5_price`      price of certification: volume vs paired-sample budget
+                     with predicted knee 2N* = 2 s^2/(kappa tau^2); gate
+                     validity (empirical vs Clopper-Pearson cutoffs)
+6. `fig6_novel`      limitation: novel-task traffic breaks the contract
+                     silently (no OOD signal in confidence)
+
+Tables (emitted to `results/tables/` as csv/md/tex by `make_tables`):
+T1 the family in one table (member | coupling | anchors | assumptions |
+vol/viol/ret/Spearman); T2 baselines cannot hold a contract (lead/static/
+random fixed violation rates vs certified cells). Score-based methods
+(qa-score, cascade, scarcity) are APPENDIX-ONLY: the setting is score-free.
 
 All runnable from the repo root: `pixi run python -m experiments.routing.<name>`.
 Outputs land in `results/` here (git-ignored): per-decision parquets + summaries.
