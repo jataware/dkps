@@ -169,7 +169,7 @@ def fig_concept():
                 ls=(0, (2, 3)), color='#486884', lw=1.1, zorder=3)
         for j, key, m in ((iA, 'pickA', mA), (iB, 'pickB', mB)):
             is_near = j == near
-            off = (9, 7) if is_near else (9, -13)
+            off = (11, 12) if is_near else (9, -13)
             ax.scatter(*pts[j], s=70 if is_near else 52, color=C[key],
                        edgecolors='white', linewidths=0.9, zorder=5)
             if is_near:
