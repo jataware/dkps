@@ -232,6 +232,8 @@ def _bar(ax, labels, means, ses, colors, ylabel):
 
 # ---------------------------------------------------------------- contract
 def _vol_curve(sub, eps_grid, alpha=0.10):
+    """Median volume across seeds (the gate's outcome is bimodal:
+    typical certification vs occasional conservative abstention)."""
     out = []
     for eps in eps_grid:
         per_seed = []
@@ -244,14 +246,15 @@ def _vol_curve(sub, eps_grid, alpha=0.10):
             dv = ss[ss.split == 'eval']['dev'].to_numpy()
             per_seed.append((off.mean(),
                              (dv[off] > eps).mean() if off.any() else 0.0))
-        out.append(np.mean(per_seed, axis=0))
+        per_seed = np.asarray(per_seed)
+        cert = per_seed[:, 0] > 0.05
+        out.append((np.median(per_seed[:, 0]),
+                    per_seed[cert, 1].mean() if cert.any() else 0.0))
     return np.array(out)
 
 
 def fig_contract():
-    d1 = pd.concat(
-        [pd.read_parquet(os.path.join(RESULTS, f'gap_close{s}.parquet'))
-         for s in ('_1600', '_1600b')], ignore_index=True)
+    d1 = _read('gap_close_p800')
     eps_grid = np.arange(0.15, 0.75, 0.05)
     lev = pd.read_parquet(os.path.join(RESULTS, 'lever2_conf.parquet'))
     rd_dev = lev[(lev.pool == 'le13b') & (lev.method == 'random')
@@ -424,8 +427,9 @@ def fig2_selection():
     d2 = _read('lever2_conf', 'lever2_conf_b')
     ev = d2[(d2.method == 'qa') & (d2.split == 'eval')]
 
-    ax = axes[1]                       # (b) target rank
+    ax = axes[1]                       # (b) target rank vs neighbor floor
     lbl = {'r1': 'best', 'r5': '5th best', 'rmed': 'median'}
+    orc_all = d2[(d2.method == 'oracle-pick') & (d2.split == 'eval')]
     for pool, ls in (('le13b', '-'), ('all', '--')):
         per = ev[ev.pool == pool].groupby(['variant', 'seed'])['dev'] \
             .mean().unstack().reindex(['r1', 'r5', 'rmed'])
@@ -434,16 +438,20 @@ def fig2_selection():
                     color=C['qa'], lw=1.4, ms=2.5, capsize=1.5,
                     label='\u226413B pool' if pool == 'le13b'
                     else 'unrestricted pool')
+        orc = orc_all[orc_all.pool == pool].groupby('variant')['dev'] \
+            .mean().reindex(['r1', 'r5', 'rmed'])
+        ax.plot(range(3), orc, ls, color=C['oracle'], lw=1.0, ms=2,
+                marker='s')
     ax.set_xticks(range(3))
     ax.set_xticklabels([lbl[v] for v in ('r1', 'r5', 'rmed')])
     ax.set_xlabel('target model (rank by mean score)')
-    ax.set_title('(b) Best model =\nhardest target')
+    ax.set_title('(b) Error tracks the\nneighbor floor (grey)')
     ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
     ax = axes[2]                       # (c) candidate count
     ev1 = d2[(d2.variant == 'r1') & (d2.split == 'eval')]
-    ks, qa_m, qa_s, orc = [], [], [], []
+    ks, qa_m, qa_s, orc, rnd = [], [], [], [], []
     for pool, K in [(f'k{k}', k) for k in (2, 4, 8, 16, 32, 64)] \
             + [('all', 137)]:
         sq = ev1[(ev1.pool == pool) & (ev1.method == 'qa')]
@@ -455,15 +463,19 @@ def fig2_selection():
         qa_s.append(per.std() / np.sqrt(len(per)))
         orc.append(ev1[(ev1.pool == pool)
                        & (ev1.method == 'oracle-pick')]['dev'].mean())
+        rnd.append(ev1[(ev1.pool == pool)
+                       & (ev1.method == 'random')]['dev'].mean())
+    ax.plot(ks, rnd, ':', color=C['grey'], lw=1.0, ms=2, marker='o',
+            label='random pick')
     ax.errorbar(ks, qa_m, yerr=qa_s, fmt='-o', color=C['qa'], lw=1.4,
                 ms=2.5, capsize=1.5, label='PKPS pick')
-    ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.2, ms=2.5,
-            label='oracle pick')
+    ax.plot(ks, orc, '-s', color=C['oracle'], lw=1.0, ms=2,
+            label='hindsight best')
     ax.set_xscale('log', base=2)
     ax.set_xticks([2, 8, 32, 128])
     ax.set_xticklabels(['2', '8', '32', '128'])
     ax.set_xlabel('candidate models')
-    ax.set_title('(c) Candidate count:\nthe floor falls')
+    ax.set_title('(c) Gains saturate; hindsight\nis selection-inflated')
     ax.legend(fontsize=6)
     ax.grid(alpha=0.3)
 
@@ -506,9 +518,12 @@ def _gate_stats(df, pool, methods, eps=0.5, alpha=0.10):
             per.append((off.mean(),
                         (dv[off] > eps).mean() if off.any() else 0.0))
         per = np.asarray(per)
-        rows.append({'method': meth, 'vol': per[:, 0].mean(),
-                     'se': per[:, 0].std() / np.sqrt(len(per)),
-                     'viol': per[:, 1].mean()})
+        cert = per[:, 0] > 0.05
+        rows.append({'method': meth, 'vol': np.median(per[:, 0]),
+                     'q25': np.quantile(per[:, 0], 0.25),
+                     'q75': np.quantile(per[:, 0], 0.75),
+                     'viol': per[cert, 1].mean() if cert.any() else 0.0,
+                     'abstain': float((~cert).mean())})
     if not rows:
         return pd.DataFrame(columns=['vol', 'se', 'viol']) \
             .rename_axis('method')
@@ -527,7 +542,7 @@ LADDER = [('qa', 'none\n(localized means)', C['qa']),
 
 def fig4_family():
     """One estimator family, one coupling dial delta."""
-    gc = _read('gap_close_1600', 'gap_close_1600b')
+    gc = _read('gap_close_p800')
     fig = plt.figure(figsize=(6.9, 2.1))
     gs = fig.add_gridspec(1, 3, width_ratios=[1.0, 1.3, 1.0])
 
@@ -556,21 +571,22 @@ def fig4_family():
 
     ax = fig.add_subplot(gs[1])        # (b) ladder bars, 15 seeds
     st = _gate_stats(gc, 'all', [m for m, _, _ in LADDER])
-    labels, means, ses, cols = [], [], [], []
+    labels, means, errs, cols = [], [], [[], []], []
     for m, note, c in LADDER:
         if m not in st.index:
             continue
         labels.append('oracle' if m == 'oracle-conf' else m)
         means.append(100 * st.loc[m, 'vol'])
-        ses.append(100 * st.loc[m, 'se'])
+        errs[0].append(100 * (st.loc[m, 'vol'] - st.loc[m, 'q25']))
+        errs[1].append(100 * (st.loc[m, 'q75'] - st.loc[m, 'vol']))
         cols.append(c)
-    _bar(ax, labels, means, ses, cols, 'certified volume (%)')
+    _bar(ax, labels, means, errs, cols, 'certified volume (%)')
     for xi, m in enumerate(means):
         if m < 1.5:
             ax.text(xi, 1.5, '0', ha='center', fontsize=6,
                     color='#486884')
     ax.set_title('(b) Certified volume by member\n'
-                 r'($\varepsilon$=0.5, $\alpha$=10%, 15 seeds)')
+                 r'(median [IQR]; $\varepsilon$=0.5, $\alpha$=10%)')
 
     ax = fig.add_subplot(gs[2])        # (c) pairing overlap incl. soft
     pr = _read('lever2_pairing_softcorr2')
@@ -585,11 +601,11 @@ def fig4_family():
         ax.plot(xs, ys, '-o', color=col, lw=1.4, ms=2.5, label=lbl)
     ax.annotate('pairdev inadmissible;\nsoft earns only its\n'
                 r'$\delta\to0$ content', (0, 4), fontsize=5.5,
-                xytext=(10, 28), arrowprops=dict(arrowstyle='-', lw=0.6))
+                xytext=(35, 8), arrowprops=dict(arrowstyle='-', lw=0.6))
     ax.set_xlabel('flagship-candidate overlap (%)')
     ax.set_ylabel('certified volume (%)')
     ax.set_title('(c) Exact pairs: the unique\nvariance-zero coupling')
-    ax.legend(fontsize=6)
+    ax.legend(fontsize=6, loc='upper left')
     ax.grid(alpha=0.3)
 
     fig.tight_layout()
@@ -611,22 +627,20 @@ def fig5_price():
             r'$\approx\alpha$)', ha='center', va='top', fontsize=5.5,
             color='#486884')
     for pool, ls in (('all', '-'), ('le13b', '--')):
-        sub = cur[cur.pool == pool]
-        per = sub[sub.method == 'pd-cal'].groupby('N')['vol']
-        ax.errorbar(per.mean().index, 100 * per.mean(),
-                    yerr=100 * per.std() / np.sqrt(10), fmt=ls + 'o',
-                    color=C['pairdev'], lw=1.6, ms=2.5, capsize=1.5,
-                    label='pd-cal (unrestricted)' if pool == 'all'
-                    else 'pd-cal (\u226413B)')
-    per = cur[(cur.pool == 'all') & (cur.method == 'pairdev')] \
-        .groupby('N')['vol']
-    ax.plot(per.mean().index, 100 * per.mean(), ':', color='#486884',
-            lw=1.0, label='full pairing (unrestricted)')
+        sub = cur[(cur.pool == pool) & (cur.method == 'pd-cal')]
+        g = sub.groupby('N')['vol']
+        Ns = g.median().index.to_numpy()
+        ax.fill_between(Ns, 100 * g.quantile(0.25), 100 * g.quantile(0.75),
+                        color=C['pairdev'], alpha=0.15, lw=0)
+        ax.plot(Ns, 100 * g.median(), ls + 'o', color=C['pairdev'],
+                lw=1.6, ms=2.5,
+                label='pd-cal (unrestricted)' if pool == 'all'
+                else 'pd-cal (\u226413B)')
     ax.axvline(2 * 217, color='k', lw=0.6, ls=':')
     ax.text(2 * 217 + 18, 44, 'predicted knee\n'
             r'$2N^*=2s^2/(\kappa\tau^2)$', fontsize=5.5)
     ax.set_xlabel('total paired sample N (anchors + gate calibration)')
-    ax.set_ylabel('certified volume (%)')
+    ax.set_ylabel('certified volume (%), median [IQR]')
     ax.set_title('(a) The price of certification:\n'
                  'generations on your own traffic')
     ax.legend(fontsize=5.8, ncol=1, loc='lower right',
@@ -634,7 +648,7 @@ def fig5_price():
     ax.grid(alpha=0.3)
 
     ax = axes[1]
-    gc = _read('gap_close_1600', 'gap_close_1600b')
+    gc = _read('gap_close_p800')
     sub = gc[(gc.pool == 'all') & (gc.method == 'pd-cal')]
     for rule, col, lbl in (('emp', C['pairdev'], 'empirical cutoff'),
                            ('ucb', C['qa'], 'Clopper-Pearson cutoff')):
@@ -750,7 +764,7 @@ T1_META = [
 
 def make_tables():
     from scipy.stats import spearmanr
-    gc = _read('gap_close_1600', 'gap_close_1600b')
+    gc = _read('gap_close_p800')
     rows = []
     for meth, delta, anchors, extra in T1_META:
         rec = {'member': meth if meth != 'oracle-conf' else 'oracle',
@@ -762,6 +776,7 @@ def make_tables():
             rec[f'vol_{pool}'] = f"{100 * st.loc[meth, 'vol']:.0f}%"
             if pool == 'all':
                 rec['viol'] = f"{st.loc[meth, 'viol']:.2f}"
+                rec['abstain'] = f"{st.loc[meth, 'abstain']:.0%}"
                 ev = gc[(gc.pool == pool) & (gc.method == meth)
                         & (gc.split == 'eval')]
                 ce = np.where(np.isfinite(ev.conf), ev.conf, 1e6)
