@@ -92,22 +92,25 @@ fig_paper.py            ALL paper figures + tables; helivan.io palette
 
 ## Paper figure set (ICLR/NeurIPS main track; `fig_paper.py`)
 
-1. `fig1_concept`    PKPS geometry localized at two queries; the nearest
-                     substitute changes with the query
-2. `fig2_selection`  selection minimizes mimicry (combined pool, label-free
-                     matches hidden task labels) + when it is easy: target
-                     rank (the best model is the hardest target), candidate
-                     count (oracle floor falls, PKPS follows), cache density
-3. `fig3_contract`   certified volume vs tolerance at alpha=10% + flagship
-                     bill saved (pd-cal primary, qa, pairdev, oracle)
-4. `fig4_family`     one estimator family, one coupling dial delta:
-                     schematic, 15-seed certified-volume ladder,
-                     pairing-overlap panel with soft-pairdev
-5. `fig5_price`      price of certification: volume vs paired-sample budget
-                     with predicted knee 2N* = 2 s^2/(kappa tau^2); gate
-                     validity (empirical vs Clopper-Pearson cutoffs)
-6. `fig6_novel`      limitation: novel-task traffic breaks the contract
-                     silently (no OOD signal in confidence)
+One hero: the PKPS router = query-localized pick + deviation-regression
+confidence (on the calibration sample) + conformal gate. One question per
+main figure; all caveats live in fig 4.
+
+1. `fig1_concept`  WHAT: the PKPS geometry localized at two queries; the
+                   nearest substitute changes with the query
+2. `fig2_payoff`   PAYS: pick quality (label-free = task labels) ->
+                   certified volume vs tolerance (hero + oracle; baselines
+                   certify 0%) -> flagship bill saved
+3. `fig3_why`      WHY + MINIMAL ASSUMPTION: 3-bar ladder (unpaired 41% /
+                   calibration sample 90% / full pairing 95%, oracle 93%)
+                   + controlled pairing ablation (coupling must be exact)
+4. `fig4_ops`      COST + LIMITS: budget curve with predicted knee; gate
+                   validity (empirical vs Clopper-Pearson); novel-task
+                   traffic breaks the contract
+
+Appendix figures (same module): `fig2_selection` (difficulty levers),
+`fig3_contract`, `fig4_family` (full 8-member ladder + dial schematic),
+`fig5_price`, `fig6_novel`, `fig3_ablations`.
 
 Tables (emitted to `results/tables/` as csv/md/tex by `make_tables`):
 T1 the family in one table (member | coupling | anchors | assumptions |

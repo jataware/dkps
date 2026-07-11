@@ -27,7 +27,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from .lever_sweep2 import _geometry, _prep, gate2, pairdev_est
+from .lever_sweep2 import (_geometry, _prep, gate2, pairdev_est,
+                           softdev_est)
 from .run_cost_routing import parse_params
 from .run_helm import RESULTS
 
@@ -152,6 +153,10 @@ def collect(X, Qu, rows, n, names, seed, n_hold=800, n_eval=None,
     pd30_st = {} if light else {
         su: pairdev_sub(Xa, code_a, model_groups, f, n, ones_a, 30, rng)
         for su, f in flags.items()}
+    # soft-pairdev under the SAME protocol (finite-delta coupling)
+    soft_h = {su: softdev_est(Xa, ua, model_groups, f, n, W,
+                              delta=0.05 * med)
+              for su, f in flags.items()}
 
     out = []
     for gi, (q, g) in enumerate(hold_groups):
@@ -176,7 +181,8 @@ def collect(X, Qu, rows, n, names, seed, n_hold=800, n_eval=None,
             varub = np.sqrt(d ** 2 + s2sum)
             varnorm = d / np.sqrt(s2sum + 1e-12)
             confs = {'qa': d, 'pairdev': pd_full[suite][gi][av],
-                     'pd-cal': pd_cal[suite][gi][av]}
+                     'pd-cal': pd_cal[suite][gi][av],
+                     'soft': soft_h[suite][gi][av]}
             if not light:
                 confs.update({'var-ub': varub, 'var-norm': varnorm,
                               'pd-cal-st': pd_cal_st[suite][0][av],

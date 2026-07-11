@@ -809,15 +809,260 @@ def make_tables():
     return t1, t2
 
 
+# =================================================================
+# MAIN-BODY FIGURE SET (one hero: the PKPS router = localized pick +
+# deviation-regression confidence + conformal gate). One question per
+# figure; levers/full ladder/gate rules live in the appendix figures.
+# =================================================================
+
+HERO = '#114471'
+
+
+def fig2_payoff():
+    """Does it pay? Pick quality -> certified volume -> dollars."""
+    fig, axes = plt.subplots(1, 3, figsize=(6.9, 2.2))
+
+    ax = axes[0]                                   # (a) the pick
+    cm = _read('combined_mimicry')
+    order = [('qa-0.25x', 'PKPS pick', C['qa']),
+             ('task*', 'task labels', '#114471'),
+             ('static', 'static', C['slate1']),
+             ('random', 'random', C['grey'])]
+    per = cm[cm.method.isin([m for m, _, _ in order] + ['oracle'])] \
+        .groupby(['method', 'seed'])['error'].mean().unstack()
+    means = [per.loc[m].mean() for m, _, _ in order]
+    ses = [per.loc[m].std() / np.sqrt(per.shape[1]) for m, _, _ in order]
+    _bar(ax, [l for _, l, _ in order], means, ses,
+         [c for _, _, c in order], 'mimicry error of the pick')
+    orc = per.loc['oracle'].mean()
+    ax.axhline(orc, color=C['oracle'], lw=1.2, ls='--')
+    ax.text(len(order) - 0.45, orc + 0.012, 'oracle', fontsize=5.5,
+            ha='right', color='#486884')
+    ax.set_title('(a) The pick: label-free,\nno task metadata')
+
+    d1 = _read('gap_close_p800')
+    eps_grid = np.arange(0.15, 0.75, 0.05)
+    lev = _read('lever2_conf')
+    rd_dev = lev[(lev.pool == 'le13b') & (lev.method == 'random')
+                 & (lev.split == 'eval')]['dev'].median()
+
+    ax = axes[1]                                   # (b) the contract
+    for pool, ls, lbl in (('all', '-', 'unrestricted pool'),
+                          ('le13b', '--', '\u226413B pool')):
+        sub = d1[d1.pool == pool]
+        v = _vol_curve(sub[sub.method == 'pd-cal'], eps_grid)
+        ax.plot(eps_grid, 100 * v[:, 0], ls, color=HERO, lw=1.8,
+                label=f'PKPS router ({lbl})')
+        v = _vol_curve(sub[sub.method == 'oracle-conf'], eps_grid)
+        ax.plot(eps_grid, 100 * v[:, 0], ls, color=C['oracle'], lw=1.0)
+    ax.plot([], [], '-', color=C['oracle'], lw=1.0, label='oracle')
+    ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
+    ax.text(rd_dev - 0.012, 20, 'typical model-\nswap deviation',
+            fontsize=5.5, ha='right')
+    ax.text(0.97, 0.06, 'leaderboard / static / random:\nno per-query '
+            'signal, certify 0%', transform=ax.transAxes, ha='right',
+            fontsize=5.5, color='#486884', style='italic')
+    ax.set_xlabel(r'tolerance $\varepsilon$')
+    ax.set_ylabel('certified volume (%)')
+    ax.set_title('(b) The guarantee: median volume\n'
+                 r'at P(dev > $\varepsilon$) $\leq$ 10%')
+    ax.legend(fontsize=5.8, loc='upper left')
+    ax.grid(alpha=0.3)
+
+    ax = axes[2]                                   # (c) the money
+    sub = d1[d1.pool == 'le13b']
+    v = _vol_curve(sub[sub.method == 'pd-cal'], eps_grid)
+    for R, lsr in ((25, '-'), (10, ':')):
+        ax.plot(eps_grid, 100 * v[:, 0] * (1 - 1 / R), lsr, color=HERO,
+                lw=1.8 if R == 25 else 1.2, label=f'{R}x price ratio')
+    ax.axvline(rd_dev, color='k', lw=0.6, ls=':')
+    ax.set_xlabel(r'tolerance $\varepsilon$')
+    ax.set_ylabel('flagship bill saved (%)')
+    ax.set_title('(c) The savings\n(\u226413B substitutes)')
+    ax.legend(fontsize=5.8, loc='upper left')
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    _save(fig, 'fig2_payoff')
+
+
+def fig3_why():
+    """Why it works and what it minimally needs: the coupling ladder
+    under ONE protocol, plus the controlled pairing ablation."""
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.5))
+
+    ax = axes[0]                                   # (a) condensed ladder
+    gc = _read('gap_close_p800')
+    members = [('qa', 'unpaired\n(means only)', C['qa']),
+               ('pd-cal', 'calibration\nsample (ours)', HERO),
+               ('pairdev', 'full suite\npairing', '#486884')]
+    st = _gate_stats(gc, 'all', [m for m, _, _ in members]
+                     + ['oracle-conf'])
+    labels, meds, errs, cols = [], [], [[], []], []
+    for m, lbl, c in members:
+        labels.append(lbl)
+        meds.append(100 * st.loc[m, 'vol'])
+        errs[0].append(100 * (st.loc[m, 'vol'] - st.loc[m, 'q25']))
+        errs[1].append(100 * (st.loc[m, 'q75'] - st.loc[m, 'vol']))
+        cols.append(c)
+    x = np.arange(len(labels))
+    ax.bar(x, meds, yerr=errs, width=0.6, color=cols, capsize=1.5,
+           error_kw=dict(lw=0.7))
+    for xi, m in enumerate(meds):
+        if m < 1.5:
+            ax.text(xi, 2, '0', ha='center', fontsize=6, color='#486884')
+    orc = 100 * st.loc['oracle-conf', 'vol']
+    ax.axhline(orc, color=C['oracle'], lw=1.2, ls='--')
+    ax.text(len(labels) - 0.5, orc + 2, 'oracle', fontsize=5.5,
+            ha='right', color='#486884')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=5.8)
+    ax.set_ylabel('certified volume (%), median [IQR]')
+    ax.set_title('(a) Confidence needs exact pairs;\n'
+                 'the calibration sample suffices')
+    ax.grid(alpha=0.3, axis='y')
+
+    ax = axes[1]                                   # (b) pairing ablation
+    pr = _read('lever2_pairing_softcorr2')
+    xs = [100, 50, 0]
+    for meth, col, lbl in (('pairdev', '#486884', 'full-pairing regr.'),
+                           ('soft-0.05x', C['slate1'], 'soft-coupled'),
+                           ('qa', C['qa'], 'unpaired (means)')):
+        ys = []
+        for al in ('aligned', 'independent', 'disjoint'):
+            stp = _gate_stats(pr[pr.variant == al], 'all', [meth])
+            ys.append(100 * stp.loc[meth, 'vol'] if len(stp) else np.nan)
+        ax.plot(xs, ys, '-o', color=col, lw=1.4, ms=2.5, label=lbl)
+    ax.annotate('inadmissible: no shared\nanchors to regress on',
+                (0, 4), fontsize=5.5, xytext=(30, 8),
+                arrowprops=dict(arrowstyle='-', lw=0.6))
+    ax.set_xlabel('flagship\u2013candidate anchor overlap (%)')
+    ax.set_ylabel('certified volume (%)')
+    ax.set_title('(b) Controlled ablation: coupling\nmust be exact '
+                 '(HELM, fixed cache)')
+    ax.legend(fontsize=5.8, loc='upper left')
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    _save(fig, 'fig3_why')
+
+
+def fig4_ops():
+    """What it costs and when it fails: budget curve, gate validity,
+    exchangeability breakage. All caveats live here by design."""
+    from .gap_close import gate2 as _g2
+    fig, axes = plt.subplots(1, 3, figsize=(6.9, 2.1))
+
+    ax = axes[0]                                   # (a) budget curve
+    cur = _read('cal_curve_nested')
+    ax.axvspan(50, 300, color='#e0edff', alpha=0.55, lw=0)
+    ax.set_ylim(0, 104)
+    ax.text(175, 102, 'gate unreliable', ha='center', va='top',
+            fontsize=5.5, color='#486884')
+    for pool, ls, lbl in (('all', '-', 'unrestricted'),
+                          ('le13b', '--', '\u226413B')):
+        sub = cur[(cur.pool == pool) & (cur.method == 'pd-cal')]
+        g = sub.groupby('N')['vol']
+        Ns = g.median().index.to_numpy()
+        ax.fill_between(Ns, 100 * g.quantile(0.25),
+                        100 * g.quantile(0.75), color=HERO, alpha=0.15,
+                        lw=0)
+        ax.plot(Ns, 100 * g.median(), ls + 'o', color=HERO, lw=1.6,
+                ms=2.5, label=lbl)
+    ax.axvline(2 * 217, color='k', lw=0.6, ls=':')
+    ax.text(2 * 217 + 20, 40, 'predicted\nknee $2N^*$', fontsize=5.5)
+    ax.set_xlabel('paired sample N (own-traffic queries)')
+    ax.set_ylabel('certified volume (%)')
+    ax.set_title('(a) Cost: generations on\nyour own traffic')
+    ax.legend(fontsize=5.8, loc='lower right')
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]                                   # (b) gate validity
+    gc = _read('gap_close_p800')
+    sub = gc[(gc.pool == 'all') & (gc.method == 'pd-cal')]
+    for rule, col, lbl in (('emp', HERO, 'empirical cutoff'),
+                           ('ucb', C['qa'], 'Clopper\u2013Pearson')):
+        ns, vio, vols = [], [], []
+        for nc in (50, 100, 200, 400):
+            per = []
+            for seed, ss in sub.groupby('seed'):
+                cal = ss[ss.split == 'cal']
+                cal = cal.sample(min(nc, len(cal)),
+                                 random_state=int(seed))
+                ev = ss[ss.split == 'eval']
+                cc = np.where(np.isfinite(cal.conf), cal.conf, 1e6)
+                ce = np.where(np.isfinite(ev.conf), ev.conf, 1e6)
+                off = _g2(cc, cal['dev'].to_numpy(), ce, 0.5, 0.10,
+                          rule=rule)
+                dv = ev['dev'].to_numpy()
+                per.append(((dv[off] > 0.5).mean() if off.any()
+                            else 0.0, off.mean()))
+            per = np.asarray(per)
+            ns.append(nc)
+            vio.append(per[:, 0].mean())
+            vols.append(np.median(per[:, 1]))
+        ax.plot(ns, 100 * np.asarray(vio), '-o', color=col, lw=1.4,
+                ms=2.5, label=lbl)
+        dy = -9 if rule == 'emp' else 4
+        for xx, yy, v in zip(ns, 100 * np.asarray(vio), vols):
+            ax.annotate(f'{v:.0%}', (xx, yy), textcoords='offset points',
+                        xytext=(4, dy), fontsize=5.5, color=col)
+    ax.axhline(10, color='k', lw=0.6, ls=':')
+    ax.text(330, 10.25, r'budget $\alpha$', fontsize=5.5)
+    ax.set_xlabel('gate calibration size')
+    ax.set_ylabel('achieved violation (%)')
+    ax.set_title('(b) Validity: violation vs\ncalibration (labels: '
+                 'volume)')
+    ax.legend(fontsize=5.8)
+    ax.grid(alpha=0.3)
+
+    ax = axes[2]                                   # (c) exchangeability
+    nv = _read('lever2_novel')
+    width = 0.35
+    for j, (pool, lbl) in enumerate((('le13b', '\u226413B pool'),
+                                     ('all', 'unrestricted pool'))):
+        qa = nv[(nv.method == 'qa') & (nv.pool == pool)]
+        stats = {}
+        for k, evs in (('seen', 'eval-seen'), ('novel', 'eval-novel')):
+            per = []
+            for seed, ss in qa.groupby('seed'):
+                cal = ss[ss.split == 'cal']
+                ev = ss[ss.split == evs]
+                off = _g2(cal['conf'].to_numpy(), cal['dev'].to_numpy(),
+                          ev['conf'].to_numpy(), 0.5, 0.10)
+                dv = ev['dev'].to_numpy()
+                per.append((dv[off] > 0.5).mean() if off.any() else 0.0)
+            stats[k] = np.mean(per)
+        ax.bar(np.arange(2) + (j - 0.5) * width,
+               [100 * stats['seen'], 100 * stats['novel']], width,
+               color=[C['slate1'], '#114471'][j], label=lbl)
+    ax.axhline(10, color='k', lw=0.6, ls=':')
+    ax.set_xticks(range(2))
+    ax.set_xticklabels(['seen tasks', 'novel tasks'])
+    ax.set_ylabel('achieved violation (%)')
+    ax.set_title('(c) Limit: novel-task traffic\nbreaks the contract')
+    ax.legend(fontsize=5.8)
+    ax.grid(alpha=0.3, axis='y')
+
+    fig.tight_layout()
+    _save(fig, 'fig4_ops')
+
+
 def main():
     os.makedirs(FIGDIR, exist_ok=True)
+    # main-body set
+    fig2_payoff()
+    fig3_why()
+    fig4_ops()
+    make_tables()
+    # appendix set
     fig2_selection()
     fig_contract()
     fig4_family()
     fig5_price()
     fig6_novel()
-    make_tables()
     fig_ablations()
+    # concept last (data pass)
     fig_concept()
 
 
