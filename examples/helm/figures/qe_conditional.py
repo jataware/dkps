@@ -8,11 +8,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rcParams.update({                              # clean modern style: white, subtle grid, despined
-    'figure.facecolor': 'white', 'axes.facecolor': 'white', 'axes.edgecolor': '#b8b8b8',
+    'figure.facecolor': 'white', 'axes.facecolor': 'white', 'axes.edgecolor': '#afbec6',
     'axes.linewidth': 0.9, 'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#ececec',
     'grid.linewidth': 0.8, 'axes.spines.top': False, 'axes.spines.right': False,
-    'axes.spines.left': False, 'xtick.color': '#555', 'ytick.color': '#555',
-    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11})
+    'axes.spines.left': False, 'xtick.color': '#486884', 'ytick.color': '#486884',
+    'axes.labelcolor': '#213c66', 'axes.titlecolor': '#0a2245', 'text.color': '#213c66', 'font.size': 11})
 import numpy as np
 import pandas as pd
 from scipy.stats import gaussian_kde
@@ -28,10 +28,10 @@ def ridge(ax, groups, title):
         v = np.asarray(v, float); v = v[np.isfinite(v)]; off = i * 1.0
         if len(v) > 10:
             dd = gaussian_kde(v)(xs); dd = dd / dd.max() * 0.82
-            ax.fill_between(xs, off, off + dd, where=xs >= 0, color='#E24A33', alpha=0.6, lw=0)
+            ax.fill_between(xs, off, off + dd, where=xs >= 0, color='#3596ff', alpha=0.6, lw=0)
             ax.fill_between(xs, off, off + dd, where=xs < 0, color='#bbb', alpha=0.55, lw=0)
             ax.plot(xs, off + dd, color='#444', lw=0.7)
-            ax.plot([v.mean()], [off + 0.02], 'v', color='#111', ms=5)
+            ax.plot([v.mean()], [off + 0.02], 'v', color='#0a2245', ms=5)
         ax.text(XL[0] - 0.02 * (XL[1] - XL[0]), off + 0.12, lab, fontsize=14, ha='right', va='bottom')
     ax.axvline(0, color='#888', lw=0.9); ax.set_yticks([]); ax.set_xlim(*XL)
     ax.set_xticks([0.0, 0.2]); ax.tick_params(labelsize=13)

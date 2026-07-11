@@ -9,11 +9,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 plt.rcParams.update({                              # clean modern style: white, subtle grid, despined
     'figure.facecolor': 'white', 'axes.facecolor': 'white',
-    'axes.edgecolor': '#b8b8b8', 'axes.linewidth': 0.9,
-    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e9e9e9', 'grid.linewidth': 0.8,
+    'axes.edgecolor': '#afbec6', 'axes.linewidth': 0.9,
+    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e5e7eb', 'grid.linewidth': 0.8,
     'axes.spines.top': False, 'axes.spines.right': False,
-    'xtick.color': '#555', 'ytick.color': '#555',
-    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11,
+    'xtick.color': '#486884', 'ytick.color': '#486884',
+    'axes.labelcolor': '#213c66', 'axes.titlecolor': '#0a2245', 'text.color': '#213c66', 'font.size': 11,
 })
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ import pandas as pd
 # the full PKPS (combined, uses all data) is red like PKPS elsewhere; the paired/unpaired
 # ablations get their own colours (teal/orange) so they never collide with a method's colour
 # (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
-ESTIMATOR_COLORS = {'sample': '#777777', 'dkps': '#8EBA42', 'pkps': '#E24A33'}
+ESTIMATOR_COLORS = {'sample': '#9ca3af', 'dkps': '#93aacc', 'pkps': '#3596ff'}
 ESTIMATOR_LABELS = {'sample': 'Sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
 ESTIMATOR_ORDER = ['sample', 'dkps', 'pkps']
 

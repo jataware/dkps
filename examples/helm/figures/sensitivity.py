@@ -10,18 +10,18 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rcParams.update({
     'figure.facecolor': 'white', 'axes.facecolor': 'white',
-    'axes.edgecolor': '#b8b8b8', 'axes.linewidth': 0.9,
-    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e9e9e9', 'grid.linewidth': 0.8,
+    'axes.edgecolor': '#afbec6', 'axes.linewidth': 0.9,
+    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e5e7eb', 'grid.linewidth': 0.8,
     'axes.spines.top': False, 'axes.spines.right': False,
-    'xtick.color': '#555', 'ytick.color': '#555',
-    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11,
+    'xtick.color': '#486884', 'ytick.color': '#486884',
+    'axes.labelcolor': '#213c66', 'axes.titlecolor': '#0a2245', 'text.color': '#213c66', 'font.size': 11,
 })
 import numpy as np
 import pandas as pd
 
 MAIN = {'helm': 'results-pkps-rd1', 'eee': 'results-eee-rd1'}
 DIMS = [4, 8, 24]
-DCOL = {4: '#6baed6', 8: '#E24A33', 24: '#2171b5'}   # d=8 (paper) in red
+DCOL = {4: '#6baed6', 8: '#3596ff', 24: '#2171b5'}   # d=8 (paper) in red
 SIG_LABELS = ['0.03', '0.1', '0.3', '1', '3', r'$\delta$']
 SUITE_LBL = {'helm': 'HELM', 'eee': 'EEE'}
 
@@ -52,7 +52,7 @@ axes[0].set_ylabel(r'\PKPS MAE vs. true score'.replace(r'\PKPS', 'PKPS'), fontsi
 
 # (c) fixed bandwidth vs CV
 ax = axes[2]
-for suite, col in [('helm', '#348ABC'), ('eee', '#8C564B')]:
+for suite, col in [('helm', '#486884'), ('eee', '#114471')]:
     ys, es = [], []
     for i in range(6):
         g = budget_curve(f'results-sens/{suite}-sig{i}')

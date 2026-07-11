@@ -47,51 +47,41 @@ information lost. Theoretically, we show that
 benchmark prediction using \PKPS is query-efficient relative to methods that only use
 information from queries all models have responded to. Empirically, we show that \PKPS
 outperforms relevant baselines on two tasks---query-efficient evaluation and (model, task)
-score matrix imputation---across two large benchmark suites.
+score-matrix completion---across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
 Generative models are evaluated on an ever-growing collection of benchmarks spanning
 knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
-all of them is often prohibitively expensive: a modern release reports scores on more
-than $40$ benchmarks, the same evaluations are re-run many times before release to track
-training and select checkpoints, and a full suite can cost thousands of dollars and days
-of wall-clock time per run \citep{benchpress}. As a result, models are evaluated on
-different subsets of tasks and of queries within a task: a recent compilation of $84$ frontier models on $133$ benchmarks
-finds only $23\%$ of the score matrix filled \citep{benchpress}. Within a curated
-benchmark, every model is forced to answer an identical set of queries---but this
-controlled setting is the exception. Arena-style platforms score each model on the
-conversations its users generate \citep{chiang2024chatbot}; contamination-aware
-benchmarks refresh their items, so models evaluated in different months answer different
-questions \citep{white2024livebench}; and cost-driven subsampling gives each evaluation
-run its own item subset \citep{perlitz2024efficient}. The resulting (model $\times$
-task) score matrix is sparse, its entries are noisy averages over few queries, and the
-responses that produced it are \emph{unpaired}: comparing models in general requires
-using responses to different queries. Predicting the matrix's missing and true entries
-would let practitioners reuse cached evaluations instead of paying to re-run them
-\citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}; for deprecated models that
-can no longer be queried, prediction from cached responses is the only option.
+all of them is prohibitively expensive, so models are evaluated on different subsets of
+tasks and of queries within a task: a recent compilation of $84$ frontier models on
+$133$ benchmarks finds only $23\%$ of the score matrix filled \citep{benchpress}.
+Outside curated leaderboards the observed queries also differ across models: arena-style
+platforms score each model on the conversations its users generate
+\citep{chiang2024chatbot}, contamination-aware benchmarks refresh their items
+\citep{white2024livebench}, and cost-driven subsampling gives each evaluation run its
+own item subset \citep{perlitz2024efficient}. The resulting (model $\times$ task)
+score matrix is therefore sparse, its entries are noisy averages over few queries, and
+the responses that produced it are \emph{unpaired}: comparing models in general
+requires using responses to different queries. Predicting the matrix's missing and true
+entries would let practitioners reuse cached evaluations instead of paying to re-run
+them \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}; for deprecated models
+that can no longer be queried, prediction from cached responses is the only option.
 
-Two lines of work aim to reduce this cost by predicting scores rather than computing
-them. Efficient benchmarking extrapolates a task's full score from a small scored subset of its
-items, classically by item-response theory \citep{polo2024tinybenchmarks}; matrix
-completion imputes cells that were never run, from low-rank structure across the matrix
-\citep{benchpress}. These are two ends of the same problem: every cell of the
-score matrix is observed with some number of queries, possibly zero, and predicting its
-true score amounts to denoising when that number is small and to completion when it is
-zero. A single representation of each model that is accurate enough to predict any cell
-would serve both ends.
-
-Neither line of work has such a representation: both use only each cell's aggregate
-score, and the responses that produced those scores carry more information than the
-scores themselves. The Data Kernel Perspective Space (DKPS) \citep{dkps_qeff} uses this
-information: it embeds each model from its responses via classical multidimensional
-scaling and regresses benchmark scores in the resulting space. The DKPS distance between
-two models, however, is defined only over responses to shared queries---a \emph{paired}
-design; in practice this restricts analysis to maximal subsets of models that share a
-common query set \citep{dkps_qeff}. To our knowledge, no existing method predicts the
-score matrix from evaluation data as it is typically available: sparse, noisy, and
-unpaired.
+Two lines of work predict scores rather than compute them: efficient benchmarking
+extrapolates a task's full score from a small scored subset of its items, classically by
+item-response theory \citep{polo2024tinybenchmarks}, and matrix completion imputes
+cells that were never run from low-rank structure \citep{benchpress}. These are two
+ends of one problem---every cell is observed with some number of queries, possibly
+zero---but both use only each cell's aggregate score, and the responses behind those
+scores carry more information than the scores themselves. The Data Kernel Perspective
+Space (DKPS) \citep{helm2024tracking} uses this information, embedding each model from
+its responses by classical multidimensional scaling and regressing benchmark scores in
+the resulting space \citep{dkps_qeff}. Its distances, however, are defined only over
+responses to shared queries---a \emph{paired} design, which in practice restricts
+analysis to maximal subsets of models sharing a common query set. To our knowledge, no
+existing method predicts the score matrix from evaluation data as it is typically
+available: sparse, noisy, and unpaired.
 
 In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
 collection of low-dimensional representations of models based on their embedded
@@ -124,7 +114,8 @@ completion reduces error by up to $28\%$ (Section~\ref{sec:experiments}).
 \begin{table}[t!]
 \centering
 \caption{MAE of benchmark prediction methods on both suites and tasks (best per column
-bolded, second best underlined; setup described in Section~\ref{sec:setup}):
+bolded, with ties both bolded; second best underlined; setup described in
+Section~\ref{sec:setup}):
 query-efficiency at budgets $m\in\{1,8\}$ queries per cell at full task coverage, and
 completion of missing cells at cohort sizes $n\in\{10,\max\}$ with task coverage
 $p_{\mathrm{task}}$ and query depth $p_{\mathrm{query}}$ fixed at $0.5$, except for the
@@ -147,8 +138,8 @@ Sample score       & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ &
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
 LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
 DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
-\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{\underline{0.120}}$ & $\underline{0.103}$ & $\mathbf{\underline{0.171}}$ & $\underline{0.076}$ & $\underline{0.058}$ & $\mathbf{\underline{0.082}}$ & $\underline{0.070}$ & $\mathbf{\underline{0.108}}$ \\
-Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{\underline{0.120}}$ & $\mathbf{0.099}$ & $\mathbf{\underline{0.171}}$ & $\mathbf{0.073}$ & $\mathbf{0.049}$ & $\mathbf{\underline{0.082}}$ & $\mathbf{0.069}$ & $\mathbf{\underline{0.108}}$ \\
+\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{0.120}$ & $\underline{0.103}$ & $\mathbf{0.171}$ & $\underline{0.076}$ & $\underline{0.058}$ & $\mathbf{0.082}$ & $\underline{0.070}$ & $\mathbf{0.108}$ \\
+Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $\mathbf{0.073}$ & $\mathbf{0.049}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -587,7 +578,9 @@ stays positive in the mean across datasets, cohorts, coverage, and query depth
 \paragraph{Both applications replicate on the Every Eval Ever suite.} The second suite
 shows the same qualitative behavior with a larger completion margin
 (Table~\ref{tab:suite}; lever sweeps in Appendix~\ref{app:eee}): at $m{=}1$ \PKPS
-attains a third of the sample score's error ($0.076$ vs.\ $0.224$), and on missing cells the
+attains a third of the sample score's error ($0.076$ vs.\ $0.224$), matching the
+accuracy the sample score reaches at $m{=}8$ ($0.081$)---an $8\times$ smaller
+budget---and on missing cells the
 ensemble outperforms LRMC at \emph{every} operating point, including the full cohort
 ($0.069$ vs.\ $0.096$ at $n{=}45$). Table~\ref{tab:suite} collects both
 applications on both suites; the ensemble is best or tied in every column.

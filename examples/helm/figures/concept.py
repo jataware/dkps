@@ -27,9 +27,9 @@ from matplotlib.gridspec import GridSpec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 N = 12
-RED, BLUE, PURPLE, GRAY = '#dc2626', '#2563eb', '#7c3aed', '#cbd5e1'
+RED, BLUE, PURPLE, GRAY = '#3596ff', '#114471', '#486884', '#cbd5e1'
 EMPTY = '#eef2f7'
-PCMAP = LinearSegmentedColormap.from_list('pk', ['#ffffff', '#ddd6fe', PURPLE])
+PCMAP = LinearSegmentedColormap.from_list('pk', ['#ffffff', '#e0edff', PURPLE])
 
 # which model answered each of the N queries (unpaired: mostly one model, a few both/neither).
 Si = np.array([0, 1, 3, 4, 6, 7, 10])      # model i  (red)
@@ -156,8 +156,8 @@ for ax, W in [(axC, Kdkps), (axR, Krbf)]:
     ax.set_xticks([]); ax.set_yticks([])
     for s in ax.spines.values():
         s.set_edgecolor('#d7dde6')
-    ax.set_xlabel('query index', fontsize=10, color='#475569')
-axC.set_ylabel('query index', fontsize=10, color='#475569')
+    ax.set_xlabel('query index', fontsize=10, color='#486884')
+axC.set_ylabel('query index', fontsize=10, color='#486884')
 
 # ---- RIGHT 2x2 BLOCK: perspective embedding (coloured by score) + LOO prediction
 SCM = 'viridis'
@@ -174,7 +174,7 @@ for axe, axp, Z, pred, mae, le, lp in [(axDKe, axDKp, Zdk, pred_dk, mae_dk, 'd',
     axe.set_xlim(cx - rr, cx + rr); axe.set_ylim(cy - rr, cy + rr)
     axe.set_aspect('equal'); axe.set_xticks([]); axe.set_yticks([])
     axe.text(0.05, 0.95, f'({le})', transform=axe.transAxes, ha='left', va='top',
-             fontsize=9, fontweight='bold', color='#334155', zorder=4,
+             fontsize=9, fontweight='bold', color='#213c66', zorder=4,
              bbox=dict(boxstyle='round,pad=0.12', fc='white', ec='none', alpha=0.65))
     for s in axe.spines.values():
         s.set_edgecolor('#d7dde6')
@@ -184,13 +184,13 @@ for axe, axp, Z, pred, mae, le, lp in [(axDKe, axDKp, Zdk, pred_dk, mae_dk, 'd',
     axp.set_xlim(-0.05, 1.05); axp.set_ylim(-0.05, 1.05); axp.set_aspect('equal')
     axp.set_xticks([0, 1]); axp.set_yticks([0, 1]); axp.tick_params(labelsize=8, color='#d7dde6')
     axp.text(0.05, 0.94, f'({lp})', transform=axp.transAxes, ha='left', va='top',
-             fontsize=9, fontweight='bold', color='#334155', zorder=4,
+             fontsize=9, fontweight='bold', color='#213c66', zorder=4,
              bbox=dict(boxstyle='round,pad=0.12', fc='white', ec='none', alpha=0.65))
     axp.text(0.95, 0.07, f'MAE {mae:.2f}', transform=axp.transAxes, ha='right', va='bottom',
-             fontsize=8.5, color='#334155')
+             fontsize=8.5, color='#213c66')
     for s in axp.spines.values():
         s.set_edgecolor('#d7dde6')
-axPKp.set_xlabel('true score', fontsize=8.5, color='#475569', labelpad=1)
+axPKp.set_xlabel('true score', fontsize=8.5, color='#486884', labelpad=1)
 
 # (the matrix colour key is added after layout, once (c) is moved next to (b))
 
@@ -209,7 +209,7 @@ pc = axC.get_position()
 axR.set_position([pc.x1 + 0.022, pc.y0, pc.width, pc.height])
 mcax = fig.add_axes([axR.get_position().x1 + 0.012, pc.y0, 0.008, pc.height])
 mcb = fig.colorbar(im, cax=mcax)
-mcax.set_title(r'$k_Q$', fontsize=9, pad=3, color='#475569')   # label on top: the flow arrow passes mid-height
+mcax.set_title(r'$k_Q$', fontsize=9, pad=3, color='#486884')   # label on top: the flow arrow passes mid-height
 mcb.set_ticks([0, 1])
 # arrange the right 2x2 block as flush PHYSICAL squares spanning the matrices' height,
 # packed tight to save space
@@ -242,7 +242,7 @@ fig.text((pe2.x0 + pe2.x1) / 2, hY, 'model\nembedding', ha='center', va='bottom'
          fontsize=9.5, linespacing=0.95)
 fig.text((pp2.x0 + pp2.x1) / 2, hY, 'predicted vs true\nbenchmark score', ha='center',
          va='bottom', fontsize=9.5, linespacing=0.95)
-for ax, lab, col in [(axDKe, 'DKPS', '#8EBA42'), (axPKe, 'PKPS', '#E24A33')]:
+for ax, lab, col in [(axDKe, 'DKPS', '#93aacc'), (axPKe, 'PKPS', '#3596ff')]:
     p = ax.get_position()
     fig.text(p.x0 - 0.009, (p.y0 + p.y1) / 2, lab, ha='right', va='center', fontsize=11,
              fontweight='bold', color=col, rotation=90)

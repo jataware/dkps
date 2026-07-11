@@ -11,11 +11,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rcParams.update({                              # clean modern style: white, subtle grid, despined
     'figure.facecolor': 'white', 'axes.facecolor': 'white',
-    'axes.edgecolor': '#b8b8b8', 'axes.linewidth': 0.9,
-    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e9e9e9', 'grid.linewidth': 0.8,
+    'axes.edgecolor': '#afbec6', 'axes.linewidth': 0.9,
+    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e5e7eb', 'grid.linewidth': 0.8,
     'axes.spines.top': False, 'axes.spines.right': False,
-    'xtick.color': '#555', 'ytick.color': '#555',
-    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11,
+    'xtick.color': '#486884', 'ytick.color': '#486884',
+    'axes.labelcolor': '#213c66', 'axes.titlecolor': '#0a2245', 'text.color': '#213c66', 'font.size': 11,
 })
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ args = ap.parse_args()
 CFG = {'helm': dict(dir='results-pkps-unified', n=93, T=18, stem='fig_suite_completion'),
        'eee':  dict(dir='results-eee-unified',  n=45, T=16, stem='fig_eee_completion')}[args.suite]
 D = Path(CFG['dir'])
-COL = {'mc': '#348ABC', 'pkps': '#E24A33', 'ens': '#8C564B'}
+COL = {'mc': '#486884', 'pkps': '#3596ff', 'ens': '#114471'}
 LBL = {'mc': 'LRMC', 'pkps': 'PKPS', 'ens': 'Ensemble'}
 LW = {'mc': 2.6, 'pkps': 2.6, 'ens': 3.6}
 NLS = {CFG['n']: '-', 10: '--'}                 # cohort -> line style

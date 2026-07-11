@@ -10,11 +10,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rcParams.update({                              # clean modern style: white, subtle grid, despined
     'figure.facecolor': 'white', 'axes.facecolor': 'white',
-    'axes.edgecolor': '#b8b8b8', 'axes.linewidth': 0.9,
-    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e9e9e9', 'grid.linewidth': 0.8,
+    'axes.edgecolor': '#afbec6', 'axes.linewidth': 0.9,
+    'axes.grid': True, 'axes.axisbelow': True, 'grid.color': '#e5e7eb', 'grid.linewidth': 0.8,
     'axes.spines.top': False, 'axes.spines.right': False,
-    'xtick.color': '#555', 'ytick.color': '#555',
-    'axes.labelcolor': '#222', 'axes.titlecolor': '#111', 'text.color': '#222', 'font.size': 11,
+    'xtick.color': '#486884', 'ytick.color': '#486884',
+    'axes.labelcolor': '#213c66', 'axes.titlecolor': '#0a2245', 'text.color': '#213c66', 'font.size': 11,
 })
 import numpy as np
 import pandas as pd
@@ -29,11 +29,11 @@ CFG = {'helm': dict(dir='results-pkps-rd1', n=93, stem='fig_suite_query_efficien
 D = Path(CFG['dir'])
 # colour = method; line style = score-only (dashed: sample, IRT) vs response embedding
 # (solid: DKPS, PKPS); the ensemble is solid and thicker.
-STYLE = {'sample': dict(color='#777777', ls='--', label='Sample score'),
-         'irt':    dict(color='#988ED5', ls='--', label='IRT'),
-         'dkps':   dict(color='#8EBA42', ls='-',  label='DKPS'),
-         'pkps':   dict(color='#E24A33', ls='-',  label='PKPS'),
-         'ens':    dict(color='#8C564B', ls='-',  label='Ensemble', lw=3.6)}
+STYLE = {'sample': dict(color='#9ca3af', ls='--', label='Sample score'),
+         'irt':    dict(color='#afbec6', ls='--', label='IRT'),
+         'dkps':   dict(color='#93aacc', ls='-',  label='DKPS'),
+         'pkps':   dict(color='#3596ff', ls='-',  label='PKPS'),
+         'ens':    dict(color='#114471', ls='-',  label='Ensemble', lw=3.6)}
 ORDER = ['sample', 'irt', 'dkps', 'pkps', 'ens']
 N = CFG['n']
 PANELS = [('budget',   'm',       r'queries per cell $m$',           rf'$n{{=}}{N},\ p_{{\mathrm{{task}}}}{{=}}1$', True),
