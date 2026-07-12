@@ -224,56 +224,40 @@ other models evaluated on task $t$.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-Classical MDS consumes a distance matrix between the $n$ models of
-Section~\ref{sec:setting}. When all models share a query set, the distance can be taken
-directly between average embedded responses \citep{dkps_qeff}; when query sets differ,
-there is nothing to subtract. Kernel comparisons \emph{across} two query sets remain
-well-defined, however, so both paired DKPS and \PKPS first form an $n\times n$
-comparison matrix $A$ (defined below) and induce the squared distance
-$D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ (clamped at $0$)---the usual conversion of an inner
-product to a squared distance, with $A_{ii'}$ in the role of an inner product between the
-models' response behaviors. The $d$-dimensional
-\emph{representations} are the classical-multidimensional-scaling minimizer
-\begin{equation}
-(\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
-\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2,
-\label{eq:mds}
-\end{equation}
-so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}. Paired DKPS
-and \PKPS differ only in the comparison matrix $A$.
+We seek to estimate a model's score $y_i^{(t)}$ from the sparse, unpaired
+evaluation data of Section~\ref{sec:setting}. We assume access to the observed
+responses and their queries, each embedded into a Euclidean space---for
+$q_j\in Q_i$, a response embedding $x_{ij}\in\mathbb{R}^p$ and a query embedding
+$u_j\in\mathbb{R}^{p_q}$---and, for the previously evaluated \emph{reference}
+models, their observed sample scores. We do not require item-level scores, and we
+do not require that any two models have responded to a common query.
 
-With all $n$
-models answering the same $m$ queries
-($Q_1=\dots=Q_n$), DKPS uses the identity-matched comparison
-$A_{ii'}=\tfrac{1}{m}\sum_j k_R(x_{ij},x_{i'j})$: response $j$ of model $i$ is paired only
-with response $j$ of model $i'$, so the design must be paired. With a linear $k_R$ the
-induced distance is exactly the mean squared distance between aligned responses,
-$D^2(i,i')=\tfrac1m\sum_j\|x_{ij}-x_{i'j}\|^2$.
-
-\PKPS replaces
-identity matching with a query kernel $k_Q$:
+\PKPS compares two models by comparing every response of one to every response of
+the other, weighting each comparison by the similarity of the queries that produced
+it. Given a \emph{query kernel} $k_Q$ and a \emph{response kernel} $k_R$, the
+comparison between models $i$ and $i'$ is
 \begin{equation}
 A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)\, k_R(x_{ij},x_{i'l})}
               {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)},
 \label{eq:A}
 \end{equation}
-Each term is normalized by its own query-kernel
-mass, so models that answered different numbers of queries, or entirely different
-queries, remain comparable; responses to similar queries contribute even across tasks, so
-unpaired evaluations are used (Figure~\ref{fig:concept}). Paired DKPS is the special case
-$k_Q=\delta$, where only $j=l$ survives.
+with $k_Q$ evaluated on the query embeddings. Each entry is normalized by its own
+query-kernel mass, so models that answered different numbers of queries, or
+entirely different queries, remain comparable. With $A_{ii'}$ in the role of an
+inner product between the models' response behaviors, the induced squared distance
+is $D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ (clamped at $0$).
 
-We analyze and evaluate \PKPS with an RBF query kernel over the embedded queries,
-$k_Q(q_j,q_l)=\exp(-\|u_j-u_l\|^2/2\sigma^2)$, with bandwidth $\sigma$ chosen per run
-(below), and a linear response kernel $k_R(x,x')=\langle x,x'\rangle$; paired DKPS
-corresponds to a linear $k_R$ with the identity query kernel $k_Q=\delta$. Linearity of
-$k_R$ makes the kernel factorize across response domains
-(Section~\ref{sec:setup}); the synthetic study uses an RBF $k_R$. Since Eq.~\ref{eq:A}
-normalizes each pair by its own kernel mass, $A$ is only approximately an inner
-product and need not be positive semidefinite---hence the clamp on $D^2$, and classical
-MDS embeds the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as is
-standard. $A_{ii'}$ costs $|Q_i||Q_{i'}|$ kernel terms per pair, and one response-kernel
-pass serves the whole bandwidth grid.
+This construction strictly generalizes DKPS. With the identity query kernel
+$k_Q=\delta$, only queries lying in both query sets survive the double sum of
+Eq.~\ref{eq:A}, which reduces to the identity-matched comparison
+$A_{ii'}=\tfrac{1}{|Q_i\cap Q_{i'}|}\sum_{q\in Q_i\cap Q_{i'}}k_R(x_{iq},x_{i'q})$
+of paired DKPS---undefined when models share no queries. For any strictly positive
+$k_Q$, such as an RBF over the query embeddings, the normalizer is positive for any
+nonempty query sets, so Eq.~\ref{eq:A} is defined even on disjoint sets and
+responses to nearby queries contribute in proportion to their similarity
+(Figure~\ref{fig:concept}). Since the RBF converges pointwise to $\delta$ as its
+bandwidth $\sigma\to0$, paired DKPS is also the small-bandwidth limit; between the
+limits, $\sigma$ controls the tradeoff between exact matching and bridging.
 
 \begin{figure}[t]
 \centering
@@ -291,18 +275,74 @@ correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-\subsection{Theoretical properties of the \PKPS}
-\PKPS is a strict generalization of DKPS. With $k_Q=\delta$ only equal queries lying in
-both query sets survive the double sum of Eq.~\ref{eq:A}, so it reduces to paired DKPS
-over the shared queries,
-$A_{ii'}=\tfrac{1}{|Q_i\cap Q_{i'}|}\sum_{q\in Q_i\cap Q_{i'}}k_R(x_{iq},x_{i'q})$; since the RBF
-kernel converges pointwise to $\delta$ as $\sigma\!\to\!0$, DKPS is also the
-small-bandwidth limit. Conversely, for any strictly positive $k_Q$ the normalizer is
-positive for any nonempty query sets, so $A_{ii'}$ is defined even on disjoint sets, where
-paired DKPS is undefined. Between these limits, the bandwidth $\sigma$ controls the
-tradeoff between exact matching and bridging.
+The $d$-dimensional \emph{representations} are the
+classical-multidimensional-scaling minimizer
+\begin{equation}
+(\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
+\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2,
+\label{eq:mds}
+\end{equation}
+so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}; the
+collection $\{\hat\psi_i\}_{i=1}^n$ is the $d$-dimensional \PKPS. Because
+Eq.~\ref{eq:A} normalizes each pair by its own kernel mass, $A$ is only
+approximately an inner product and need not be positive semidefinite---hence the
+clamp on $D^2$, and classical MDS embeds the doubly-centered matrix by its top-$d$
+nonnegative eigenvalues, as is standard. Throughout, we instantiate \PKPS with an
+RBF query kernel and a linear response kernel $k_R(x,x')=\langle x,x'\rangle$
+(the synthetic study uses an RBF $k_R$); linearity makes the kernel factorize
+across response domains (Section~\ref{sec:setup}), and $A_{ii'}$ costs
+$|Q_i||Q_{i'}|$ kernel terms per pair, with one response-kernel pass serving the
+whole bandwidth grid.
+
+\subsection{Theoretical properties}
+\label{sec:theory}
+The representations concentrate around population counterparts at a rate governed
+by the overlap of the query \emph{distributions} rather than of the query sets.
+\begin{definition}[Population \PKPS]
+\label{def:pop}
+Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
+$P_i$. The \emph{population comparison} is
+$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
+$P_i$ and $P_{i'}$ independent, the population squared distances are
+$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
+$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
+Gram matrix $B^*$ of $D^{*2}$.
+\end{definition}
+\begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
+Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
+bounded below, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
+spectral gap $\lambda_d>0$.
+\end{assumption}
+Boundedness and the spectral gap are standard conditions in spectral-embedding
+analyses. The important condition for the unpaired setting is $\kappa>0$, the population
+analogue of the pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
+\emph{distributions} overlap, even when no individual query is shared. It fails when the
+query distributions are disjoint, i.e., when models are evaluated on domains that the
+kernel cannot bridge; in this case no unpaired method should be expected to compare
+them.
+\begin{proposition}[Concentration of \PKPS perspectives]
+\label{prop:conc}
+Under Assumption~\ref{ass:reg}, with at least $m$ queries per model, for any
+$\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
+that
+$\max_i\|\hat\psi_i-W\psi_i\|\le
+C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
+where $C$ depends only on the kernel bounds.
+\end{proposition}
+\begin{proof}[Proof sketch]
+Each entry of Eq.~\ref{eq:A} is a ratio of two-sample U-statistics; Hoeffding
+concentration of numerator and denominator, with the denominator bounded below by
+$\kappa$, gives entrywise error $O(\kappa^{-2}m^{-1/2})$ (Lemma~\ref{lem:conc}).
+A Weyl--Procrustes perturbation argument then transfers the entrywise error to the
+rank-$d$ spectral embedding at the stated rate (Lemma~\ref{lem:pert}). The full
+proof is in Appendix~\ref{app:proof}.
+\end{proof}
+The rate is the paired DKPS rate with the pairing fraction $\rho$ replaced by the
+population overlap $\kappa$: sampling more queries improves the representation at
+$m^{-1/2}$ regardless of how many queries are shared.
 
 \subsection{Inference in the \PKPS}
+\label{sec:qeff}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
 embed each model into the perspective space (Eq.~\ref{eq:mds}), then regress its
 benchmark score on the resulting coordinate. On reference models with known
@@ -339,22 +379,9 @@ cross-validated on observed scores. No weight uses the scores of the family bein
 predicted. (A closed-form inverse-variance weighting performs slightly worse at every
 budget; Appendix~\ref{app:abl}.)
 
-\subsection{Query efficiency}
-\label{sec:qeff}
-DKPS requires query \emph{sets} to overlap; \PKPS requires only query
-\emph{distributions} to overlap. This section makes the distinction precise, extending
-the machinery of \citet{dkps_qeff}; MSE denotes mean squared error over the draw of a
-target model from the model population.
-\begin{definition}[Population \PKPS]
-\label{def:pop}
-Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_i$. The \emph{population comparison} is
-$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
-$P_i$ and $P_{i'}$ independent, the population squared distances are
-$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
-$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
-Gram matrix $B^*$ of $D^{*2}$.
-\end{definition}
+Query efficiency formalizes when this two-step estimator beats computing scores
+directly; MSE denotes mean squared error over the draw of a target model from the
+model population.
 \begin{assumption}[Score regularity]\label{ass:score}
 The benchmark score is bounded and $\gamma$-Lipschitz on the population perspective space.
 \end{assumption}
@@ -368,27 +395,6 @@ space.
 Assumption~\ref{ass:support} ensures that a target model has arbitrarily near reference
 neighbors once the cohort is large; in practice it suggests that a large, diverse
 reference population may be needed. Both conditions mirror \citet{dkps_qeff}.
-\begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
-Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
-bounded below, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
-spectral gap $\lambda_d>0$.
-\end{assumption}
-Boundedness and the spectral gap are standard conditions in spectral-embedding
-analyses. The important condition for the unpaired setting is $\kappa>0$, the population
-analogue of the pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
-\emph{distributions} overlap, even when no individual query is shared. It fails when the
-query distributions are disjoint, i.e., when models are evaluated on domains that the
-kernel cannot bridge; in this case no unpaired method should be expected to compare
-them.
-\begin{proposition}[Concentration of \PKPS perspectives]
-\label{prop:conc}
-Under Assumption~\ref{ass:reg}, with at least $m$ queries per model, for any
-$\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
-that
-$\max_i\|\hat\psi_i-W\psi_i\|\le
-C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
-where $C$ depends only on the kernel bounds (proof in Appendix~\ref{app:proof}).
-\end{proposition}
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
 Fix a per-model budget $m$ and let $h_n$ denote a score estimator using $n$ scored
@@ -402,7 +408,7 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
 bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
 by validation on held-out reference scores. Under
-Assumptions~\ref{ass:score}--\ref{ass:reg}, for any $\epsilon>0$:
+Assumptions~\ref{ass:reg}--\ref{ass:support}, for any $\epsilon>0$:
 \emph{(i)} there exist $(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and
 independent of $\rho$, at which $\mathrm{MSE}(\PKPS\text{-CV})\le\epsilon$ with high
 probability;
