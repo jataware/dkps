@@ -297,35 +297,19 @@ whole bandwidth grid.
 \subsection{Theoretical properties}
 \label{sec:theory}
 The representations concentrate around population counterparts at a rate governed
-by the overlap of the query \emph{distributions} rather than of the query sets.
-\begin{definition}[Population \PKPS]
-\label{def:pop}
-Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_i$. The \emph{population comparison} is
-$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
-$P_i$ and $P_{i'}$ independent, the population squared distances are
-$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
-$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
-Gram matrix $B^*$ of $D^{*2}$.
-\end{definition}
-\begin{assumption}[Boundedness]\label{ass:bound}
-Kernels and embedded responses are bounded.
-\end{assumption}
-\begin{assumption}[Population overlap]\label{ass:overlap}
-The \emph{cross-model query-kernel mass} is bounded below:
-$\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$.
-\end{assumption}
-\begin{assumption}[Spectral identifiability]\label{ass:spec}
-$B^*$ has rank $d$ with spectral gap $\lambda_d>0$.
-\end{assumption}
-Assumptions~\ref{ass:bound} and \ref{ass:spec} are standard conditions in
-spectral-embedding analyses. The substantive condition for the unpaired setting is
-Assumption~\ref{ass:overlap}: $\kappa$ is the population analogue of the pairing
-fraction $\rho$, and for an RBF $k_Q$ it is positive whenever the query
-\emph{distributions} overlap, even when no individual query is shared. It fails when
-the query distributions are disjoint, i.e., when models are evaluated on domains that
-the kernel cannot bridge; in this case no unpaired method should be expected to
-compare them.
+by the overlap of the query \emph{distributions} rather than of the query sets. The
+population \PKPS replaces the sums of Eq.~\ref{eq:A} with expectations over each
+model's design distribution (Definition~\ref{def:pop}, Appendix~\ref{app:proof}).
+We require bounded kernels and embedded responses, a positive \emph{cross-model
+query-kernel mass} $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$, and a rank-$d$
+spectral gap in the population Gram matrix
+(Assumptions~\ref{ass:bound}--\ref{ass:spec}, Appendix~\ref{app:proof}).
+Boundedness and the spectral gap are standard in spectral-embedding analyses; the
+substantive requirement is the overlap $\kappa>0$, the population analogue of the
+pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
+\emph{distributions} overlap, even when no individual query is shared, and it fails
+when models are evaluated on domains the kernel cannot bridge---where no unpaired
+method should be expected to compare them.
 \begin{proposition}[Concentration of \PKPS perspectives]
 \label{prop:conc}
 Under Assumptions~\ref{ass:bound}--\ref{ass:spec}, with at least $m$ queries per model, for any
@@ -387,20 +371,15 @@ budget; Appendix~\ref{app:abl}.)
 
 Query efficiency formalizes when this two-step estimator beats computing scores
 directly; MSE denotes mean squared error over the draw of a target model from the
-model population.
-\begin{assumption}[Score regularity]\label{ass:score}
-The benchmark score is bounded and $\gamma$-Lipschitz on the population perspective space.
-\end{assumption}
-In practice, Assumption~\ref{ass:score} holds when models with similar response
-distributions attain similar scores; this is the working premise of any response-based
-predictor, and is visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
-\begin{assumption}[Model support]\label{ass:support}
-The model distribution places mass on every neighborhood of the population perspective
-space.
-\end{assumption}
-Assumption~\ref{ass:support} ensures that a target model has arbitrarily near reference
-neighbors once the cohort is large; in practice it suggests that a large, diverse
-reference population may be needed. Both conditions mirror \citet{dkps_qeff}.
+model population. Two further conditions are required, stated formally in
+Appendix~\ref{app:proof}: the benchmark score is bounded and Lipschitz on the
+population perspective space (Assumption~\ref{ass:score})---the working premise of
+any response-based predictor, visible as the smooth score gradient in
+Figure~\ref{fig:concept}(e)---and the model population places mass on every
+neighborhood of the perspective space (Assumption~\ref{ass:support}), so that a
+target model has near reference neighbors once the cohort is large; in practice this
+suggests that a large, diverse reference population may be needed. Both conditions
+mirror \citet{dkps_qeff}.
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
 Fix a per-model budget $m$ and let $h_n$ denote a score estimator using $n$ scored
@@ -932,6 +911,35 @@ effective depth, so comparisons there reflect the constraint rather than the met
 
 \section{Proofs of Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}}
 \label{app:proof}
+
+\paragraph{Formal definitions and assumptions.} We collect the formal statements referenced in Section~\ref{sec:method}.
+\begin{definition}[Population \PKPS]
+\label{def:pop}
+Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
+$P_i$. The \emph{population comparison} is
+$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
+$P_i$ and $P_{i'}$ independent, the population squared distances are
+$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
+$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
+Gram matrix $B^*$ of $D^{*2}$.
+\end{definition}
+\begin{assumption}[Boundedness]\label{ass:bound}
+Kernels and embedded responses are bounded.
+\end{assumption}
+\begin{assumption}[Population overlap]\label{ass:overlap}
+The \emph{cross-model query-kernel mass} is bounded below:
+$\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$.
+\end{assumption}
+\begin{assumption}[Spectral identifiability]\label{ass:spec}
+$B^*$ has rank $d$ with spectral gap $\lambda_d>0$.
+\end{assumption}
+\begin{assumption}[Score regularity]\label{ass:score}
+The benchmark score is bounded and $\gamma$-Lipschitz on the population perspective space.
+\end{assumption}
+\begin{assumption}[Model support]\label{ass:support}
+The model distribution places mass on every neighborhood of the population perspective
+space.
+\end{assumption}
 
 \paragraph{Population quantities.} Queries for model $i$ are drawn i.i.d.\ from a design
 distribution over embedded queries; write $z=(u,x_i(u))$ for an embedded query--response
