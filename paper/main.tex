@@ -53,8 +53,11 @@ score completion---across two large benchmark suites.
 \section{Introduction}
 Evaluating a generative model is necessary for understanding its capabilities.
 As the capabilities of generative models increase \citep{wei2022emergent},
-their applicability expands to evermore domains---often necessitating the creation of
-new benchmarks \citep{hendrycks2021math, guha2023legalbench}.
+their applicability expands to ever more domains---often necessitating the creation of
+new benchmarks for, e.g., mathematics \citep{hendrycks2021math}, law
+\citep{guha2023legalbench}, finance \citep{islam2023financebench}, venture capital
+\citep{chen2025vcbench}, agentic tasks \citep{liu2023agentbench}, and even running a
+vending machine business \citep{backlund2025vendingbench}.
 The current benchmarking landscape is correspondingly vast: BIG-bench alone contains
 more than 200 tasks \citep{srivastava2023beyond}, HELM tracks dozens of scenarios
 across multiple releases \citep{helm}, and a recent compilation counts 133
@@ -66,7 +69,8 @@ Further, as benchmarks evolve---queries are added, refreshed to avoid contaminat
 \citep{perlitz2024efficient}---two models evaluated on the same benchmark may have
 responded to different sets of queries.
 
-Benchmark prediction \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}
+Benchmark prediction \citep{polo2024tinybenchmarks, vivek2024anchor, li2024active,
+hofmann2025fluid, bowyer2026efficient, benchpress}
 attempts to alleviate the resource burden of evaluation by predicting scores from
 already-available information rather than computing them from newly generated
 responses.
@@ -74,9 +78,10 @@ There are two main benchmark prediction tasks: query-efficient evaluation and
 (model, task) score completion.
 In query-efficient evaluation, a model responds to a small subset of a task's queries
 and its score on the full task is predicted from the resulting responses.
-Existing methods for query-efficient evaluation require responses to \emph{paired}
-queries---queries that all models under consideration have responded
-to \citep{dkps_qeff}.
+Existing methods for query-efficient evaluation require an item-level scoring
+function \citep{polo2024tinybenchmarks, hofmann2025fluid, li2024active,
+bowyer2026efficient} and/or responses to \emph{paired} queries---queries that all
+models under consideration have responded to \citep{dkps_qeff}.
 In (model, task) score completion, a model has not responded to any of a task's
 queries and its score on the task is predicted from the observed entries of the score
 matrix.
@@ -85,13 +90,16 @@ item-level responses that produced them \citep{benchpress}.
 In both tasks, the collection of responses as it is typically available is unpaired
 and sparse.
 
+In this paper, we introduce the Product Kernel Perspective Space (\PKPS) to predict
+benchmark scores directly from sparse, unpaired collections of responses.
+
 \paragraph{Contributions.} We make three primary contributions.
 \begin{enumerate}
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
 \item \emph{Conceptual:} we unify the two main benchmark prediction
 tasks---query-efficient evaluation and (model, task) score completion---as instances
 of a single problem: predicting scores from a sparse, unpaired collection of
-responses.
+responses from previously evaluated models.
 \item \emph{Methodological \& theoretical:} we propose the \PKPS, a collection of
 low-dimensional representations of models defined on potentially unpaired embedded
 responses, and show that benchmark prediction using \PKPS is at least as

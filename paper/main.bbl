@@ -1,4 +1,4 @@
-\begin{thebibliography}{30}
+\begin{thebibliography}{36}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -19,11 +19,22 @@ Aranyak Acharyya, Joshua Agterberg, Youngser Park, and Carey~E. Priebe.
   generative models.
 \newblock \emph{arXiv preprint arXiv:2511.08307}, 2025.
 
+\bibitem[Backlund and Petersson(2025)]{backlund2025vendingbench}
+Axel Backlund and Lukas Petersson.
+\newblock Vending-bench: A benchmark for long-term coherence of autonomous
+  agents.
+\newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
+
 \bibitem[Bean et~al.(2025)Bean, Seedat, Chen, and Schwarz]{bean2025scales}
 Andrew~M. Bean, Nabeel Seedat, Shengzhuang Chen, and Jonathan~Richard Schwarz.
 \newblock {Scales++}: Compute efficient evaluation subset selection with
   cognitive scales embeddings.
 \newblock \emph{arXiv preprint arXiv:2510.26384}, 2025.
+
+\bibitem[Bowyer et~al.(2026)]{bowyer2026efficient}
+Sam Bowyer et~al.
+\newblock Efficient benchmark prediction.
+\newblock \emph{arXiv preprint}, 2026.
 
 \bibitem[Cand{\`e}s and Recht(2009)]{candes2009exact}
 Emmanuel~J. Cand{\`e}s and Benjamin Recht.
@@ -31,12 +42,17 @@ Emmanuel~J. Cand{\`e}s and Benjamin Recht.
 \newblock \emph{Foundations of Computational Mathematics}, 9\penalty0
   (6):\penalty0 717--772, 2009.
 
-\bibitem[Chen et~al.(2025)Chen, Helm, Park, Priebe, and
+\bibitem[Chen et~al.(2025{\natexlab{a}})Chen, Helm, Park, Priebe, and
   Villar]{chen2025weights}
 Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
 \newblock Extracting information from fine-tuned weights.
 \newblock In \emph{Non-Euclidean Foundation Models: Advancing AI Beyond
-  Euclidean Frameworks}, 2025.
+  Euclidean Frameworks}, 2025{\natexlab{a}}.
+
+\bibitem[Chen et~al.(2025{\natexlab{b}})]{chen2025vcbench}
+Rick Chen et~al.
+\newblock {VCBench}: Benchmarking {LLM}s in venture capital.
+\newblock \emph{arXiv preprint}, 2025{\natexlab{b}}.
 
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
@@ -93,6 +109,11 @@ Wassily Hoeffding.
 \newblock \emph{Journal of the American Statistical Association}, 58\penalty0
   (301):\penalty0 13--30, 1963.
 
+\bibitem[Hofmann et~al.(2025)]{hofmann2025fluid}
+Valentin Hofmann et~al.
+\newblock Fluid language model benchmarking.
+\newblock \emph{arXiv preprint}, 2025.
+
 \bibitem[Horwitz et~al.(2025)Horwitz, Kurer, Kahana, Amar, and
   Hoshen]{horwitz2025atlas}
 Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen.
@@ -103,6 +124,13 @@ Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen.
 Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
 \newblock The {Platonic Representation Hypothesis}.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
+
+\bibitem[Islam et~al.(2023)Islam, Kannappan, Kiela, Qian, Scherrer, and
+  Vidgen]{islam2023financebench}
+Pranab Islam, Anand Kannappan, Douwe Kiela, Rebecca Qian, Nino Scherrer, and
+  Bertie Vidgen.
+\newblock Financebench: A new benchmark for financial question answering.
+\newblock \emph{arXiv preprint arXiv:2311.11944}, 2023.
 
 \bibitem[Kipnis et~al.(2025)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
 Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
@@ -141,6 +169,13 @@ Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu,
   Koreeda.
 \newblock Holistic evaluation of language models.
 \newblock \emph{Transactions on Machine Learning Research (TMLR)}, 2023.
+
+\bibitem[Liu et~al.(2024)Liu, Yu, Zhang, Xu, Lei, Lai, Gu, Ding, Men, Yang,
+  et~al.]{liu2023agentbench}
+Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu~Gu,
+  Hangliang Ding, Kaiwen Men, Kejuan Yang, et~al.
+\newblock {AgentBench}: Evaluating {LLM}s as agents.
+\newblock In \emph{International Conference on Learning Representations}, 2024.
 
 \bibitem[Mazumder et~al.(2010)Mazumder, Hastie, and
   Tibshirani]{mazumder2010softimpute}
