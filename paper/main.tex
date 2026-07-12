@@ -51,64 +51,65 @@ score-matrix completion---across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
-Generative models are evaluated on an ever-growing collection of benchmarks spanning
-knowledge, reasoning, code, translation, and safety \citep{helm}. Evaluating a model on
-all of them is prohibitively expensive, so models are evaluated on different subsets of
-tasks and of queries within a task: a recent compilation of $84$ frontier models on
-$133$ benchmarks finds only $23\%$ of the score matrix filled \citep{benchpress}.
-Outside curated leaderboards the observed queries also differ across models: arena-style
-platforms score each model on the conversations its users generate
-\citep{chiang2024chatbot}, contamination-aware benchmarks refresh their items
-\citep{white2024livebench}, and cost-driven subsampling gives each evaluation run its
-own item subset \citep{perlitz2024efficient}. The resulting (model $\times$ task)
-score matrix is therefore sparse, its entries are noisy averages over few queries, and
-the responses that produced it are \emph{unpaired}: comparing models in general
-requires using responses to different queries. Predicting the matrix's missing and true
-entries would let practitioners reuse cached evaluations instead of paying to re-run
-them \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}; for deprecated models
-that can no longer be queried, prediction from cached responses is the only option.
+Evaluating a generative model is necessary for understanding its capabilities.
+As the capabilities of generative models increase \citep{wei2022emergent},
+their applicability expands to evermore domains---often necessitating the creation of
+new benchmarks \citep{hendrycks2021math, guha2023legalbench}.
+The current benchmarking landscape is correspondingly vast: BIG-bench alone contains
+more than 200 tasks \citep{srivastava2023beyond}, HELM tracks dozens of scenarios
+across multiple releases \citep{helm}, and a recent compilation counts 133
+benchmarks for frontier models \citep{benchpress}.
+As such, a model is rarely evaluated on all benchmarks: of the (model, task) pairs in
+the compilation above, only 23\% have a reported score \citep{benchpress}.
+Further, as benchmarks evolve---queries are added, refreshed to avoid contamination
+\citep{white2024livebench}, or subsampled to reduce cost
+\citep{perlitz2024efficient}---two models evaluated on the same benchmark may have
+responded to different sets of queries.
 
-Two lines of work predict scores rather than compute them: efficient benchmarking
-extrapolates a task's full score from a small scored subset of its items, classically by
-item-response theory \citep{polo2024tinybenchmarks}, and matrix completion imputes
-cells that were never run from low-rank structure \citep{benchpress}. These are two
-ends of one problem---every cell is observed with some number of queries, possibly
-zero---but both use only each cell's aggregate score, and the responses behind those
-scores carry more information than the scores themselves. The Data Kernel Perspective
-Space (DKPS) \citep{helm2024tracking} uses this information, embedding each model from
-its responses by classical multidimensional scaling and regressing benchmark scores in
-the resulting space \citep{dkps_qeff}. Its distances, however, are defined only over
-responses to shared queries---a \emph{paired} design, which in practice restricts
-analysis to maximal subsets of models sharing a common query set. To our knowledge, no
-existing method predicts the score matrix from evaluation data as it is typically
-available: sparse, noisy, and unpaired.
+Benchmark prediction \citep{polo2024tinybenchmarks, vivek2024anchor, benchpress}
+attempts to alleviate the resource burden of evaluation by predicting scores from
+already-available information rather than computing them from newly generated
+responses.
+There are two main benchmark prediction tasks: query-efficient evaluation and
+(model, task) score completion.
+In query-efficient evaluation, a model responds to a small subset of a task's queries
+and its score on the full task is predicted from the resulting responses.
+Existing methods for query-efficient evaluation require responses to \emph{paired}
+queries---queries that all models under consideration have responded
+to \citep{dkps_qeff}.
+In (model, task) score completion, a model has not responded to any of a task's
+queries and its score on the task is predicted from the observed entries of the score
+matrix.
+Existing methods for score completion use only the aggregate scores and discard the
+item-level responses that produced them \citep{benchpress}.
+In both tasks, the collection of responses as it is typically available is unpaired
+and sparse.
 
-In this paper, we introduce the \textbf{Product Kernel Perspective Space (\PKPS)}, a
-collection of low-dimensional representations of models based on their embedded
-responses. \PKPS compares every response of one model to every response of another,
-weighting each comparison by the similarity of the queries that produced it: the
-comparison between two models is a product of a query kernel and a response kernel,
-normalized by
-the total query-kernel mass, so that two models are not deemed dissimilar merely because
-they answered different sets of queries (Figure~\ref{fig:concept}). Models are embedded
-from these comparisons by classical multidimensional scaling, and paired DKPS is recovered
-exactly when the query kernel is the identity (Section~\ref{sec:method});
-Table~\ref{tab:suite} previews our main results.
+In this paper, we unify the two main benchmark prediction problems under a single
+framework and propose and analyze the Product Kernel Perspective Space (\PKPS), a
+collection of low-dimensional representations of models defined on potentially
+unpaired embedded responses.
+For query-efficient evaluation, \PKPS generalizes existing methods by using unpaired
+responses; for score completion, \PKPS uses item-level responses rather than aggregate
+scores alone.
 
-\paragraph{Contributions.} We make two primary contributions.
+\paragraph{Contributions.} We make three primary contributions.
 \begin{enumerate}
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
-\item \emph{Methodological \& theoretical:} we extend the DKPS and its
-query-efficiency theory to the unpaired regime. Benchmark prediction in the \PKPS is
-query-efficient relative to the sample score, with a query budget that does not depend
-on the fraction of queries shared across models, and relative to paired DKPS at every
-pairing fraction (Theorem~\ref{thm:qeff} and Corollary~\ref{cor:sample}).
-\item \emph{Empirical:} on two benchmark suites---$93$ models on $18$ HELM tasks and
-$45$ modern models on $16$ tasks from the Every Eval Ever datastore
-\citep{eee2026}---we demonstrate utility on two problems: query-efficient evaluation,
-where \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
-query budget, and score-matrix completion, where ensembling \PKPS with low-rank matrix
-completion reduces error by up to $28\%$ (Section~\ref{sec:experiments}).
+\item \emph{Conceptual:} we unify the two main benchmark prediction
+tasks---query-efficient evaluation and (model, task) score completion---as instances
+of a single problem: predicting scores from a sparse, unpaired collection of
+responses.
+\item \emph{Methodological \& theoretical:} we propose the \PKPS, a collection of
+low-dimensional representations of models defined on potentially unpaired embedded
+responses, and show that benchmark prediction using \PKPS is at least as
+query-efficient as methods that only use information from paired responses
+(Theorem~\ref{thm:qeff}).
+\item \emph{Empirical:} on two benchmark suites---93 models on 18 HELM tasks and 45
+modern models on 16 tasks from the Every Eval Ever datastore \citep{eee2026}---we show
+that \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
+query budget and, when ensembled with low-rank matrix completion, reduces score
+completion error by up to 28\% (Section~\ref{sec:experiments}).
 \end{enumerate}
 
 \begin{table}[t!]

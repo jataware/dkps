@@ -1,4 +1,4 @@
-\begin{thebibliography}{27}
+\begin{thebibliography}{30}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -38,15 +38,6 @@ Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
 \newblock In \emph{Non-Euclidean Foundation Models: Advancing AI Beyond
   Euclidean Frameworks}, 2025.
 
-\bibitem[Chiang et~al.(2024)Chiang, Zheng, Sheng, Angelopoulos, Li, Li, Zhang,
-  Zhu, Jordan, Gonzalez, and Stoica]{chiang2024chatbot}
-Wei-Lin Chiang, Lianmin Zheng, Ying Sheng, Anastasios~N. Angelopoulos, Tianle
-  Li, Dacheng Li, Hao Zhang, Banghua Zhu, Michael Jordan, Joseph~E. Gonzalez,
-  and Ion Stoica.
-\newblock {Chatbot Arena}: An open platform for evaluating {LLM}s by human
-  preference.
-\newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
-
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
 Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
@@ -60,6 +51,14 @@ Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
 \newblock \url{https://evalevalai.com/projects/every-eval-ever/}, 2026.
 \newblock Dataset:
   \url{https://huggingface.co/datasets/evaleval/EEE_datastore}.
+
+\bibitem[Guha et~al.(2023)Guha, Nyarko, Ho, R{\'e}, Zambrano,
+  et~al.]{guha2023legalbench}
+Neel Guha, Julian Nyarko, Daniel~E. Ho, Christopher R{\'e}, Adam Zambrano,
+  et~al.
+\newblock Legalbench: A collaboratively built benchmark for measuring legal
+  reasoning in large language models.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2023.
 
 \bibitem[Helm et~al.(2024)Helm, Duderstadt, Park, and Priebe]{helm2024tracking}
 Hayden Helm, Brandon Duderstadt, Youngser Park, and Carey~E. Priebe.
@@ -80,6 +79,13 @@ Hayden Helm, Aranyak Acharyya, Youngser Park, Brandon Duderstadt, and Carey
 Hayden Helm, Ben Johnson, and Carey~E. Priebe.
 \newblock Query-efficient model evaluation using cached responses.
 \newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
+
+\bibitem[Hendrycks et~al.(2021)Hendrycks, Burns, Kadavath, Arora, Basart, Tang,
+  Song, and Steinhardt]{hendrycks2021math}
+Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric
+  Tang, Dawn Song, and Jacob Steinhardt.
+\newblock Measuring mathematical problem solving with the {MATH} dataset.
+\newblock In \emph{NeurIPS Datasets and Benchmarks Track}, 2021.
 
 \bibitem[Hoeffding(1963)]{hoeffding1963}
 Wassily Hoeffding.
@@ -165,6 +171,13 @@ Georg Rasch.
   Tests}.
 \newblock Danish Institute for Educational Research, 1960.
 
+\bibitem[Srivastava et~al.(2023)Srivastava, Rastogi, Rao,
+  et~al.]{srivastava2023beyond}
+Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, et~al.
+\newblock Beyond the imitation game: Quantifying and extrapolating the
+  capabilities of language models.
+\newblock \emph{Transactions on Machine Learning Research}, 2023.
+
 \bibitem[Torgerson(1952)]{torgerson1952mds}
 Warren~S. Torgerson.
 \newblock Multidimensional scaling: {I}. {T}heory and method.
@@ -182,6 +195,16 @@ Rajan Vivek, Kawin Ethayarajh, Diyi Yang, and Douwe Kiela.
 \newblock Anchor points: Benchmarking models with much fewer examples.
 \newblock In \emph{Conference of the European Chapter of the Association for
   Computational Linguistics (EACL)}, 2024.
+
+\bibitem[Wei et~al.(2022)Wei, Tay, Bommasani, Raffel, Zoph, Borgeaud, Yogatama,
+  Bosma, Zhou, Metzler, Chi, Hashimoto, Vinyals, Liang, Dean, and
+  Fedus]{wei2022emergent}
+Jason Wei, Yi~Tay, Rishi Bommasani, Colin Raffel, Barret Zoph, Sebastian
+  Borgeaud, Dani Yogatama, Maarten Bosma, Denny Zhou, Donald Metzler, Ed~H.
+  Chi, Tatsunori Hashimoto, Oriol Vinyals, Percy Liang, Jeff Dean, and William
+  Fedus.
+\newblock Emergent abilities of large language models.
+\newblock \emph{Transactions on Machine Learning Research}, 2022.
 
 \bibitem[White et~al.(2025)White, Dooley, Roberts, Pal, Feuer, Jain,
   Shwartz-Ziv, Jain, Saifullah, Dey, {Shubh-Agrawal}, Sandha, Naidu, Hegde,
