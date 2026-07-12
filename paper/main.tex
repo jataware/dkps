@@ -47,7 +47,7 @@ information lost. Theoretically, we show that
 benchmark prediction using \PKPS is query-efficient relative to methods that only use
 information from queries all models have responded to. Empirically, we show that \PKPS
 outperforms relevant baselines on two tasks---query-efficient evaluation and (model, task)
-score-matrix completion---across two large benchmark suites.
+score completion---across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
@@ -138,36 +138,7 @@ Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\
 \end{tabular}
 \end{table}
 
-\subsection{Problem setting and notation}
-\label{sec:setting}
-Our goal is to predict the score of a model for a task for which its responses are
-partially observed or unobserved in the context of sparse and unpaired previously
-evaluated reference models. For our purposes, a \emph{model} is a random mapping
-$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space. The response
-$f(q)$ is an independent sample from $P_{q}$. We observe $n$ models $f_1,\dots,f_n$,
-where each model responds to a (potentially different) collection of queries
-$Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
-design) is a special case. We assume access to responses
-$\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$.
-
-Each query is an element of at least one of $T$
-\emph{tasks}---$Q^{(1)},\dots,Q^{(T)}$---with $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$
-and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the collection of queries from task $t$
-that model $i$ has responded to and let $m_{i}^{(t)}:=|Q^{(t)}_{i}|$. The sparsity and
-unpairedness of a task are functions of the $\{m_{i}^{(t)}\}$: it is \emph{sparse} when
-few models have $m_{i}^{(t)}>0$, and \emph{unpaired} when the cross-model overlaps
-$m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
-$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
-model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
-leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
-
-Finally, let $y_i^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s score on task $t$. For
-$m_i^{(t)}>0$ we observe $y(f_{i},Q_i^{(t)})$. The goal of \emph{benchmark prediction}
-is to estimate $y_i^{(t)}$. We consider two related instances of the problem: i)
-estimate $y_{i}^{(t)}$ with $m_{i}^{(t)}>0$ (\emph{query efficiency}) and ii) estimate
-$y_{i}^{(t)}$ with $m_{i}^{(t)}=0$ (\emph{matrix completion}).
-
-\section{Related work}
+\subsection{Related work}
 \label{sec:related}
 
 \paragraph{Low-dimensional representations of models.} Some approaches construct
@@ -202,6 +173,44 @@ each cell's aggregate score; \citet{benchpress} identify extending prediction to
 instance-level outcomes as a natural next step. \PKPS unifies the two ends---a cell with
 $m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and
 adds the response-level signal, which can be ensembled with matrix completion.
+
+\section{Problem statement}
+\label{sec:setting}
+Our goal is to predict the score of a model for a task for which its responses are
+partially observed or unobserved in the context of sparse and unpaired previously
+evaluated reference models. For our purposes, a \emph{model} is a random mapping
+$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space. The response
+$f(q)$ is an independent sample from $P_{q}$. We observe $n$ models $f_1,\dots,f_n$,
+where each model responds to a (potentially different) collection of queries
+$Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
+design) is a special case. We assume access to responses
+$\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$.
+
+Each query is an element of at least one of $T$
+\emph{tasks}---$Q^{(1)},\dots,Q^{(T)}$---with $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$
+and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the collection of queries from task $t$
+that model $i$ has responded to and let $m_{i}^{(t)}:=|Q^{(t)}_{i}|$. The sparsity and
+unpairedness of a task are functions of the $\{m_{i}^{(t)}\}$: it is \emph{sparse} when
+few models have $m_{i}^{(t)}>0$, and \emph{unpaired} when the cross-model overlaps
+$m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
+$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
+model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
+leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
+
+Finally, let $y_i^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s score on task $t$. For
+$m_i^{(t)}>0$ we observe $y(f_{i},Q_i^{(t)})$. The goal of \emph{benchmark prediction}
+is to estimate $y_i^{(t)}$ from the available responses.
+
+Stated this way, the two benchmark prediction tasks of the introduction are instances
+of a single problem, indexed by the number of observed queries: every (model, task)
+cell is observed with some number of queries $m_i^{(t)}\ge0$.
+\emph{Query-efficient evaluation} is the instance with $m_{i}^{(t)}>0$: the sample
+score $y(f_{i},Q_i^{(t)})$ is available but noisy, and estimating $y_i^{(t)}$ amounts
+to denoising it. \emph{(Model, task) score completion} is the instance with
+$m_{i}^{(t)}=0$: no responses from the cell exist, and the estimate must be built from
+the model's responses to other tasks and from the other models. A representation of
+models accurate enough to predict any cell therefore serves both tasks; constructing
+one from sparse, unpaired responses is the subject of this paper.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
@@ -450,8 +459,8 @@ when paired.}
 \label{sec:experiments}
 We evaluate \PKPS on synthetic data, where every lever of the observation process can be
 swept, and on two heterogeneous benchmark suites. Throughout, the two instances of
-Section~\ref{sec:setting} structure the experiments: query efficiency ($m_i^{(t)}>0$)
-and matrix completion ($m_i^{(t)}=0$).
+Section~\ref{sec:setting} structure the experiments: query-efficient
+evaluation ($m_i^{(t)}>0$) and score completion ($m_i^{(t)}=0$).
 
 \subsection{Evaluation setup}
 \label{sec:setup}
@@ -531,7 +540,7 @@ bias. This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 \centering
 \includegraphics[width=0.96\textwidth]{fig_suite_completion.pdf}\\[2pt]
 \includegraphics[width=0.96\textwidth]{fig_completion_conditional.pdf}
-\caption{Matrix completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
+\caption{Score completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
 ($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
 query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
 tasks, and cohort size (LRMC slate, \PKPS bright blue, Ensemble navy; solid $n{=}93$, dashed
