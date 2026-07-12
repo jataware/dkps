@@ -1,4 +1,4 @@
-\begin{thebibliography}{29}
+\begin{thebibliography}{27}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -98,13 +98,6 @@ Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
 \newblock The {Platonic Representation Hypothesis}.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
-\bibitem[Ilyas et~al.(2022)Ilyas, Park, Engstrom, Leclerc, and
-  Madry]{ilyas2022datamodels}
-Andrew Ilyas, Sung~Min Park, Logan Engstrom, Guillaume Leclerc, and Aleksander
-  Madry.
-\newblock Datamodels: Predicting predictions from training data.
-\newblock In \emph{International Conference on Machine Learning (ICML)}, 2022.
-
 \bibitem[Kipnis et~al.(2025)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
 Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
 \newblock {metabench}: A sparse benchmark of reasoning and knowledge in large
@@ -165,14 +158,6 @@ Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
   Mikhail Yurochkin.
 \newblock {tinyBenchmarks}: Evaluating {LLM}s with fewer examples.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
-
-\bibitem[Prabhu et~al.(2024)Prabhu, Udandarao, Torr, Bethge, Bibi, and
-  Albanie]{prabhu2024lifelong}
-Ameya Prabhu, Vishaal Udandarao, Philip Torr, Matthias Bethge, Adel Bibi, and
-  Samuel Albanie.
-\newblock Efficient lifelong model evaluation in an era of rapid progress.
-\newblock In \emph{Advances in Neural Information Processing Systems
-  (NeurIPS)}, 2024.
 
 \bibitem[Rasch(1960)]{rasch1960}
 Georg Rasch.
