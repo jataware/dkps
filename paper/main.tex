@@ -146,41 +146,52 @@ Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\
 \end{tabular}
 \end{table}
 
-\subsection{Related work}
+\subsection{Related Work}
 \label{sec:related}
 
-\paragraph{Low-dimensional representations of models.} Some approaches construct
-representations by comparing internal activations across models
-\citep{duderstadt2023comparing, huh2024platonic, horwitz2025atlas} or by comparing model
-weights directly \citep{chen2025weights}. Evaluation frameworks, however, typically permit
-only black-box access: they observe responses, not internals. The Data Kernel Perspective
-Space (DKPS), introduced by \citet{helm2024tracking}, addresses this setting by
-mapping a collection of models into a
-low-dimensional Euclidean space via classical multidimensional scaling of average embedded
-responses \citep{torgerson1952mds}. Prior work established consistency and concentration
-of the representations \citep{acharyya2024consistent, acharyya2025concentration},
-supervised inference thereon \citep{helm2025inference}, and query efficiency
-\citep{dkps_qeff}. These constructions compare responses to shared queries, a paired
-design. \PKPS replaces the identity matching with a product kernel so that models
-evaluated on different queries remain comparable.
+\paragraph{Benchmark prediction.}
+We decompose benchmark prediction into two lines of work: query-efficient
+benchmarking and (model, task) score completion.
+Methods for query-efficient benchmarking predict a model's score on a full task from
+its responses to a small subset of the task's queries---typically by selecting an
+informative query subset and extrapolating via IRT models
+\citep{polo2024tinybenchmarks, hofmann2025fluid}, clustering
+\citep{vivek2024anchor}, rank-preserving subsampling \citep{perlitz2024efficient},
+learned acquisition policies \citep{li2024active}, regression on item-level scores
+\citep{bowyer2026efficient}, or regression on model representations
+\citep{dkps_qeff}.
+All previous methods proposed for query-efficient benchmarking explicitly require
+paired responses from previously evaluated models.
+Methods for (model, task) score completion predict entries of the score matrix that
+were never evaluated, via cross-task predictability \citep{ye2023predictable},
+observational scaling laws \citep{ruan2024observational}, or low-rank matrix
+completion \citep{benchpress}; all operate exclusively on aggregate scores,
+discarding the responses that produced them.
+\PKPS instead uses the embedded responses themselves and, by comparing responses to
+similar rather than identical queries, applies uniformly across the sparsity
+spectrum---from a model that has answered a few of a task's queries to one that has
+answered none.
 
-\paragraph{Benchmark prediction.} A second line of work predicts unobserved (model, task)
-scores so that not every evaluation must be run; efficient benchmarking and matrix
-completion are its two ends. \citet{polo2024tinybenchmarks} use item-response theory to
-construct small item subsets whose scores predict full performance \citep[see
-also][]{rasch1960, metabench}; \citet{vivek2024anchor} cluster items by cross-model
-agreement and score only the cluster centers; \citet{bean2025scales} select items using
-cognitive-scale embeddings; \citet{li2024active} select items adaptively via reinforcement
-learning; and \citet{perlitz2024efficient} analyze the cost--reliability tradeoff of
-benchmark designs. Closest to us, \citet{dkps_qeff} predict held-out scores from cached
-responses.
-On the completion end, \citet{benchpress} observe that the (model $\times$ task) score
-matrix is approximately rank-two and complete it in logit space \citep[see
-also][]{candes2009exact, mazumder2010softimpute, koren2009matrix}. These methods use only
-each cell's aggregate score; \citet{benchpress} identify extending prediction to
-instance-level outcomes as a natural next step. \PKPS unifies the two ends---a cell with
-$m\ge0$ queries spans efficient benchmarking ($m{>}0$) and completion ($m{=}0$)---and
-adds the response-level signal, which can be ensembled with matrix completion.
+\paragraph{Low-dimensional representations of models.}
+Existing approaches represent models by comparing internal activations
+\citep{duderstadt2023comparing, huh2024platonic}, weights
+\citep{horwitz2025atlas, chen2025weights}, or responses.
+The Data Kernel Perspective Space (DKPS) \citep{helm2024tracking} is a
+response-based representation obtained by applying multidimensional scaling to
+distances between matrices of average embedded responses.
+Subsequent work establishes that the representations consistently estimate
+ground-truth low-dimensional model structure \citep{acharyya2024consistent,
+acharyya2025concentration} and that inference methods trained on them are consistent
+\citep{helm2025inference}.
+Most relevant to our setting, \citet{dkps_qeff} regress benchmark scores of
+previously evaluated models on their DKPS representations, prove that the resulting
+predictions are query-efficient relative to the sample score, and demonstrate
+query-budget reductions of up to $10\times$ on HELM tasks.
+All of these results, however, require a common query set: the distance between two
+models is defined only over responses to identical queries.
+\PKPS generalizes the construction with a kernel on the query space, recovering DKPS
+when the query kernel is the identity and extending both the representations and
+their accompanying inference guarantees to the unpaired regime.
 
 \section{Problem statement}
 \label{sec:setting}

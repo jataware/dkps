@@ -1,4 +1,4 @@
-\begin{thebibliography}{36}
+\begin{thebibliography}{31}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -25,22 +25,10 @@ Axel Backlund and Lukas Petersson.
   agents.
 \newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
 
-\bibitem[Bean et~al.(2025)Bean, Seedat, Chen, and Schwarz]{bean2025scales}
-Andrew~M. Bean, Nabeel Seedat, Shengzhuang Chen, and Jonathan~Richard Schwarz.
-\newblock {Scales++}: Compute efficient evaluation subset selection with
-  cognitive scales embeddings.
-\newblock \emph{arXiv preprint arXiv:2510.26384}, 2025.
-
 \bibitem[Bowyer et~al.(2026)]{bowyer2026efficient}
 Sam Bowyer et~al.
 \newblock Efficient benchmark prediction.
 \newblock \emph{arXiv preprint}, 2026.
-
-\bibitem[Cand{\`e}s and Recht(2009)]{candes2009exact}
-Emmanuel~J. Cand{\`e}s and Benjamin Recht.
-\newblock Exact matrix completion via convex optimization.
-\newblock \emph{Foundations of Computational Mathematics}, 9\penalty0
-  (6):\penalty0 717--772, 2009.
 
 \bibitem[Chen et~al.(2025{\natexlab{a}})Chen, Helm, Park, Priebe, and
   Villar]{chen2025weights}
@@ -132,18 +120,6 @@ Pranab Islam, Anand Kannappan, Douwe Kiela, Rebecca Qian, Nino Scherrer, and
 \newblock Financebench: A new benchmark for financial question answering.
 \newblock \emph{arXiv preprint arXiv:2311.11944}, 2023.
 
-\bibitem[Kipnis et~al.(2025)Kipnis, Voudouris, Buschoff, and Schulz]{metabench}
-Alex Kipnis, Konstantinos Voudouris, Luca M.~Schulze Buschoff, and Eric Schulz.
-\newblock {metabench}: A sparse benchmark of reasoning and knowledge in large
-  language models.
-\newblock In \emph{International Conference on Learning Representations
-  (ICLR)}, 2025.
-
-\bibitem[Koren et~al.(2009)Koren, Bell, and Volinsky]{koren2009matrix}
-Yehuda Koren, Robert Bell, and Chris Volinsky.
-\newblock Matrix factorization techniques for recommender systems.
-\newblock \emph{Computer}, 42\penalty0 (8):\penalty0 30--37, 2009.
-
 \bibitem[Li et~al.(2024)Li, Ma, Ballesteros, Benajiba, and
   Horwood]{li2024active}
 Yang Li, Jie Ma, Miguel Ballesteros, Yassine Benajiba, and Graham Horwood.
@@ -177,14 +153,6 @@ Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu~Gu,
 \newblock {AgentBench}: Evaluating {LLM}s as agents.
 \newblock In \emph{International Conference on Learning Representations}, 2024.
 
-\bibitem[Mazumder et~al.(2010)Mazumder, Hastie, and
-  Tibshirani]{mazumder2010softimpute}
-Rahul Mazumder, Trevor Hastie, and Robert Tibshirani.
-\newblock Spectral regularization algorithms for learning large incomplete
-  matrices.
-\newblock \emph{Journal of Machine Learning Research}, 11:\penalty0 2287--2322,
-  2010.
-
 \bibitem[Perlitz et~al.(2024)Perlitz, Bandel, Gera, Arviv, Ein-Dor, Shnarch,
   Slonim, Shmueli-Scheuer, and Choshen]{perlitz2024efficient}
 Yotam Perlitz, Elron Bandel, Ariel Gera, Ofir Arviv, Liat Ein-Dor, Eyal
@@ -200,11 +168,11 @@ Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
 \newblock {tinyBenchmarks}: Evaluating {LLM}s with fewer examples.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
-\bibitem[Rasch(1960)]{rasch1960}
-Georg Rasch.
-\newblock \emph{Probabilistic Models for Some Intelligence and Attainment
-  Tests}.
-\newblock Danish Institute for Educational Research, 1960.
+\bibitem[Ruan et~al.(2024)Ruan, Maddison, and Hashimoto]{ruan2024observational}
+Yangjun Ruan, Chris~J. Maddison, and Tatsunori Hashimoto.
+\newblock Observational scaling laws and the predictability of language model
+  performance.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2024.
 
 \bibitem[Srivastava et~al.(2023)Srivastava, Rastogi, Rao,
   et~al.]{srivastava2023beyond}
@@ -212,11 +180,6 @@ Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, et~al.
 \newblock Beyond the imitation game: Quantifying and extrapolating the
   capabilities of language models.
 \newblock \emph{Transactions on Machine Learning Research}, 2023.
-
-\bibitem[Torgerson(1952)]{torgerson1952mds}
-Warren~S. Torgerson.
-\newblock Multidimensional scaling: {I}. {T}heory and method.
-\newblock \emph{Psychometrika}, 17\penalty0 (4):\penalty0 401--419, 1952.
 
 \bibitem[Tu et~al.(2016)Tu, Boczar, Simchowitz, Soltanolkotabi, and
   Recht]{tu2016procrustes}
@@ -251,6 +214,13 @@ Colin White, Samuel Dooley, Manley Roberts, Arka Pal, Ben Feuer, Siddhartha
 \newblock {LiveBench}: A challenging, contamination-free {LLM} benchmark.
 \newblock In \emph{International Conference on Learning Representations
   (ICLR)}, 2025.
+
+\bibitem[Ye et~al.(2023)Ye, Fu, Ren, and Jia]{ye2023predictable}
+Qinyuan Ye, Harvey~Yiyun Fu, Xiang Ren, and Robin Jia.
+\newblock How predictable are large language model capabilities? a case study
+  on {BIG}-bench.
+\newblock In \emph{Findings of the Association for Computational Linguistics:
+  EMNLP}, 2023.
 
 \bibitem[Zeng and Papailiopoulos(2026)]{benchpress}
 Yuchen Zeng and Dimitris Papailiopoulos.
