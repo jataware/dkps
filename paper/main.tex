@@ -310,7 +310,7 @@ pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
 \emph{distributions} overlap, even when no individual query is shared, and it fails
 when models are evaluated on domains the kernel cannot bridge---where no unpaired
 method should be expected to compare them.
-\begin{proposition}[Concentration of \PKPS perspectives]
+\begin{theorem}[Concentration of \PKPS perspectives]
 \label{prop:conc}
 Under Assumptions~\ref{ass:bound}--\ref{ass:spec}, with at least $m$ queries per model, for any
 $\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
@@ -318,7 +318,7 @@ that
 $\max_i\|\hat\psi_i-W\psi_i\|\le
 C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
 where $C$ depends only on the kernel bounds.
-\end{proposition}
+\end{theorem}
 \begin{proof}[Proof sketch]
 Each entry of Eq.~\ref{eq:A} is a ratio of two-sample U-statistics; Hoeffding
 concentration of numerator and denominator, with the denominator bounded below by
@@ -414,7 +414,7 @@ is query-efficient relative to the sample score
 whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
 \end{corollary}
 \begin{proof}[Proof sketch]
-For (i), Proposition~\ref{prop:conc} bounds every perspective's estimation error; the
+For (i), Theorem~\ref{prop:conc} bounds every perspective's estimation error; the
 nearest-neighbor error splits into two estimation terms and the population
 nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for $n$
 large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
@@ -435,7 +435,7 @@ prediction cannot depend on the target's responses at all (ii); and that
 cross-validation extends the comparison safely to every pairing fraction (iii). Only
 (iii) is a model-selection guarantee: (i) rests on the concentration of the
 self-normalized product-kernel comparison, in which the population overlap $\kappa$
-replaces the pairing fraction $\rho$ (Proposition~\ref{prop:conc}), and (ii) is an
+replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}), and (ii) is an
 impossibility result for exact matching. Empirically, a bridging bandwidth improves on
 exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
