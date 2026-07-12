@@ -171,11 +171,11 @@ spectrum---from a model that has answered a few of a task's queries to one that 
 answered none.
 
 \paragraph{Low-dimensional representations of models.}
-Our approach to sparse and unpaired benchmark prediction first constructs low-dimensional representation of the models before learning a simple regressor in the representation space.
+Our approach to sparse and unpaired benchmark prediction first constructs low-dimensional representations of the models before learning a simple regressor in the representation space.
 Existing approaches to represent models vary by access regime.
 For example, representations can be induced by comparing internal activations
 \citep{duderstadt2023comparing, huh2024platonic} and/or weights
-\citep{chen2025weights} in the whitebox setting.
+\citep{chen2025weights} in the white-box setting.
 Evaluators do not necessarily have white-box access and instead rely on black-box methods such as
 the Data Kernel Perspective Space (DKPS) \citep{helm2024tracking}, which constructs low-dimensional representations by applying multidimensional scaling to
 distances between matrices of embedded responses on a paired set of queries.
@@ -222,8 +222,8 @@ $s(f_{i},Q_i^{(t)})$.
 \item \emph{(Model, task) score completion} is the
 special case $m_{i}^{(t)}=0$.
 No responses from the target (model, task) slice exist and prediction
-must be based on model $i$'s responses to other tasks and from other models
-evaluated on task $t$.
+must be based on model $i$'s responses to other tasks and on responses from
+other models evaluated on task $t$.
 \end{enumerate}
 
 \section{The Product Kernel Perspective Space}

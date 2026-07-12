@@ -25,10 +25,11 @@ Axel Backlund and Lukas Petersson.
   agents.
 \newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
 
-\bibitem[Bowyer et~al.(2026)]{bowyer2026efficient}
-Sam Bowyer et~al.
-\newblock Efficient benchmark prediction.
-\newblock \emph{arXiv preprint}, 2026.
+\bibitem[Bowyer et~al.(2026)Bowyer, Locatelli, and Cao]{bowyer2026efficient}
+Sam Bowyer, Acyr Locatelli, and Kris Cao.
+\newblock Efficient benchmarking is just feature selection and multiple
+  regression.
+\newblock \emph{arXiv preprint arXiv:2605.25773}, 2026.
 
 \bibitem[Bubeck et~al.(2023)Bubeck, Chandrasekaran, Eldan, Gehrke, Horvitz,
   Kamar, Lee, Lee, Li, Lundberg, Nori, Palangi, Ribeiro, and
@@ -47,10 +48,13 @@ Nan Chen, Hayden Helm, Youngser Park, Carey Priebe, and Soledad Villar.
 \newblock In \emph{Non-Euclidean Foundation Models: Advancing AI Beyond
   Euclidean Frameworks}, 2025{\natexlab{a}}.
 
-\bibitem[Chen et~al.(2025{\natexlab{b}})]{chen2025vcbench}
-Rick Chen et~al.
+\bibitem[Chen et~al.(2025{\natexlab{b}})Chen, Ternasky, Kwesi, Griffin, Yin,
+  Salifu, Amoaba, Mu, Alican, and Ihlamur]{chen2025vcbench}
+Rick Chen, Joseph Ternasky, Afriyie~Samuel Kwesi, Ben Griffin, Aaron~Ontoyin
+  Yin, Zakari Salifu, Kelvin Amoaba, Xianling Mu, Fuat Alican, and Yigit
+  Ihlamur.
 \newblock {VCBench}: Benchmarking {LLM}s in venture capital.
-\newblock \emph{arXiv preprint}, 2025{\natexlab{b}}.
+\newblock \emph{arXiv preprint arXiv:2509.14448}, 2025{\natexlab{b}}.
 
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
@@ -107,10 +111,12 @@ Wassily Hoeffding.
 \newblock \emph{Journal of the American Statistical Association}, 58\penalty0
   (301):\penalty0 13--30, 1963.
 
-\bibitem[Hofmann et~al.(2025)]{hofmann2025fluid}
-Valentin Hofmann et~al.
+\bibitem[Hofmann et~al.(2025)Hofmann, Heineman, Magnusson, Lo, Dodge, Sap, Koh,
+  Wang, Hajishirzi, and Smith]{hofmann2025fluid}
+Valentin Hofmann, David Heineman, Ian Magnusson, Kyle Lo, Jesse Dodge, Maarten
+  Sap, Pang~Wei Koh, Chun Wang, Hannaneh Hajishirzi, and Noah~A. Smith.
 \newblock Fluid language model benchmarking.
-\newblock \emph{arXiv preprint}, 2025.
+\newblock In \emph{Conference on Language Modeling}, 2025.
 
 \bibitem[Huh et~al.(2024)Huh, Cheung, Wang, and Isola]{huh2024platonic}
 Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
