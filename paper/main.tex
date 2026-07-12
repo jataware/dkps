@@ -51,6 +51,7 @@ score completion---across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
+\label{sec:introduction}
 Evaluating a generative model is necessary for understanding its capabilities.
 As the capabilities of generative models increase \citep{wei2022emergent, bubeck2023sparks},
 their applicability expands to ever more domains---often necessitating the creation of
@@ -187,39 +188,43 @@ The proposed Product Kernel Perspective Space generalizes the construction with 
 
 \section{Benchmark Prediction}
 \label{sec:setting}
-For our purposes, a \emph{model} is a random mapping
-$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space; the response
-$f(q)$ is an independent sample from $P_{q}$. A \emph{task} is a pair
-$(Q^{(t)}, y)$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a collection of queries with
-$M^{(t)}:=|Q^{(t)}|$ and $y$ is a scoring function mapping a model and a query
-collection to a score. Model $i$'s score on task $t$ is
-$y_i^{(t)}:=y(f_{i},Q^{(t)})$.
+For our purposes, a model is a random mapping
+$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space.
+A task is a pair $(Q^{(t)}, s)$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a collection
+of queries with $M^{(t)}:=|Q^{(t)}|$ and $s$ is a scoring function mapping a model
+and a query collection to a score. Model $i$'s true score on task $t$ is
+$y_i^{(t)}:=s(f_{i},Q^{(t)})$.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
-query $q\in Q^{(t)}$ may or may not have been generated. Let
-$Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
-observed, $m_{i}^{(t)}:=|Q^{(t)}_{i}|$, and $Q_i:=\cup_{t}Q_i^{(t)}$; we assume
-access to the observed responses $\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$. The
-setting where every response exists ($Q_{1}=\dots=Q_{n}$, a \emph{paired} design) is
-a special case. The observed collection is \emph{sparse} when few models have
+query $q\in Q^{(t)}$ may or may not have been generated.
+Let $Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
+observed with $m_{i}^{(t)}:=|Q^{(t)}_{i}|$ and $Q_i:=\cup_{t}Q_i^{(t)}$.
+
+The setting where every response exists ($Q_{1}=\dots=Q_{n}$, a \emph{paired} design)
+is a special case. The observed collection is \emph{sparse} when few models have
 $m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the cross-model overlaps
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
 $\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
-leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings. For
-$m_i^{(t)}>0$ we also observe the sample score $y(f_{i},Q_i^{(t)})$.
+leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
 
-The goal of \emph{benchmark prediction} is to estimate $y_i^{(t)}$ from the observed
-responses. The two tasks of the introduction are the two regimes of the observation
-count $m_i^{(t)}$. \emph{Query-efficient evaluation} is the special case
-$m_{i}^{(t)}>0$: the sample score is available but noisy, and estimating
-$y_i^{(t)}$ amounts to denoising it. \emph{(Model, task) score completion} is the
-special case $m_{i}^{(t)}=0$: no responses from the cell exist, and the estimate
-must be built from model $i$'s responses to other tasks and from the previously
-evaluated models. A representation of models accurate enough to predict any cell
-serves both special cases; constructing one from sparse, unpaired responses is the
-subject of this paper.
+The goal of benchmark prediction is to estimate a model's score from the available
+evaluation data.
+The two tasks introduced in \S\ref{sec:introduction} are the two regimes of the
+observation count $m_i^{(t)}$:
+\begin{enumerate}
+\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
+\item \emph{Query-efficient evaluation} is the case
+$m_{i}^{(t)}>0$ and growing. Responses or scores from other models on task $t$ are
+typically available, and the goal is to outperform the naive sample score
+$s(f_{i},Q_i^{(t)})$.
+\item \emph{(Model, task) score completion} is the
+special case $m_{i}^{(t)}=0$.
+No responses from the target (model, task) slice exist and prediction
+must be based on model $i$'s responses to other tasks and from other models
+evaluated on task $t$.
+\end{enumerate}
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
