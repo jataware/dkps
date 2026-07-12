@@ -308,21 +308,27 @@ $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspect
 $\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
 Gram matrix $B^*$ of $D^{*2}$.
 \end{definition}
-\begin{assumption}[Kernel and geometry regularity]\label{ass:reg}
-Kernels and embedded responses are bounded; the \emph{cross-model query-kernel mass} is
-bounded below, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$; and $B^*$ has rank $d$ with
-spectral gap $\lambda_d>0$.
+\begin{assumption}[Boundedness]\label{ass:bound}
+Kernels and embedded responses are bounded.
 \end{assumption}
-Boundedness and the spectral gap are standard conditions in spectral-embedding
-analyses. The important condition for the unpaired setting is $\kappa>0$, the population
-analogue of the pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
-\emph{distributions} overlap, even when no individual query is shared. It fails when the
-query distributions are disjoint, i.e., when models are evaluated on domains that the
-kernel cannot bridge; in this case no unpaired method should be expected to compare
-them.
+\begin{assumption}[Population overlap]\label{ass:overlap}
+The \emph{cross-model query-kernel mass} is bounded below:
+$\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]>0$.
+\end{assumption}
+\begin{assumption}[Spectral identifiability]\label{ass:spec}
+$B^*$ has rank $d$ with spectral gap $\lambda_d>0$.
+\end{assumption}
+Assumptions~\ref{ass:bound} and \ref{ass:spec} are standard conditions in
+spectral-embedding analyses. The substantive condition for the unpaired setting is
+Assumption~\ref{ass:overlap}: $\kappa$ is the population analogue of the pairing
+fraction $\rho$, and for an RBF $k_Q$ it is positive whenever the query
+\emph{distributions} overlap, even when no individual query is shared. It fails when
+the query distributions are disjoint, i.e., when models are evaluated on domains that
+the kernel cannot bridge; in this case no unpaired method should be expected to
+compare them.
 \begin{proposition}[Concentration of \PKPS perspectives]
 \label{prop:conc}
-Under Assumption~\ref{ass:reg}, with at least $m$ queries per model, for any
+Under Assumptions~\ref{ass:bound}--\ref{ass:spec}, with at least $m$ queries per model, for any
 $\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
 that
 $\max_i\|\hat\psi_i-W\psi_i\|\le
@@ -408,7 +414,7 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
 bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
 by validation on held-out reference scores. Under
-Assumptions~\ref{ass:reg}--\ref{ass:support}, for any $\epsilon>0$:
+Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$:
 \emph{(i)} there exist $(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and
 independent of $\rho$, at which $\mathrm{MSE}(\PKPS\text{-CV})\le\epsilon$ with high
 probability;
@@ -929,7 +935,7 @@ effective depth, so comparisons there reflect the constraint rather than the met
 
 \paragraph{Population quantities.} Queries for model $i$ are drawn i.i.d.\ from a design
 distribution over embedded queries; write $z=(u,x_i(u))$ for an embedded query--response
-pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:reg} the kernels are bounded:
+pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
 A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
@@ -938,11 +944,11 @@ A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\
 population squared distances $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, the centered Gram
 matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
 population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
-which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:reg} (cf.\ Definition~\ref{def:pop}).
+which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:spec} (cf.\ Definition~\ref{def:pop}).
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
-Under Assumption~\ref{ass:reg}, for models $i,i'$ with $\min(|Q_i|,|Q_{i'}|)\ge m$ and any
+Under Assumptions~\ref{ass:bound} and \ref{ass:overlap}, for models $i,i'$ with $\min(|Q_i|,|Q_{i'}|)\ge m$ and any
 $\delta\in(0,1)$: with probability at least $1-\delta$,
 \[
 |A_{ii'}-A^*_{ii'}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
@@ -961,7 +967,7 @@ stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
 \citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
 $\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; since $\bar B$ dominates
 both ranges, a union bound gives $|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$
-jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by Assumption~\ref{ass:reg} and $t_m(\delta)\le\kappa/2$,
+jointly with probability $\ge1-\delta$. On this event, since $Z^*\ge\kappa$ by Assumption~\ref{ass:overlap} and $t_m(\delta)\le\kappa/2$,
 we have $Z\ge\kappa/2$, and
 \[
 |A_{ii'}-A^*_{ii'}|=\frac{|NZ^*-N^*Z|}{ZZ^*}
@@ -1082,7 +1088,7 @@ $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surel
 identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
 function of the reference data alone, independent of the target, whence
 $\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$, while under
-Assumptions~\ref{ass:score}--\ref{ass:reg} part (i) supplies a bandwidth
+Assumptions~\ref{ass:bound}--\ref{ass:support} part (i) supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
 validation and a joint embedding (Section~\ref{sec:method}); the split protocol is
