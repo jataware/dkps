@@ -193,43 +193,41 @@ models is defined only over responses to identical queries.
 when the query kernel is the identity and extending both the representations and
 their accompanying inference guarantees to the unpaired regime.
 
-\section{Problem statement}
+\section{Benchmark Prediction}
 \label{sec:setting}
-Our goal is to predict the score of a model for a task for which its responses are
-partially observed or unobserved in the context of sparse and unpaired previously
-evaluated reference models. For our purposes, a \emph{model} is a random mapping
-$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space. The response
-$f(q)$ is an independent sample from $P_{q}$. We observe $n$ models $f_1,\dots,f_n$,
-where each model responds to a (potentially different) collection of queries
-$Q_i\subseteq\mathcal{Q}$. The setting where $Q_{1}=\dots=Q_{n}$ (i.e., a \emph{paired}
-design) is a special case. We assume access to responses
-$\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$.
+For our purposes, a \emph{model} is a random mapping
+$f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space; the response
+$f(q)$ is an independent sample from $P_{q}$. A \emph{task} is a pair
+$(Q^{(t)}, y)$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a collection of queries with
+$M^{(t)}:=|Q^{(t)}|$ and $y$ is a scoring function mapping a model and a query
+collection to a score. Model $i$'s score on task $t$ is
+$y_i^{(t)}:=y(f_{i},Q^{(t)})$.
 
-Each query is an element of at least one of $T$
-\emph{tasks}---$Q^{(1)},\dots,Q^{(T)}$---with $Q_{i}\subseteq\cup_{t=1}^{T}Q^{(t)}$
-and $M^{(t)}:=|Q^{(t)}|$. Let $Q_{i}^{(t)}$ be the collection of queries from task $t$
-that model $i$ has responded to and let $m_{i}^{(t)}:=|Q^{(t)}_{i}|$. The sparsity and
-unpairedness of a task are functions of the $\{m_{i}^{(t)}\}$: it is \emph{sparse} when
-few models have $m_{i}^{(t)}>0$, and \emph{unpaired} when the cross-model overlaps
+Evaluation data is indexed by (model, task, query) triples: for $n$ models
+$f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
+query $q\in Q^{(t)}$ may or may not have been generated. Let
+$Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
+observed, $m_{i}^{(t)}:=|Q^{(t)}_{i}|$, and $Q_i:=\cup_{t}Q_i^{(t)}$; we assume
+access to the observed responses $\{\{f_{i}(q):q\in Q_{i}\}\}_{i=1}^{n}$. The
+setting where every response exists ($Q_{1}=\dots=Q_{n}$, a \emph{paired} design) is
+a special case. The observed collection is \emph{sparse} when few models have
+$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the cross-model overlaps
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
-$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a given
-model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
-leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
+$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
+given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
+leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings. For
+$m_i^{(t)}>0$ we also observe the sample score $y(f_{i},Q_i^{(t)})$.
 
-Finally, let $y_i^{(t)}:=y(f_{i},Q^{(t)})$ be model $i$'s score on task $t$. For
-$m_i^{(t)}>0$ we observe $y(f_{i},Q_i^{(t)})$. The goal of \emph{benchmark prediction}
-is to estimate $y_i^{(t)}$ from the available responses.
-
-Stated this way, the two benchmark prediction tasks of the introduction are instances
-of a single problem, indexed by the number of observed queries: every (model, task)
-cell is observed with some number of queries $m_i^{(t)}\ge0$.
-\emph{Query-efficient evaluation} is the instance with $m_{i}^{(t)}>0$: the sample
-score $y(f_{i},Q_i^{(t)})$ is available but noisy, and estimating $y_i^{(t)}$ amounts
-to denoising it. \emph{(Model, task) score completion} is the instance with
-$m_{i}^{(t)}=0$: no responses from the cell exist, and the estimate must be built from
-the model's responses to other tasks and from the other models. A representation of
-models accurate enough to predict any cell therefore serves both tasks; constructing
-one from sparse, unpaired responses is the subject of this paper.
+The goal of \emph{benchmark prediction} is to estimate $y_i^{(t)}$ from the observed
+responses. The two tasks of the introduction are the two regimes of the observation
+count $m_i^{(t)}$. \emph{Query-efficient evaluation} is the special case
+$m_{i}^{(t)}>0$: the sample score is available but noisy, and estimating
+$y_i^{(t)}$ amounts to denoising it. \emph{(Model, task) score completion} is the
+special case $m_{i}^{(t)}=0$: no responses from the cell exist, and the estimate
+must be built from model $i$'s responses to other tasks and from the previously
+evaluated models. A representation of models accurate enough to predict any cell
+serves both special cases; constructing one from sparse, unpaired responses is the
+subject of this paper.
 
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
