@@ -1,4 +1,4 @@
-\begin{thebibliography}{31}
+\begin{thebibliography}{30}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -101,12 +101,6 @@ Wassily Hoeffding.
 Valentin Hofmann et~al.
 \newblock Fluid language model benchmarking.
 \newblock \emph{arXiv preprint}, 2025.
-
-\bibitem[Horwitz et~al.(2025)Horwitz, Kurer, Kahana, Amar, and
-  Hoshen]{horwitz2025atlas}
-Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen.
-\newblock We should chart an atlas of all the world's models.
-\newblock \emph{arXiv preprint arXiv:2503.10633}, 2025.
 
 \bibitem[Huh et~al.(2024)Huh, Cheung, Wang, and Isola]{huh2024platonic}
 Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola.
