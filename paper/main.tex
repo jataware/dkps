@@ -344,7 +344,8 @@ Fix a task $t$.
 In the unpaired and sparse setting, the natural sampling unit is a (model, design,
 score) triple: let $(f,\mu,y),(f_{1},\mu_{1},y_{1}),\hdots,(f_{n},\mu_{n},y_{n})$
 be i.i.d.\ samples from a joint distribution, where $\mu_{i}$ is a \emph{design
-distribution} over queries and $y_{i}:=s(f_{i},Q^{(t)})$.
+distribution} over queries and $y_{i}:=s(f_{i},Q^{(t)})$ is model $i$'s true score
+on task $t$ (and likewise $y:=s(f,Q^{(t)})$ for the target).
 Model $i$'s observed queries $Q_{i}$ are $m_{i}$ i.i.d.\ draws from $\mu_{i}$, and
 we observe the embedded responses $\{x_{ij}:q_{j}\in Q_{i}\}$ for every model but
 only the reference scores $y_{1},\hdots,y_{n}$.
