@@ -319,9 +319,11 @@ C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
 where $C$ depends only on the kernel bounds.
 \end{theorem}
 \begin{proof}[Proof sketch]
-Each entry of Eq.~\eqref{eq:A} is a ratio of two-sample U-statistics; Hoeffding
-concentration of numerator and denominator, with the denominator bounded below by
-$\kappa$, gives entrywise error $O(\kappa^{-2}m^{-1/2})$ (Lemma~\ref{lem:conc}).
+Each entry of Eq.~\eqref{eq:A} is a ratio of two-sample U-statistics.
+We thus get concentration of numerator and denominator via Hoeffding's inequality
+\citep{hoeffding1963} and the bounded kernel assumption.
+The denominator is bounded below by $\kappa$ and gives entrywise error
+$O(\kappa^{-2}m^{-1/2})$ (Lemma~\ref{lem:conc}).
 A Weyl--Procrustes perturbation argument then transfers the entrywise error to the
 rank-$d$ spectral embedding at the stated rate (Lemma~\ref{lem:pert}). The full
 proof is in Appendix~\ref{app:proof}.
