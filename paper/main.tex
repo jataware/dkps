@@ -350,13 +350,15 @@ $(f,Q,y),(f_{1},Q_{1},y_{1}),\hdots,(f_{n},Q_{n},y_{n})$ be i.i.d.\ samples from
 a joint distribution, where $Q_{i}$ is the collection of queries model $i$ has
 responded to and $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$ is model $i$'s true score on task
 $t$.
-For every model we observe the embedded responses $\{x_{ij}:q_{j}\in Q_{i}\}$
-and the noisy sample scores $\big(s^{(t')}(f_{i},Q_{i}^{(t')})\big)_{t'=1}^{T}$,
-where entries with $Q_{i}^{(t')}=\emptyset$ are the missing cells of the score
-matrix.
+For every model, including the target, we observe the embedded responses
+$\{x_{ij}:q_{j}\in Q_{i}\}$ and the noisy sample scores
+$\big(s^{(t')}(f_{i},Q_{i}^{(t')})\big)_{t'=1}^{T}$, where entries with
+$Q_{i}^{(t')}=\emptyset$ are the missing cells of the score matrix.
 The reference models are fully evaluated on task $t$ ($Q_{i}^{(t)}=Q^{(t)}$), so
-their observed scores equal $y_{1},\hdots,y_{n}$; the target's true score $y$ is
-not observed.
+their observed task-$t$ scores equal $y_{1},\hdots,y_{n}$.
+The only unknown is the target's true score $y$ on task $t$: the target may well
+have known scores on other tasks, which \PKPS does not require but the completion
+baselines and the ensemble use (Section~\ref{sec:setup}).
 Sparsity and pairing are properties of the query collections---coverage of task
 $t$ is $|Q_{i}\cap Q^{(t)}|$ and pairing is the overlap among the $Q_{i}$---while
 the population overlap $\kappa$ is a property of the designs that generate them
