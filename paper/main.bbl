@@ -199,11 +199,10 @@ Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, et~al.
   capabilities of language models.
 \newblock \emph{Transactions on Machine Learning Research}, 2023.
 
-\bibitem[Trosset and Priebe(2008)]{trosset2008out}
+\bibitem[Trosset and Priebe(2024)]{trosset2024continuous}
 Michael~W. Trosset and Carey~E. Priebe.
-\newblock The out-of-sample problem for classical multidimensional scaling.
-\newblock \emph{Computational Statistics \& Data Analysis}, 52\penalty0
-  (10):\penalty0 4635--4642, 2008.
+\newblock Continuous multidimensional scaling.
+\newblock \emph{arXiv preprint arXiv:2402.04436}, 2024.
 
 \bibitem[Tu et~al.(2016)Tu, Boczar, Simchowitz, Soltanolkotabi, and
   Recht]{tu2016procrustes}
