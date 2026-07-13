@@ -338,17 +338,19 @@ Inference using the \PKPS is a two-step statistical problem: first embed the
 models, then train a decision function that takes the representations as
 model-level covariates.
 For benchmark prediction, the decision function is a regressor.
-Fix a task $t$.
-The evaluation data contains \emph{reference} models $f_{1},\hdots,f_{n}$, whose
-scores $y_{1}^{(t)},\hdots,y_{n}^{(t)}$ are observed, and a \emph{target} model
-$f$, whose score is not.
+Fix a task $t$ and, following \citet{dkps_qeff}, let
+$(f,y),(f_{1},y_{1}),\hdots,(f_{n},y_{n})$ be i.i.d.\ samples from a joint
+distribution on (model, score) pairs, where we write $y_{i}$ for $y_{i}^{(t)}$.
+The reference scores $y_{1},\hdots,y_{n}$ are observed and the target score $y$ is
+not.
 Every model has responded to some collection of queries---the target to a few of
 task $t$'s queries in query-efficient evaluation, and to none of them in score
 completion---and \PKPS embeds all $n+1$ models jointly from these responses
 (Eq.~\eqref{eq:mds}).
-We fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the reference
-(representation, score) pairs $\{(\hat\psi_{i},y_{i}^{(t)})\}_{i=1}^{n}$ and
-predict $\hat y^{(t)}(f)=\hat h(\hat\psi)$.
+We fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the (representation,
+score) pairs $\{(\hat\psi_{i},y_{i})\}_{i=1}^{n}$, predict
+$\hat y(f)=\hat h(\hat\psi)$, and evaluate estimators by their MSE over the draw
+of $(f,y)$.
 
 We note that benchmark prediction with the \PKPS is most naturally transductive:
 since Eq.~\eqref{eq:A} requires no scores, the target is embedded alongside the
@@ -359,15 +361,9 @@ The free choices of the procedure are the bandwidth $\sigma$ and the regressor
 $\hat h$.
 We describe our instantiation in Section~\ref{sec:setup}.
 
-We analyze the two-step estimator in the statistical framing of \citet{dkps_qeff}:
-let $(f,y),(f_{1},y_{1}),\hdots,(f_{n},y_{n})$ be i.i.d.\ samples from a joint
-distribution on (model, score) pairs, with the reference scores observed and the
-target score $y$ unobserved, and evaluate a decision function by its MSE over the
-draw of $(f,y)$.
-Our results additionally require a bounded, Lipschitz score on the population
-perspective space and a model distribution that places mass on every neighborhood
-of it (Assumptions~\ref{ass:score} and~\ref{ass:support},
-Appendix~\ref{app:proof}).
+Our results require a bounded, Lipschitz score on the population perspective
+space and a model distribution that places mass on every neighborhood of it
+(Assumptions~\ref{ass:score} and~\ref{ass:support}, Appendix~\ref{app:proof}).
 The first condition is the working premise of any response-based predictor and is
 visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
 The second gives a target model near reference neighbors in large cohorts.
