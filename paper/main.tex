@@ -341,33 +341,32 @@ That is, given evaluation data with models $f_{1},\hdots,f_{n}$ that have respon
 to $Q_{1},\hdots,Q_{n}$, we compute the representations
 $(\hat\psi_{1},\hdots,\hat\psi_{n})$ and treat $\hat\psi_{i}$ as model $i$'s
 covariate in a downstream decision problem.
-For benchmark prediction, the scores of a subset of \emph{reference} models are
-observed; we fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the observed
-(representation, score) pairs and predict the score of an un-scored model $f$ as
+For benchmark prediction, we observe the scores of a subset of \emph{reference}
+models, fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the observed
+(representation, score) pairs, and predict the score of an un-scored model $f$ as
 $\hat y(f)=\hat h(\hat\psi)$.
-The problem is most naturally \emph{transductive}: because Eq.~\eqref{eq:A} uses
-only responses, the un-scored model is embedded alongside the reference models.
-Out-of-sample alternatives, which embed a new model by its comparison row to a fixed
-reference configuration, also exist \citep{trosset2008out}. The free choices are
-the bandwidth $\sigma$ and the regressor $\hat h$; we describe our instantiation in
-Section~\ref{sec:setup}.
+We note that this is most naturally a transductive problem---since
+Eq.~\eqref{eq:A} requires no scores, the un-scored model is embedded alongside the
+reference models---though out-of-sample methods exist \citep{trosset2008out}.
+The free choices are the bandwidth $\sigma$ and the regressor $\hat h$; we describe
+our instantiation in Section~\ref{sec:setup}.
 
-To analyze the two-step estimator, we adopt the statistical framing of
-\citet{dkps_qeff}: let $(f,y),(f_{1},y_{1}),\hdots,(f_{n},y_{n})$ be i.i.d.\
-samples from a joint distribution on (model, score) pairs, where the reference
-scores $y_{1},\hdots,y_{n}$ are observed and the target score $y$ is not. A
-decision function $h_{n}:\mathbb{R}^{d}\to\mathcal{Y}$ trained on the
-perspective--score pairs $\{(\hat\psi_{i},y_{i})\}_{i=1}^{n}$ is evaluated by its
-expected squared error over the draw of $(f,y)$, written MSE; \emph{query
-efficiency} compares decision functions as the reference cohort grows. Two further
-conditions are required, stated formally in Appendix~\ref{app:proof}: the benchmark score is bounded and Lipschitz on the
-population perspective space (Assumption~\ref{ass:score})---the working premise of
-any response-based predictor, visible as the smooth score gradient in
-Figure~\ref{fig:concept}(e)---and the model population places mass on every
-neighborhood of the perspective space (Assumption~\ref{ass:support}), so that a
-target model has near reference neighbors once the cohort is large; in practice this
-suggests that a large, diverse reference population may be needed. Both conditions
-mirror \citet{dkps_qeff}.
+We analyze the two-step estimator in the statistical framing of \citet{dkps_qeff}.
+Let $(f,y),(f_{1},y_{1}),\hdots,(f_{n},y_{n})$ be i.i.d.\ samples from a joint
+distribution on (model, score) pairs, where the reference scores
+$y_{1},\hdots,y_{n}$ are observed and the target score $y$ is not.
+We evaluate a decision function by its expected squared error over the draw of
+$(f,y)$ and write MSE for this quantity.
+Our results require that the score is bounded and Lipschitz on the population
+perspective space and that the model distribution places mass on every neighborhood
+of the population perspective space (see Assumptions~\ref{ass:score}
+and~\ref{ass:support}, Appendix~\ref{app:proof}).
+The first condition is the working premise of any response-based predictor and is
+visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
+The second condition ensures that a target model has near reference neighbors once
+the cohort is large.
+
+Query efficiency compares decision functions as the reference cohort grows.
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
 Fix a per-model budget $m$ and let $h_n$ denote a score estimator using $n$ scored
@@ -394,8 +393,22 @@ that dominates exact matching:
 $\mathrm{MSE}(\PKPS_\sigma)\le\mathrm{MSE}(\mathrm{DKPS})$ at every $(n,m)$,
 strictly whenever any bandwidth improves on exact matching.
 \end{theorem}
+\begin{proof}[Proof sketch]
+For (i), Theorem~\ref{prop:conc} bounds every perspective's estimation error, and
+Assumption~\ref{ass:support} makes the population nearest-neighbor distance small
+for large $n$; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
+$\mathrm{MSE}\le\epsilon$, and no step involves $\rho$.
+For (ii), with no shared queries every identity-matched comparison is an empty sum,
+so a paired-DKPS prediction cannot depend on the target's responses and its error
+is at least the score variance; (i) supplies a bandwidth attaining $\epsilon<v$.
+For (iii), the exact-matching limit coincides with paired DKPS on the shared
+queries with the same regression head, so it attains equality; any bandwidth
+improving on exact matching witnesses strict domination.
+The full proofs are in Appendix~\ref{app:proof}.
+\end{proof}
 \citet{dkps_qeff} established that paired DKPS is query-efficient relative to the
-sample score; the comparison extends to \PKPS at every pairing fraction.
+sample score.
+The comparison extends to \PKPS at every pairing fraction.
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
 The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
@@ -403,43 +416,29 @@ $\sigma_q^2$ is the per-query score variance, so by Theorem~\ref{thm:qeff}(i), \
 is query-efficient relative to the sample score
 whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
 \end{corollary}
-\begin{proof}[Proof sketch]
-For (i), Theorem~\ref{prop:conc} bounds every perspective's estimation error; the
-nearest-neighbor error splits into two estimation terms and the population
-nearest-neighbor distance, which Assumption~\ref{ass:support} makes small for $n$
-large; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
-$\mathrm{MSE}\le\epsilon$, and no step involves $\rho$---exact matching, by contrast,
-retains only the $\rho m$ shared pairs, so the same argument degrades as
-$\rho\to0$. For (ii), with no shared queries every identity-matched comparison is an
-empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
-error is at least the score variance; (i) supplies a bandwidth attaining
-$\epsilon<v$. For (iii), the exact-matching limit coincides with paired DKPS on the
-shared queries with the same regression head, so it attains equality; any bandwidth
-improving on exact matching witnesses strict domination.
-Full proofs in Appendix~\ref{app:proof}.
-\end{proof}
-Theorem~\ref{thm:qeff} states that a query budget independent of the pairing fraction
-suffices for any target accuracy (i); that under fully unpaired designs the separation
-from paired DKPS is information-theoretic---with no shared queries, a paired-DKPS
-prediction cannot depend on the target's responses at all (ii); and that at every
-pairing fraction the bandwidth family contains a member dominating exact matching,
-since exact matching is itself in the family (iii). (i) rests on the concentration of
-the self-normalized product-kernel comparison, in which the population overlap
-$\kappa$ replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}); (ii) is an
-impossibility result for exact matching. The bandwidths in (i)--(iii) can be selected
-in practice by model selection over a finite grid containing the exact-matching
-limit, such as the leak-free cross-validation described in Section~\ref{sec:setup}, which
-attains the best grid member up to $\epsilon$ (oracle inequality;
-Appendix~\ref{app:proof}). Empirically, a bridging bandwidth improves on exact
-matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
-The same machinery covers the score-completion instance ($m_i^{(t)}=0$).
+Theorem~\ref{thm:qeff} makes three statements.
+First, a query budget independent of the pairing fraction suffices for any target
+accuracy (i).
+Second, the separation from paired DKPS under fully unpaired designs is
+information-theoretic: with no shared queries, a paired-DKPS prediction cannot
+depend on the target's responses at all (ii).
+Third, the bandwidth family always contains a member that dominates exact matching,
+since exact matching is itself in the family (iii).
+The bandwidths in the theorem can be selected in practice by model selection over a
+finite grid containing the exact-matching limit; the cross-validation described in
+Section~\ref{sec:setup} attains the best grid member up to $\epsilon$
+(Appendix~\ref{app:proof}).
+Empirically, a bridging bandwidth improves on exact matching at every $\rho<1$
+(Figure~\ref{fig:synthetic}e).
+
+The same machinery covers (model, task) score completion ($m_i^{(t)}=0$).
 Eq.~\eqref{eq:A} uses only responses, so a model that has answered none of task
 $t$'s queries is embedded from its responses to other tasks, and the regression
-transfers the scores of reference models that were evaluated on $t$. Identity-matched
-constructions have no mechanism for this regime---a cell with no responses shares no
-queries with any evaluation of $t$---and the sample score does not exist there;
-Section~\ref{sec:experiments} evaluates completion empirically on both suites.
+transfers the scores of reference models that were evaluated on $t$.
+Identity-matched constructions have no mechanism for this regime, and the sample
+score does not exist; we evaluate completion empirically in
+Section~\ref{sec:experiments}.
 
 \begin{figure}[t]
 \centering
