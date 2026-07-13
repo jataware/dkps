@@ -390,27 +390,26 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 \end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Fix a budget $m$ and pairing fraction $\rho\in[0,1]$. Write \PKPS$_\sigma$ for the
-estimator with fixed bandwidth $\sigma$, and let \PKPS-CV select its bandwidth from a
-finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$ by validation on
-held-out reference scores. Under
+Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and write \PKPS$_\sigma$ for
+the estimator with fixed bandwidth $\sigma$; the exact-matching limit $k_Q=\delta$
+recovers paired DKPS. Under
 Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$:
-\emph{(i)} there exist $(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and
-independent of $\rho$, at which $\mathrm{MSE}(\PKPS\text{-CV})\le\epsilon$ with high
-probability;
+\emph{(i)} there exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
+$(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
+$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability;
 \emph{(ii)} under a fully unpaired design (nonatomic design distributions) with
 non-degenerate scores, $v=\mathrm{Var}(y)>0$, every paired-DKPS estimator has
-$\mathrm{MSE}\ge v$ at \emph{every} $(n,m)$, so \PKPS-CV is query-efficient relative
-to paired DKPS (Definition~\ref{def:qeff}) with margin at least $v-2\epsilon$;
-\emph{(iii)} for every pairing fraction $\rho$ there exists a bandwidth
-$\sigma\in\Sigma$ that dominates exact matching:
+$\mathrm{MSE}\ge v$ at \emph{every} $(n,m)$, so \PKPS$_\sigma$ is query-efficient
+relative to paired DKPS (Definition~\ref{def:qeff}) with margin at least $v-\epsilon$;
+\emph{(iii)} for every pairing fraction $\rho$ there exists a bandwidth $\sigma$
+that dominates exact matching:
 $\mathrm{MSE}(\PKPS_\sigma)\le\mathrm{MSE}(\mathrm{DKPS})$ at every $(n,m)$,
 strictly whenever any bandwidth improves on exact matching.
 \end{theorem}
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
 The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
-$\sigma_q^2$ is the per-query score variance, so by Theorem~\ref{thm:qeff}(i), \PKPS-CV
+$\sigma_q^2$ is the per-query score variance, so by Theorem~\ref{thm:qeff}(i), \PKPS
 is query-efficient relative to the sample score
 whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
 \end{corollary}
@@ -424,11 +423,9 @@ retains only the $\rho m$ shared pairs, so the same argument degrades as
 $\rho\to0$. For (ii), with no shared queries every identity-matched comparison is an
 empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
 error is at least the score variance; (i) supplies a bandwidth attaining
-$\epsilon<v$. For (iii), the $\delta$ member of the grid coincides with paired DKPS
-on the shared queries with the same regression head, so it attains equality; any
-bandwidth improving on exact matching witnesses strict domination. Cross-validation
-attains the best grid member up to $\epsilon$ (a Hoeffding oracle inequality over the
-finite grid), so (iii) transfers to the deployable \PKPS-CV.
+$\epsilon<v$. For (iii), the exact-matching limit coincides with paired DKPS on the
+shared queries with the same regression head, so it attains equality; any bandwidth
+improving on exact matching witnesses strict domination.
 Full proofs in Appendix~\ref{app:proof}.
 \end{proof}
 Theorem~\ref{thm:qeff} states that a query budget independent of the pairing fraction
@@ -439,9 +436,11 @@ pairing fraction the bandwidth family contains a member dominating exact matchin
 since exact matching is itself in the family (iii). (i) rests on the concentration of
 the self-normalized product-kernel comparison, in which the population overlap
 $\kappa$ replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}); (ii) is an
-impossibility result for exact matching; and the guarantee of (iii) is made
-operational by cross-validation, which attains the best grid member up to $\epsilon$
-(Appendix~\ref{app:proof}). Empirically, a bridging bandwidth improves on exact
+impossibility result for exact matching. The bandwidths in (i)--(iii) can be selected
+in practice by model selection over a finite grid containing the exact-matching
+limit, such as the leak-free cross-validation of the previous subsection, which
+attains the best grid member up to $\epsilon$ (oracle inequality;
+Appendix~\ref{app:proof}). Empirically, a bridging bandwidth improves on exact
 matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
