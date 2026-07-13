@@ -334,21 +334,23 @@ $m^{-1/2}$ regardless of how many queries are shared.
 
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
-Inference in the \PKPS is a two-step statistical problem, exactly as in the DKPS
-\citep{dkps_qeff}: first embed the models into the perspective space, then regress
-benchmark scores on the resulting representations.
-
-In symbols: given reference models with observed scores $\{(f_i,y_i)\}_{i=1}^{n}$
-and a target model $f$ whose score is unobserved, we compute the representations
-$(\hat\psi_1,\dots,\hat\psi_n,\hat\psi)$ of all $n+1$ models via
-Eq.~\eqref{eq:mds}, fit a regressor $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the
-pairs $\{(\hat\psi_i,y_i)\}_{i=1}^{n}$, and predict $\hat y(f)=\hat h(\hat\psi)$.
+Inference using the \PKPS, including benchmark prediction, is a two-step
+statistical problem: first embed each model (Eq.~\eqref{eq:mds}) and then train a
+decision function on model-level covariates.
+That is, given evaluation data with models $f_{1},\hdots,f_{n}$ that have responded
+to $Q_{1},\hdots,Q_{n}$, we compute the representations
+$(\hat\psi_{1},\hdots,\hat\psi_{n})$ and treat $\hat\psi_{i}$ as model $i$'s
+covariate in a downstream decision problem.
+For benchmark prediction, the scores of a subset of \emph{reference} models are
+observed; we fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the observed
+(representation, score) pairs and predict the score of an un-scored model $f$ as
+$\hat y(f)=\hat h(\hat\psi)$.
 The problem is most naturally \emph{transductive}: because Eq.~\eqref{eq:A} uses
-only responses, the un-scored target model is included in the embedding alongside
-the reference models. Out-of-sample alternatives, which embed a new model by its
-comparison row to a fixed reference configuration, also exist
-\citep{trosset2008out}. The free choices are the bandwidth $\sigma$ and the
-regressor $\hat h$; we describe our instantiation in Section~\ref{sec:setup}.
+only responses, the un-scored model is embedded alongside the reference models.
+Out-of-sample alternatives, which embed a new model by its comparison row to a fixed
+reference configuration, also exist \citep{trosset2008out}. The free choices are
+the bandwidth $\sigma$ and the regressor $\hat h$; we describe our instantiation in
+Section~\ref{sec:setup}.
 
 Query efficiency formalizes when this two-step estimator beats computing scores
 directly; MSE denotes mean squared error over the draw of a target model from the
