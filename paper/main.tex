@@ -194,7 +194,10 @@ $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space.
 A task is a pair $(Q^{(t)}, s^{(t)})$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a
 collection of queries with $M^{(t)}:=|Q^{(t)}|$ and $s^{(t)}$ is a scoring function
 mapping a model and a query collection to a score. Model $i$'s true score on task
-$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)})$.
+$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)})$. We emphasize that
+$s^{(t)}(f_{i},\cdot)$ is valid for any query collection, including the empty
+collection: $s^{(t)}(f_{i},\emptyset)$ carries no information about $f_{i}$ and
+corresponds to a missing entry of the (model, task) score matrix.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
@@ -348,8 +351,9 @@ a joint distribution, where $Q_{i}$ is the collection of queries model $i$ has
 responded to and $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$ is model $i$'s true score on task
 $t$.
 For every model we observe the embedded responses $\{x_{ij}:q_{j}\in Q_{i}\}$
-and the noisy sample scores $\big(s^{(t')}(f_{i},Q_{i}^{(t')})\big)_{t'=1}^{T}$
-on the tasks it has touched.
+and the noisy sample scores $\big(s^{(t')}(f_{i},Q_{i}^{(t')})\big)_{t'=1}^{T}$,
+where entries with $Q_{i}^{(t')}=\emptyset$ are the missing cells of the score
+matrix.
 The reference models are fully evaluated on task $t$ ($Q_{i}^{(t)}=Q^{(t)}$), so
 their observed scores equal $y_{1},\hdots,y_{n}$; the target's true score $y$ is
 not observed.
