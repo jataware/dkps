@@ -1,4 +1,4 @@
-\begin{thebibliography}{31}
+\begin{thebibliography}{33}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -69,6 +69,14 @@ Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
 \newblock \url{https://evalevalai.com/projects/every-eval-ever/}, 2026.
 \newblock Dataset:
   \url{https://huggingface.co/datasets/evaleval/EEE_datastore}.
+
+\bibitem[Gretton et~al.(2012)Gretton, Borgwardt, Rasch, Sch{\"o}lkopf, and
+  Smola]{gretton2012kernel}
+Arthur Gretton, Karsten~M. Borgwardt, Malte~J. Rasch, Bernhard Sch{\"o}lkopf,
+  and Alexander Smola.
+\newblock A kernel two-sample test.
+\newblock \emph{Journal of Machine Learning Research}, 13:\penalty0 723--773,
+  2012.
 
 \bibitem[Guha et~al.(2023)Guha, Nyarko, Ho, R{\'e}, Zambrano,
   et~al.]{guha2023legalbench}
@@ -190,6 +198,12 @@ Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, et~al.
 \newblock Beyond the imitation game: Quantifying and extrapolating the
   capabilities of language models.
 \newblock \emph{Transactions on Machine Learning Research}, 2023.
+
+\bibitem[Trosset and Priebe(2008)]{trosset2008out}
+Michael~W. Trosset and Carey~E. Priebe.
+\newblock The out-of-sample problem for classical multidimensional scaling.
+\newblock \emph{Computational Statistics \& Data Analysis}, 52\penalty0
+  (10):\penalty0 4635--4642, 2008.
 
 \bibitem[Tu et~al.(2016)Tu, Boczar, Simchowitz, Soltanolkotabi, and
   Recht]{tu2016procrustes}

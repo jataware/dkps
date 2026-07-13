@@ -224,40 +224,48 @@ other models evaluated on task $t$.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-We seek to estimate a model's score $y_i^{(t)}$ from the sparse, unpaired
-evaluation data of Section~\ref{sec:setting}. We assume access to the observed
-responses and their queries, each embedded into a Euclidean space---for
-$q_j\in Q_i$, a response embedding $x_{ij}\in\mathbb{R}^p$ and a query embedding
-$u_j\in\mathbb{R}^{p_q}$---and, for the previously evaluated \emph{reference}
-models, their observed sample scores. We do not require item-level scores, and we
-do not require that any two models have responded to a common query.
+We estimate a model's score $y_i^{(t)}$ from the sparse, unpaired
+evaluation data of Section~\ref{sec:setting} by constructing low-dimensional
+representations of the models based on an appropriately defined pairwise distance
+matrix.
+We assume access to the responses for each observed (model, task, query) triple and
+to two embedding functions $g_{\mathrm{query}}$ and $g_{\mathrm{response}}$ that map
+queries and responses to $\mathbb{R}^{p_{Q}}$ and $\mathbb{R}^{p_{R}}$, respectively.
+We assume there exists an enumeration of all queries $q_{1},\hdots,q_{M}$ and let
+$x_{ij}$ denote the embedded response $f_{i}(q_{j})$ and $u_{j}$ denote the embedded
+query $q_{j}$.
 
-\PKPS compares two models by comparing every response of one to every response of
-the other, weighting each comparison by the similarity of the queries that produced
-it. Given a \emph{query kernel} $k_Q$ and a \emph{response kernel} $k_R$, the
-comparison between models $i$ and $i'$ is
+Given a query kernel
+$k_Q:\mathbb{R}^{p_{Q}}\times\mathbb{R}^{p_{Q}}\to\mathbb{R}_{\ge0}$ and a response
+kernel $k_R:\mathbb{R}^{p_{R}}\times\mathbb{R}^{p_{R}}\to\mathbb{R}_{\ge0}$, we
+compare models $i$ and $i'$ via
 \begin{equation}
 A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)\, k_R(x_{ij},x_{i'l})}
               {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)},
 \label{eq:A}
 \end{equation}
-with $k_Q$ evaluated on the query embeddings. Each entry is normalized by its own
-query-kernel mass, so models that answered different numbers of queries, or
-entirely different queries, remain comparable. With $A_{ii'}$ in the role of an
-inner product between the models' response behaviors, the induced squared distance
-is $D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ (clamped at $0$).
-
-This construction strictly generalizes DKPS. With the identity query kernel
-$k_Q=\delta$, only queries lying in both query sets survive the double sum of
-Eq.~\ref{eq:A}, which reduces to the identity-matched comparison
-$A_{ii'}=\tfrac{1}{|Q_i\cap Q_{i'}|}\sum_{q\in Q_i\cap Q_{i'}}k_R(x_{iq},x_{i'q})$
-of paired DKPS---undefined when models share no queries. For any strictly positive
-$k_Q$, such as an RBF over the query embeddings, the normalizer is positive for any
-nonempty query sets, so Eq.~\ref{eq:A} is defined even on disjoint sets and
-responses to nearby queries contribute in proportion to their similarity
-(Figure~\ref{fig:concept}). Since the RBF converges pointwise to $\delta$ as its
-bandwidth $\sigma\to0$, paired DKPS is also the small-bandwidth limit; between the
-limits, $\sigma$ controls the tradeoff between exact matching and bridging.
+with $k_Q$ evaluated on the query embeddings.
+Each entry is normalized by its own query-kernel mass, so models that answered
+different numbers of queries, or entirely different queries, remain comparable.
+We use the induced squared distance $D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ to capture
+model (dis)similarity \citep{gretton2012kernel}.
+Finally, the Product Kernel Perspective Space representations of the
+models---$\widehat{\psi}_{1},\hdots,\widehat{\psi}_{n}$---are defined as the
+$d$-dimensional Euclidean configuration that minimizes the raw stress criterion to
+$D$ \citep{trosset2008out}. That is,
+\begin{equation}
+(\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
+\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2.
+\label{eq:mds}
+\end{equation}
+We note that the definition of the \PKPS strictly generalizes previous work by
+replacing the identity query kernel ($k_{Q}(q,q')=\mathbb{1}\{q=q'\}$) with a generic
+query kernel.
+Importantly, for any strictly positive $k_Q$, such as an RBF over the query
+embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\ref{eq:A}
+is defined even on disjoint query sets.
+We highlight the difference between the previously proposed Data Kernel Perspective
+Space and the \PKPS in Figure~\ref{fig:concept}.
 
 \begin{figure}[t]
 \centering
@@ -275,24 +283,15 @@ correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-The $d$-dimensional \emph{representations} are the
-classical-multidimensional-scaling minimizer
-\begin{equation}
-(\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
-\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2,
-\label{eq:mds}
-\end{equation}
-so model $i$ is the point $\hat\psi_i\in\mathbb{R}^d$, its \emph{perspective}; the
-collection $\{\hat\psi_i\}_{i=1}^n$ is the $d$-dimensional \PKPS. Because
-Eq.~\ref{eq:A} normalizes each pair by its own kernel mass, $A$ is only
-approximately an inner product and need not be positive semidefinite---hence the
-clamp on $D^2$, and classical MDS embeds the doubly-centered matrix by its top-$d$
-nonnegative eigenvalues, as is standard. Throughout, we instantiate \PKPS with an
-RBF query kernel and a linear response kernel $k_R(x,x')=\langle x,x'\rangle$
-(the synthetic study uses an RBF $k_R$); linearity makes the kernel factorize
-across response domains (Section~\ref{sec:setup}), and $A_{ii'}$ costs
-$|Q_i||Q_{i'}|$ kernel terms per pair, with one response-kernel pass serving the
-whole bandwidth grid.
+Throughout, we instantiate \PKPS with an RBF query kernel and a linear response
+kernel $k_R(x,x')=\langle x,x'\rangle$ (the synthetic study uses an RBF $k_R$);
+linearity makes the kernel factorize across response domains
+(Section~\ref{sec:setup}), and $A_{ii'}$ costs $|Q_i||Q_{i'}|$ kernel terms per pair,
+with one response-kernel pass serving the whole bandwidth grid. Because
+Eq.~\ref{eq:A} normalizes each pair by its own kernel mass, $A$ is only approximately
+an inner product and need not be positive semidefinite; we clamp $D^2$ at $0$ and
+embed the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as is
+standard.
 
 \subsection{Theoretical properties}
 \label{sec:theory}
