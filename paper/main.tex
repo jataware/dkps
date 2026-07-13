@@ -264,7 +264,7 @@ We note that the definition of the \PKPS strictly generalizes previous work by
 replacing the identity query kernel ($k_{Q}(u,u')=\indone\{u=u'\}$) with a generic
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
-embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\ref{eq:A}
+embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\eqref{eq:A}
 is defined even on disjoint query sets.
 We highlight the difference between the previously proposed Data Kernel Perspective
 Space and the \PKPS in Figure~\ref{fig:concept}.
@@ -294,7 +294,7 @@ concentrate around their population counterparts at a rate governed by the overl
 the query distributions.
 We formally define the population \PKPS in Definition~\ref{def:pop} of
 Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
-Eq.~\ref{eq:A} with the appropriate expectations.
+Eq.~\eqref{eq:A} with the appropriate expectations.
 
 Our concentration results require bounded query and response kernels, bounded
 embedded responses, a positive cross-model query kernel mass, and a rank-$d$
@@ -319,7 +319,7 @@ C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
 where $C$ depends only on the kernel bounds.
 \end{theorem}
 \begin{proof}[Proof sketch]
-Each entry of Eq.~\ref{eq:A} is a ratio of two-sample U-statistics; Hoeffding
+Each entry of Eq.~\eqref{eq:A} is a ratio of two-sample U-statistics; Hoeffding
 concentration of numerator and denominator, with the denominator bounded below by
 $\kappa$, gives entrywise error $O(\kappa^{-2}m^{-1/2})$ (Lemma~\ref{lem:conc}).
 A Weyl--Procrustes perturbation argument then transfers the entrywise error to the
@@ -333,7 +333,7 @@ $m^{-1/2}$ regardless of how many queries are shared.
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
 Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
-embed each model into the perspective space (Eq.~\ref{eq:mds}), then regress its
+embed each model into the perspective space (Eq.~\eqref{eq:mds}), then regress its
 benchmark score on the resulting coordinate. On reference models with known
 scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
 $\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
@@ -349,7 +349,7 @@ cross-validation recovers paired DKPS when query overlap is high.
 
 For each
 replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
-only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\ref{eq:A};
+only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\eqref{eq:A};
 (iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
 leave-one-family-out. The score head---logit transform, per-task standardization, two-way
 (model $+$ task) bias---is identical to the low-rank matrix-completion (LRMC)
@@ -970,7 +970,7 @@ provided $t_m(\delta)\le\kappa/2$.
 \begin{proof}
 \begin{sloppypar}
 The numerator $N=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)\,k_R(x_{ij},x_{i'l})$ and
-denominator $Z=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\ref{eq:A} are
+denominator $Z=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\eqref{eq:A} are
 two-sample $U$-statistics of order $(1,1)$ in the i.i.d.\ pairs $z_j\sim P_i$,
 $z'_l\sim P_{i'}$, with kernels of range at most $2B_R$ and $1$ respectively (response noise
 enters only through the bounded kernel argument, so the number of responses per query may
@@ -1081,7 +1081,7 @@ domination. The remainder establishes the operational form: cross-validation att
 the best grid member up to $\epsilon$. Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
-Eq.~\ref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
+Eq.~\eqref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
 $\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
 selected bandwidth is $\hat\sigma=\arg\min_{\sigma\in\Sigma}\hat L(\sigma)$ with
 $\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_\sigma(f_i)-y_i)^2$. Conditional on
