@@ -311,7 +311,8 @@ query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the populati
 Gram matrix.
 \begin{theorem}[Concentration of \PKPS perspectives]
 \label{prop:conc}
-Under Assumptions~\ref{ass:bound}--\ref{ass:spec}, with at least $m$ queries per model, for any
+Suppose Assumptions~\ref{ass:bound}--\ref{ass:spec} hold and that every model has
+responded to at least $m$ queries, $\min_i|Q_i|\ge m$. Then for any
 $\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
 that
 $\max_i\|\hat\psi_i-W\psi_i\|\le
