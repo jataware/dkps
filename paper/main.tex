@@ -334,41 +334,21 @@ $m^{-1/2}$ regardless of how many queries are shared.
 
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
-Inference is a two-step statistical problem, exactly as in the DKPS \citep{dkps_qeff}:
-embed each model into the perspective space (Eq.~\eqref{eq:mds}), then regress its
-benchmark score on the resulting coordinate. On reference models with known
-scores $\{(f_i,y_i)\}$ we fit $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the pairs
-$\{(\hat\psi_i,y_i)\}$ and predict $\hat y(f)=\hat h(\hat\psi(f))$. The free choices are
-the bandwidth $\sigma$ and the regressor $\hat h$.
+Inference in the \PKPS is a two-step statistical problem, exactly as in the DKPS
+\citep{dkps_qeff}: first embed the models into the perspective space, then regress
+benchmark scores on the resulting representations.
 
-The optimal $\sigma$
-depends on the degree of pairing in the data. We choose it per run by cross-validation
-over a median-scaled grid $\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, selecting the
-$\sigma$ whose perspective best predicts the \emph{observed} scores under
-leave-one-model-out $k$-NN. Note that the selection criterion uses only observed scores
-and never the held-out scores we report. Because the grid includes near-zero bandwidths,
-cross-validation recovers paired DKPS when query overlap is high.
-
-For each
-replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
-only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\eqref{eq:A};
-(iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
-leave-one-family-out. The score head---logit transform, per-task standardization, two-way
-(model $+$ task) bias---is identical to the low-rank matrix-completion (LRMC)
-baseline's. The two methods differ only in how the residual is modeled ($k$-NN on the
-perspective versus a low-rank factorization), so performance differences are attributable
-to the representation. We found matching the per-task standardization to be important:
-without it, the model offset is dominated by the tasks with the largest logit variance.
-
-The ensemble combines the \PKPS estimate with whichever score signal is available for
-a cell. On an \emph{observed} cell, the score signal is the cell's own sample score, and
-the blend weight is a scalar fit by the same leave-one-family-out cross-validation as the
-regressor, against the reference models' cached full scores; the fitted weight grows with
-the budget, so the sample score dominates as queries accumulate. On a \emph{missing}
-cell, the score signal is LRMC \citep{benchpress}, blended with \PKPS by a weight
-cross-validated on observed scores. No weight uses the scores of the family being
-predicted. (A closed-form inverse-variance weighting performs slightly worse at every
-budget; Appendix~\ref{app:abl}.)
+In symbols: given reference models with observed scores $\{(f_i,y_i)\}_{i=1}^{n}$
+and a target model $f$ whose score is unobserved, we compute the representations
+$(\hat\psi_1,\dots,\hat\psi_n,\hat\psi)$ of all $n+1$ models via
+Eq.~\eqref{eq:mds}, fit a regressor $\hat h:\mathbb{R}^d\to\mathcal{Y}$ on the
+pairs $\{(\hat\psi_i,y_i)\}_{i=1}^{n}$, and predict $\hat y(f)=\hat h(\hat\psi)$.
+The problem is most naturally \emph{transductive}: because Eq.~\eqref{eq:A} uses
+only responses, the un-scored target model is included in the embedding alongside
+the reference models. Out-of-sample alternatives, which embed a new model by its
+comparison row to a fixed reference configuration, also exist
+\citep{trosset2008out}. The free choices are the bandwidth $\sigma$ and the
+regressor $\hat h$; we describe our instantiation in Section~\ref{sec:setup}.
 
 Query efficiency formalizes when this two-step estimator beats computing scores
 directly; MSE denotes mean squared error over the draw of a target model from the
@@ -407,6 +387,8 @@ that dominates exact matching:
 $\mathrm{MSE}(\PKPS_\sigma)\le\mathrm{MSE}(\mathrm{DKPS})$ at every $(n,m)$,
 strictly whenever any bandwidth improves on exact matching.
 \end{theorem}
+\citet{dkps_qeff} established that paired DKPS is query-efficient relative to the
+sample score; the comparison extends to \PKPS at every pairing fraction.
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
 The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
@@ -439,10 +421,18 @@ the self-normalized product-kernel comparison, in which the population overlap
 $\kappa$ replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}); (ii) is an
 impossibility result for exact matching. The bandwidths in (i)--(iii) can be selected
 in practice by model selection over a finite grid containing the exact-matching
-limit, such as the leak-free cross-validation of the previous subsection, which
+limit, such as the leak-free cross-validation described in Section~\ref{sec:setup}, which
 attains the best grid member up to $\epsilon$ (oracle inequality;
 Appendix~\ref{app:proof}). Empirically, a bridging bandwidth improves on exact
 matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
+
+The same machinery covers the score-completion instance ($m_i^{(t)}=0$).
+Eq.~\eqref{eq:A} uses only responses, so a model that has answered none of task
+$t$'s queries is embedded from its responses to other tasks, and the regression
+transfers the scores of reference models that were evaluated on $t$. Identity-matched
+constructions have no mechanism for this regime---a cell with no responses shares no
+queries with any evaluation of $t$---and the sample score does not exist there;
+Section~\ref{sec:experiments} evaluates completion empirically on both suites.
 
 \begin{figure}[t]
 \centering
@@ -497,14 +487,44 @@ largest shared item block \citep{polo2024tinybenchmarks}. \emph{Low-rank matrix
 completion} (LRMC) is the logit-space imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
 and \emph{\PKPS} regress scores on the model embeddings of Section~\ref{sec:method},
 DKPS being the identity-query-kernel limit. The \emph{ensemble} combines \PKPS with
-whichever score signal a cell has (Section~\ref{sec:method}).
+whichever score signal a cell has (below).
+
+\paragraph{\PKPS implementation and ensembling.} The optimal $\sigma$
+depends on the degree of pairing in the data. We choose it per run by cross-validation
+over a median-scaled grid $\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, selecting the
+$\sigma$ whose perspective best predicts the \emph{observed} scores under
+leave-one-model-out $k$-NN. Note that the selection criterion uses only observed scores
+and never the held-out scores we report. Because the grid includes near-zero bandwidths,
+cross-validation recovers paired DKPS when query overlap is high.
+
+For each
+replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
+only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\eqref{eq:A};
+(iii) embed models by classical MDS; (iv) regress scores on the embedding, fit
+leave-one-family-out. The score head---logit transform, per-task standardization, two-way
+(model $+$ task) bias---is identical to the low-rank matrix-completion (LRMC)
+baseline's. The two methods differ only in how the residual is modeled ($k$-NN on the
+perspective versus a low-rank factorization), so performance differences are attributable
+to the representation. We found matching the per-task standardization to be important:
+without it, the model offset is dominated by the tasks with the largest logit variance.
+
+The ensemble combines the \PKPS estimate with whichever score signal is available for
+a cell. On an \emph{observed} cell, the score signal is the cell's own sample score, and
+the blend weight is a scalar fit by the same leave-one-family-out cross-validation as the
+regressor, against the reference models' cached full scores; the fitted weight grows with
+the budget, so the sample score dominates as queries accumulate. On a \emph{missing}
+cell, the score signal is LRMC \citep{benchpress}, blended with \PKPS by a weight
+cross-validated on observed scores. No weight uses the scores of the family being
+predicted. (A closed-form inverse-variance weighting performs slightly worse at every
+budget; Appendix~\ref{app:abl}.)
+
 
 \paragraph{Measurement.} Every experiment predicts held-out or true cell scores and
 reports MAE against the full-evaluation score, mean $\pm1$ SEM over $16$ seeds ($50$ on
 synthetic data). Sweeps vary one observation lever at a time, holding the others fixed
 (grids in Appendix~\ref{app:details}); all hyperparameters, including the query
-bandwidth, are chosen per run by the leak-free cross-validation of
-Section~\ref{sec:method}.
+bandwidth, are chosen per run by the leak-free cross-validation
+described above.
 
 \begin{figure}[t]
 \centering
