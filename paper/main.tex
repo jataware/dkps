@@ -334,21 +334,29 @@ the population overlap ($\kappa^{-2}$), and does not require paired queries.
 
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
-Inference using the \PKPS, including benchmark prediction, is a two-step
-statistical problem: first embed each model (Eq.~\eqref{eq:mds}) and then train a
-decision function on model-level covariates.
-That is, given evaluation data with models $f_{1},\hdots,f_{n}$ that have responded
-to $Q_{1},\hdots,Q_{n}$, we compute the representations
-$(\hat\psi_{1},\hdots,\hat\psi_{n})$ and treat $\hat\psi_{i}$ as model $i$'s
-covariate in a downstream decision problem.
-For benchmark prediction, we observe the scores of a subset of \emph{reference}
-models, fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the observed
-(representation, score) pairs, and predict the score of an un-scored model $f$ as
-$\hat y(f)=\hat h(\hat\psi)$.
-We note that this is most naturally a transductive problem---since
-Eq.~\eqref{eq:A} requires no scores, the un-scored model is embedded alongside the
-reference models---though out-of-sample methods exist \citep{trosset2008out}.
-The free choices are the bandwidth $\sigma$ and the regressor $\hat h$.
+Inference using the \PKPS is a two-step statistical problem: first embed the
+models, then train a decision function that takes the representations as
+model-level covariates.
+For benchmark prediction, the decision function is a regressor.
+Fix a task $t$.
+The evaluation data contains \emph{reference} models $f_{1},\hdots,f_{n}$, whose
+scores $y_{1}^{(t)},\hdots,y_{n}^{(t)}$ are observed, and a \emph{target} model
+$f$, whose score is not.
+Every model has responded to some collection of queries---the target to a few of
+task $t$'s queries in query-efficient evaluation, and to none of them in score
+completion---and \PKPS embeds all $n+1$ models jointly from these responses
+(Eq.~\eqref{eq:mds}).
+We fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on the reference
+(representation, score) pairs $\{(\hat\psi_{i},y_{i}^{(t)})\}_{i=1}^{n}$ and
+predict $\hat y^{(t)}(f)=\hat h(\hat\psi)$.
+
+We note that benchmark prediction with the \PKPS is most naturally transductive:
+since Eq.~\eqref{eq:A} requires no scores, the target is embedded alongside the
+reference models.
+Out-of-sample methods exist for embedding new models into a fixed reference
+configuration \citep{trosset2008out}.
+The free choices of the procedure are the bandwidth $\sigma$ and the regressor
+$\hat h$.
 We describe our instantiation in Section~\ref{sec:setup}.
 
 We analyze the two-step estimator in the statistical framing of \citet{dkps_qeff}:
