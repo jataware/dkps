@@ -329,12 +329,8 @@ A Weyl--Procrustes perturbation argument \citep[Lemma~5.4]{tu2016procrustes} the
 transfers the entrywise error to the rank-$d$ spectral embedding at the stated rate
 (Lemma~\ref{lem:pert}). The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
-The rate matches paired DKPS in the query budget: paired DKPS concentrates at
-$(\rho m)^{-1/2}$, since exact matching retains only the $\rho m$ shared pairs,
-while \PKPS concentrates at $\kappa^{-2}m^{-1/2}$.
-Sampling more queries thus improves the representation at $m^{-1/2}$ regardless of
-how many queries are shared, with the pairing fraction's role played by the
-population overlap.
+The rate of \PKPS concentration is the rate of paired DKPS concentration scaled by
+the population overlap ($\kappa^{-2}$), and does not require paired queries.
 
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
