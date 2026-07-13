@@ -293,8 +293,9 @@ In particular, the main result of this section shows that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the query distributions.
 We formally define the population \PKPS in Definition~\ref{def:pop} of
-Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
-Eq.~\eqref{eq:A} with the appropriate expectations.
+Appendix~\ref{app:proof}.
+Broadly, it is defined by replacing the sums of Eq.~\eqref{eq:A} with the
+appropriate expectations.
 
 Our concentration results require bounded query and response kernels, bounded
 embedded responses, a positive cross-model query kernel mass, and a rank-$d$
@@ -348,8 +349,8 @@ $\hat y(f)=\hat h(\hat\psi)$.
 We note that this is most naturally a transductive problem---since
 Eq.~\eqref{eq:A} requires no scores, the un-scored model is embedded alongside the
 reference models---though out-of-sample methods exist \citep{trosset2008out}.
-The free choices are the bandwidth $\sigma$ and the regressor $\hat h$; we describe
-our instantiation in Section~\ref{sec:setup}.
+The free choices are the bandwidth $\sigma$ and the regressor $\hat h$.
+We describe our instantiation in Section~\ref{sec:setup}.
 
 We analyze the two-step estimator in the statistical framing of \citet{dkps_qeff}:
 let $(f,y),(f_{1},y_{1}),\hdots,(f_{n},y_{n})$ be i.i.d.\ samples from a joint
@@ -361,8 +362,8 @@ perspective space and a model distribution that places mass on every neighborhoo
 of it (Assumptions~\ref{ass:score} and~\ref{ass:support},
 Appendix~\ref{app:proof}).
 The first condition is the working premise of any response-based predictor and is
-visible as the smooth score gradient in Figure~\ref{fig:concept}(e); the second
-gives a target model near reference neighbors in large cohorts.
+visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
+The second gives a target model near reference neighbors in large cohorts.
 
 Query efficiency compares decision functions as the reference cohort grows.
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
@@ -405,7 +406,8 @@ improving on exact matching witnesses strict domination.
 The full proofs are in Appendix~\ref{app:proof}.
 \end{proof}
 \citet{dkps_qeff} established that paired DKPS is query-efficient relative to the
-sample score; the comparison extends to \PKPS at every pairing fraction.
+sample score.
+The comparison extends to \PKPS at every pairing fraction.
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
 The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
@@ -414,16 +416,18 @@ is query-efficient relative to the sample score
 whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
 \end{corollary}
 
-Theorem~\ref{thm:qeff} makes three statements: a query budget independent of the
-pairing fraction suffices for any target accuracy (i); the separation from paired
-DKPS under fully unpaired designs is information-theoretic, since with no shared
-queries a paired-DKPS prediction cannot depend on the target's responses (ii); and
-the bandwidth family always contains a member that dominates exact matching, since
+Theorem~\ref{thm:qeff} makes three statements.
+A query budget independent of the pairing fraction suffices for any target
+accuracy (i).
+The separation from paired DKPS under fully unpaired designs is
+information-theoretic, since with no shared queries a paired-DKPS prediction cannot
+depend on the target's responses (ii).
+The bandwidth family always contains a member that dominates exact matching, since
 exact matching is itself in the family (iii).
 In practice, the bandwidth is selected by model selection over a finite grid
-containing the exact-matching limit; the cross-validation of
-Section~\ref{sec:setup} attains the best grid member up to $\epsilon$
-(Appendix~\ref{app:proof}).
+containing the exact-matching limit.
+The cross-validation of Section~\ref{sec:setup} attains the best grid member up to
+$\epsilon$ (Appendix~\ref{app:proof}).
 Empirically, a bridging bandwidth improves on exact matching at every $\rho<1$
 (Figure~\ref{fig:synthetic}e).
 
@@ -431,9 +435,9 @@ The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
 queries is embedded from its responses to other tasks, and the regression transfers
 the scores of reference models evaluated on $t$.
-Identity-matched constructions have no mechanism for this regime, and the sample
-score does not exist; we evaluate completion empirically in
-Section~\ref{sec:experiments}.
+Identity-matched constructions have no mechanism for this regime and the sample
+score does not exist.
+We evaluate completion empirically in Section~\ref{sec:experiments}.
 
 \begin{figure}[t]
 \centering
