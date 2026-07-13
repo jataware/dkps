@@ -204,6 +204,9 @@ $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$
 query $q\in Q^{(t)}$ may or may not have been generated.
 Let $Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
 observed, with $m_{i}^{(t)}:=|Q^{(t)}_{i}|$ and $Q_i:=\cup_{t}Q_i^{(t)}$.
+The corresponding \emph{sample score}
+$\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is a noisy estimate of
+$y_{i}^{(t)}$.
 
 The evaluation data is \emph{sparse} when few models have
 $m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the cross-model overlaps
@@ -220,7 +223,7 @@ observation count $m_i^{(t)}$:
 \item \emph{Query-efficient evaluation} is the case
 $m_{i}^{(t)}>0$. Responses or scores from other models on task $t$ are
 typically available, and the goal is to outperform the naive sample score
-$s^{(t)}(f_{i},Q_i^{(t)})$.
+$\tilde{y}_{i}^{(t)}$.
 \item \emph{(Model, task) score completion} is the case $m_{i}^{(t)}=0$.
 No responses from the target (model, task) slice exist and prediction
 must be based on model $i$'s responses to other tasks and on responses from
@@ -351,8 +354,8 @@ a joint distribution, where $Q_{i}$ is the collection of queries model $i$ has
 responded to and $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$ is model $i$'s true score on task
 $t$.
 For every model, including the target, we observe the embedded responses
-$\{x_{ij}:q_{j}\in Q_{i}\}$ and the noisy sample scores
-$\big(s^{(t')}(f_{i},Q_{i}^{(t')})\big)_{t'=1}^{T}$, where entries with
+$\{x_{ij}:q_{j}\in Q_{i}\}$ and the sample scores
+$\big(\tilde{y}_{i}^{(t')}\big)_{t'=1}^{T}$, where entries with
 $Q_{i}^{(t')}=\emptyset$ are the missing cells of the score matrix.
 The reference models are fully evaluated on task $t$ ($Q_{i}^{(t)}=Q^{(t)}$), so
 their observed task-$t$ scores equal $y_{1},\hdots,y_{n}$.
