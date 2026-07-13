@@ -28,8 +28,8 @@
 \setlength{\intextsep}{8pt plus 2pt minus 2pt}
 \setlength{\abovecaptionskip}{4pt}
 
-\newcommand{\PKPS}{PKPS\xspace}
 \usepackage{xspace}
+\newcommand{\PKPS}{PKPS\xspace}
 
 \title{Predicting Benchmark Scores from Sparse and Unpaired Cached Responses}
 \author{Anonymous}
@@ -216,7 +216,7 @@ given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly cura
 leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
 The goal of benchmark prediction is to estimate a model's score from the available
 evaluation data.
-The two tasks introduced in \S\ref{sec:introduction} are the two regimes of the
+The two tasks introduced in Section~\ref{sec:introduction} are the two regimes of the
 observation count $m_i^{(t)}$:
 \begin{enumerate}
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
@@ -294,7 +294,7 @@ correlated with score (MAE $0.07$).}
 \subsection{Theoretical properties}
 \label{sec:theory}
 We next establish theoretical properties of the \PKPS necessary for demonstrating
-their efficiency in sparse and unpaired benchmark prediction.
+its efficiency in sparse and unpaired benchmark prediction.
 In particular, the main result of this section shows that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the query distributions.
@@ -372,7 +372,7 @@ near reference neighbors (Assumptions~\ref{ass:score} and~\ref{ass:support},
 Appendix~\ref{app:proof}).
 In the following, MSE denotes mean squared error over the draw of $(f,Q,y)$,
 $m$ denotes a per-model query budget, $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
-bounds the per-query score variance.
+denotes the per-query score variance.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
@@ -417,8 +417,7 @@ sample score.
 The comparison extends to \PKPS at every pairing fraction.
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
-The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
-$\sigma_q^2$ is the per-query score variance.
+The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$.
 By the achievability part of Theorem~\ref{thm:qeff}, \PKPS is query-efficient
 relative to the sample score whenever $\epsilon<\sigma_q^2/m$, at every pairing
 fraction.
@@ -456,7 +455,7 @@ when paired.}
 \section{Experiments}
 \label{sec:experiments}
 We evaluate \PKPS on synthetic data, where every lever of the observation process can be
-swept, and on two heterogeneous benchmark suites. Throughout, the two instances of
+swept, and on two heterogeneous benchmark suites. Throughout, the two regimes of
 Section~\ref{sec:setting} structure the experiments: query-efficient
 evaluation ($m_i^{(t)}>0$) and score completion ($m_i^{(t)}=0$).
 
@@ -588,7 +587,7 @@ score: at $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$
 score eventually overtakes the embedding's residual bias ($0.034$ vs.\ $0.085$ at $m{=}32$);
 the ensemble follows the better of its two components throughout. Panels (b, c) vary the
 cohort and coverage: \PKPS improves steadily ($0.157\!\to\!0.124$,
-$0.154\!\to\!0.128$; $35$--$37\%$ on the second suite) while DKPS, which cannot use
+$0.154\!\to\!0.128$; $35$--$37\%$ relative improvement on the EEE suite) while DKPS, which cannot use
 the additional unpaired responses, is flat.
 
 \paragraph{The embedding completes missing cells where LRMC cannot.}
@@ -600,7 +599,7 @@ scarce: at $n{=}10$ its MAE is $0.139$ versus $0.120$ for \PKPS
 (Figure~\ref{fig:completion}, dashed). At the full cohort ($n{=}93$, solid) \PKPS
 slightly edges LRMC ($0.103$ vs.\ $0.105$) and the ensemble performs best ($0.099$).
 
-\paragraph{The per-cell gains are broad but tail-driven.} The Ensemble outperforms the
+\paragraph{The per-cell gains are broad but tail-driven.} The ensemble outperforms the
 sample score on most cells, with the largest gains at the smallest budgets and on the
 rich-response datasets (Figure~\ref{fig:qe}d--g); the win over LRMC is modest but
 stays positive in the mean across datasets, cohorts, coverage, and query depth
@@ -628,9 +627,9 @@ to similar, rather than identical, queries. Outside of curated leaderboards, eva
 data is typically unpaired: each model answers the queries its evaluators chose, and
 methods that require a shared block of identical queries do not apply. Our central finding is that benchmark prediction
 remains possible under unpaired evaluation: as $\rho\!\to\!0$, DKPS and IRT degrade
-sharply while \PKPS does not. The same embedding supports both applications we studied,
-denoising cheap evaluations and completing never-run cells, and the ensemble performs at
-least as well as either channel alone.
+sharply while \PKPS does not. The same embedding supports both tasks we studied---query-efficient evaluation and
+(model, task) score completion---and the ensemble performs at least as well as either
+channel alone.
 
 \paragraph{Limitations and future work.} We close with the current limitations and the
 extensions they suggest. First, \PKPS embeds every observed response and query with a
@@ -651,7 +650,7 @@ All methods are released as a documented Python package (the \PKPS estimator, ma
 completion, and IRT baselines), with the data-preparation, experiment, and figure scripts
 for both the synthetic study and the HELM suite; every experiment is seeded, all real-data
 numbers are means over $16$ seeds (synthetic: $50$), and hyperparameters are selected by the
-leak-free cross-validation described in Section~\ref{sec:method} (leakage is checked by an
+leak-free cross-validation described in Section~\ref{sec:setup} (leakage is checked by an
 automated test that corrupts one model's held-out scores and verifies its predictions are
 unchanged). Appendix~\ref{app:details} lists the suite composition, embedding models, and
 all hyperparameter settings.
@@ -865,7 +864,7 @@ identified.}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_eee_completion.pdf}
-\caption{Matrix completion on the Every Eval Ever suite (MAE on missing cells, $\pm1$
+\caption{Score completion on the Every Eval Ever suite (MAE on missing cells, $\pm1$
 SEM; solid $n{=}45$, dashed $n{=}10$). The protocol matches
 Figure~\ref{fig:completion}. Unlike on the HELM suite, \PKPS and the Ensemble
 outperform LRMC at every operating point.}
@@ -1095,7 +1094,7 @@ $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 $m$ i.i.d.\ per-query scores and uses no reference models, so its MSE is $\sigma_q^2/m$
 for every $n$, where $\sigma_q^2$ is the per-query score variance ($\le1/4$ for scores
 in $[0,1]$). For any $\epsilon<\sigma_q^2/m$ at the budget of
-Theorem~\ref{thm:qeff}(i), the estimator satisfies
+Lemma~\ref{lem:exact}, the estimator satisfies
 $\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all sufficiently large $n$: query efficiency
 relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
 Corollary~\ref{cor:sample}.
@@ -1107,8 +1106,7 @@ $Q^{(t)}$ of size $m$. Then
 $\mathbb{E}[\tilde{y}_{i}^{(t)}\mid f_{i}]=y_{i}$ and
 $\mathrm{Var}(\tilde{y}_{i}^{(t)}\mid f_{i})\le\sigma_q^2/m$, and the noises
 $\varepsilon_{i}=\tilde{y}_{i}^{(t)}-y_{i}$ are independent across $i$ because
-the subsamples are drawn independently (unpaired designs). For the $k$-nearest-
-neighbor regressor, decompose
+the subsamples are drawn independently (unpaired designs). For the $k$-nearest-neighbor regressor, decompose
 $\hat y(f)-y=\tfrac1k\sum_{j\in N_k}(y_{j}-y)+\tfrac1k\sum_{j\in
 N_k}\varepsilon_{j}$ over the neighbor set $N_k$. The first term is bounded as in
 the proof of Lemma~\ref{lem:exact}: perspective estimation error
@@ -1132,7 +1130,8 @@ where its distance is undefined (Section~\ref{sec:method}).
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}: domination and strict separation.} Existence of a dominating bandwidth is
 witnessed by the exact-matching member: the $k_Q=\delta$ estimator coincides with
-paired DKPS on the shared queries with the same regression head (Section~3.1), so
+paired DKPS on the shared queries with the same regression head
+(Section~\ref{sec:method}), so
 $\sigma=\delta$ attains $\mathrm{MSE}(\PKPS_\sigma)=\mathrm{MSE}(\mathrm{DKPS})$ at
 every $(n,m)$, and any bandwidth improving on exact matching witnesses strict
 domination. The remainder establishes the operational form: cross-validation attains
@@ -1168,6 +1167,6 @@ Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
 supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
-validation and a joint embedding (Section~\ref{sec:method}); the split protocol is
+validation and a joint embedding (Section~\ref{sec:setup}); the split protocol is
 analyzed for independence of the validation losses. \hfill$\qed$
 \end{document}
