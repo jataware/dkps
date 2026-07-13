@@ -287,20 +287,28 @@ correlated with score (MAE $0.07$).}
 
 \subsection{Theoretical properties}
 \label{sec:theory}
-The representations concentrate around population counterparts at a rate governed
-by the overlap of the query \emph{distributions} rather than of the query sets. The
-population \PKPS replaces the sums of Eq.~\ref{eq:A} with expectations over each
-model's design distribution (Definition~\ref{def:pop}, Appendix~\ref{app:proof}).
-We require bounded kernels and embedded responses, a positive \emph{cross-model
-query-kernel mass} $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$, and a rank-$d$
-spectral gap in the population Gram matrix
-(Assumptions~\ref{ass:bound}--\ref{ass:spec}, Appendix~\ref{app:proof}).
-Boundedness and the spectral gap are standard in spectral-embedding analyses; the
-substantive requirement is the overlap $\kappa>0$, the population analogue of the
-pairing fraction $\rho$: for an RBF $k_Q$ it holds whenever the query
-\emph{distributions} overlap, even when no individual query is shared, and it fails
-when models are evaluated on domains the kernel cannot bridge---where no unpaired
-method should be expected to compare them.
+We next establish theoretical properties of the \PKPS necessary for demonstrating
+their efficiency in sparse and unpaired benchmark prediction.
+In particular, the main result of this section shows that the representations
+concentrate around their population counterparts at a rate governed by the overlap of
+the query distributions.
+We formally define the population \PKPS in Definition~\ref{def:pop} of
+Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
+Eq.~\ref{eq:A} with the appropriate expectations.
+
+Our concentration results require bounded query and response kernels, bounded
+embedded responses, a positive cross-model query kernel mass, and a rank-$d$
+spectral gap in the population Gram matrix (see
+Assumptions~\ref{ass:bound}--\ref{ass:spec}, Appendix~\ref{app:proof}).
+The required boundedness and the spectral gap are standard in spectral-embedding
+analyses \citep{yu2015useful, acharyya2025concentration}.
+The atypical requirement in our setting is the positive cross-model query kernel
+mass, though this holds trivially under a strictly positive $k_Q$ and importantly
+does not assume that any individual query is shared.
+In the following, $\psi_1,\dots,\psi_n$ denote the population perspectives
+(Definition~\ref{def:pop}), $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
+query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the population
+Gram matrix.
 \begin{theorem}[Concentration of \PKPS perspectives]
 \label{prop:conc}
 Under Assumptions~\ref{ass:bound}--\ref{ass:spec}, with at least $m$ queries per model, for any
