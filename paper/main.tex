@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage{iclr2025_conference}
 \usepackage{amsmath,amssymb}
+\usepackage{bbm}
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}{Corollary}
@@ -259,7 +260,7 @@ $D$ \citep{trosset2024continuous}. That is,
 \label{eq:mds}
 \end{equation}
 We note that the definition of the \PKPS strictly generalizes previous work by
-replacing the identity query kernel ($k_{Q}(q,q')=\mathbb{1}\{q=q'\}$) with a generic
+replacing the identity query kernel ($k_{Q}(q,q')=\mathbbm{1}\{q=q'\}$) with a generic
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
 embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\ref{eq:A}
