@@ -349,19 +349,24 @@ for the models \citep{dkps_qeff}.
 Fix a task $t$ and let $(f,Q,y),(f_{1},Q_{1},y_{1}),\hdots,(f_{n},Q_{n},y_{n})$
 be i.i.d.\ (model, query collection, true score) triples, where
 $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$.
-We observe the embedded responses and sample scores of every model.
-The reference models are fully evaluated on task $t$, so
-$\tilde{y}_{i}^{(t)}=y_{i}$, and only the target's $y$ is unknown (its scores on
-other tasks may be known; \PKPS does not require them).
+For every model we observe the embedded responses and the sample-score vector
+$(\tilde{y}^{(1)},\hdots,\tilde{y}^{(T)})$; no true score is observed.
+The models with $m_{i}^{(t)}>0$ serve as \emph{references} for task $t$, and the
+\emph{target} is the model whose true score we estimate---its own cell may be
+observed but noisy (query-efficient evaluation) or missing (score completion).
 We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, treat $\hat\psi_{i}$
 as a proxy for $f_{i}$, fit a regressor $\hat h:\mathbb{R}^{d}\to\mathcal{Y}$ on
-$\{(\hat\psi_{i},y_{i})\}_{i=1}^{n}$, and predict $\hat y(f)=\hat h(\hat\psi)$.
+the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
+predict $\hat y(f)=\hat h(\hat\psi)$.
 We note that the procedure is naturally transductive---Eq.~\eqref{eq:A} uses no
 scores, so the target is embedded alongside the references---though out-of-sample
 extensions exist \citep{trosset2008out}.
 
 The main result of this section shows that benchmark prediction with the \PKPS is
 query-efficient relative to paired DKPS.
+For the analysis we take the references to be fully evaluated on task $t$, so
+that $\tilde{y}_{i}^{(t)}=y_{i}$; the experiments also evaluate noisy reference
+scores (Section~\ref{sec:experiments}).
 Beyond Assumptions~\ref{ass:bound}--\ref{ass:spec}, our result requires a bounded
 and Lipschitz score on the population perspective space---the working premise of
 any response-based predictor (Figure~\ref{fig:concept}e)---and a model
