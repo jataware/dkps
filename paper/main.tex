@@ -365,8 +365,8 @@ extensions exist \citep{trosset2008out}.
 The main result of this section shows that benchmark prediction with the \PKPS is
 query-efficient relative to paired DKPS.
 For the analysis we take the references to be fully evaluated on task $t$, so
-that $\tilde{y}_{i}^{(t)}=y_{i}$; the experiments also evaluate noisy reference
-scores (Section~\ref{sec:experiments}).
+that $\tilde{y}_{i}^{(t)}=y_{i}$; Proposition~\ref{prop:noisy} removes this
+idealization for mean-type scores.
 Beyond Assumptions~\ref{ass:bound}--\ref{ass:spec}, our result requires a bounded
 and Lipschitz score on the population perspective space---the working premise of
 any response-based predictor (Figure~\ref{fig:concept}e)---and a model
@@ -417,6 +417,28 @@ By the achievability part of Theorem~\ref{thm:qeff}, \PKPS is query-efficient
 relative to the sample score whenever $\epsilon<\sigma_q^2/m$, at every pairing
 fraction.
 \end{corollary}
+The full-evaluation idealization can be removed.
+\begin{proposition}[Noisy reference scores]
+\label{prop:noisy}
+Suppose the scoring function is a mean of bounded per-query scores and each
+reference cell is a uniform subsample at budget $m$, so that
+$\tilde{y}_{i}^{(t)}=y_{i}+\varepsilon_{i}$ with the $\varepsilon_{i}$ mean
+zero, bounded, of variance at most $\sigma_q^2/m$, and independent across models
+under unpaired designs.
+With a $k$-nearest-neighbor regressor, the conclusions of
+Theorem~\ref{thm:qeff} hold with an additional additive MSE term of
+$\sigma_q^2/(mk)$, which vanishes as $k$ grows.
+\end{proposition}
+\begin{proof}[Proof sketch]
+Unbiasedness and the variance bound are properties of subsample means.
+Independence across models holds because unpaired designs draw each reference's
+queries independently, so the averaged noise contributes $\sigma_q^2/(mk)$; the
+remaining terms are bounded as in Theorem~\ref{thm:qeff}
+(Appendix~\ref{app:proof}).
+Under paired designs the $\varepsilon_{i}$ share the query draw and are in
+general positively correlated, so averaging cannot remove their common
+component---noise averaging favors unpaired references.
+\end{proof}
 In practice, the bandwidth is selected by cross-validation over a finite grid
 containing the exact-matching limit (Section~\ref{sec:setup},
 Appendix~\ref{app:proof}).
@@ -1085,6 +1107,30 @@ Theorem~\ref{thm:qeff}(i), the estimator satisfies
 $\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all sufficiently large $n$: query efficiency
 relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
 Corollary~\ref{cor:sample}.
+
+\paragraph{Proof of Proposition~\ref{prop:noisy}.} Write the scoring function as
+$s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
+$r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
+$Q^{(t)}$ of size $m$. Then
+$\mathbb{E}[\tilde{y}_{i}^{(t)}\mid f_{i}]=y_{i}$ and
+$\mathrm{Var}(\tilde{y}_{i}^{(t)}\mid f_{i})\le\sigma_q^2/m$, and the noises
+$\varepsilon_{i}=\tilde{y}_{i}^{(t)}-y_{i}$ are independent across $i$ because
+the subsamples are drawn independently (unpaired designs). For the $k$-nearest-
+neighbor regressor, decompose
+$\hat y(f)-y=\tfrac1k\sum_{j\in N_k}(y_{j}-y)+\tfrac1k\sum_{j\in
+N_k}\varepsilon_{j}$ over the neighbor set $N_k$. The first term is bounded as in
+the proof of Theorem~\ref{thm:qeff}: perspective estimation error
+(Theorem~\ref{prop:conc}) plus the population $k$-th-neighbor distance, which
+Assumption~\ref{ass:support} makes small for $n$ large with $k/n\to0$, times the
+Lipschitz constant. The second term is a mean of $k$ independent, bounded,
+mean-zero variables, so its conditional variance is at most $\sigma_q^2/(mk)$ and
+it concentrates by Hoeffding. Choosing $k\to\infty$ with $k/n\to0$ (e.g.,
+$k=\lceil\log n\rceil$) gives
+$\mathrm{MSE}\le\epsilon+\sigma_q^2/(mk)\to\epsilon$. Under a common
+(paired) subsample the $\varepsilon_{i}$ share the draw of the query set and
+$\mathrm{Cov}(\varepsilon_{i},\varepsilon_{j})$ equals the variance of the
+common query-difficulty component, which the neighbor average does not reduce.
+\qed
 
 \paragraph{Contrast with paired DKPS.} With $k_Q=\delta$, only identically-shared query
 pairs enter the double sum, so the $U$-statistic runs over the $\rho m$ shared queries
