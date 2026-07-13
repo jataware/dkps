@@ -342,15 +342,15 @@ for the models \citep{dkps_qeff}.
 
 Fix a task $t$.
 In the unpaired and sparse setting, the natural sampling unit is a (model, design,
-score) triple: let $(f,\nu,y),(f_{1},\nu_{1},y_{1}),\hdots,(f_{n},\nu_{n},y_{n})$
-be i.i.d.\ samples from a joint distribution, where $\nu_{i}$ is a \emph{design
+score) triple: let $(f,\mu,y),(f_{1},\mu_{1},y_{1}),\hdots,(f_{n},\mu_{n},y_{n})$
+be i.i.d.\ samples from a joint distribution, where $\mu_{i}$ is a \emph{design
 distribution} over queries and $y_{i}:=s(f_{i},Q^{(t)})$.
-Model $i$'s observed queries $Q_{i}$ are $m_{i}$ i.i.d.\ draws from $\nu_{i}$, and
+Model $i$'s observed queries $Q_{i}$ are $m_{i}$ i.i.d.\ draws from $\mu_{i}$, and
 we observe the embedded responses $\{x_{ij}:q_{j}\in Q_{i}\}$ for every model but
 only the reference scores $y_{1},\hdots,y_{n}$.
 Sparsity, pairing, and the population overlap are all properties of the designs:
-model $i$'s coverage of task $t$ is governed by the mass $\nu_{i}(Q^{(t)})$,
-shared queries arise only when the $\nu_{i}$ share atoms, and $\kappa$ measures
+model $i$'s coverage of task $t$ is governed by the mass $\mu_{i}(Q^{(t)})$,
+shared queries arise only when the $\mu_{i}$ share atoms, and $\kappa$ measures
 the overlap of the designs whether or not any query is shared.
 We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds} and treat
 $\hat\psi_{i}$ as a proxy for $f_{i}$: we fit a regressor
@@ -368,7 +368,7 @@ Assumptions~\ref{ass:score} and~\ref{ass:support}, Appendix~\ref{app:proof}).
 The Lipschitz condition is the working premise of any response-based predictor and
 is visible as the smooth score gradient in Figure~\ref{fig:concept}(e).
 The support condition gives the target near reference neighbors in large cohorts.
-In the following, MSE denotes mean squared error over the draw of $(f,\nu,y)$ and
+In the following, MSE denotes mean squared error over the draw of $(f,\mu,y)$ and
 $m$ denotes a per-model design budget, $\min_{i}m_{i}\ge m$.
 
 Query efficiency compares decision functions as the reference cohort grows.
@@ -935,7 +935,7 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_i$. The \emph{population comparison} is
+$P_i$, whose query marginal is the $\mu_i$ of Section~\ref{sec:qeff}. The \emph{population comparison} is
 $A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
 $P_i$ and $P_{i'}$ independent, the population squared distances are
 $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
