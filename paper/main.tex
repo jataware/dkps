@@ -243,11 +243,10 @@ $k_Q:\mathbb{R}^{p_{Q}}\times\mathbb{R}^{p_{Q}}\to\mathbb{R}_{\ge0}$ and a respo
 kernel $k_R:\mathbb{R}^{p_{R}}\times\mathbb{R}^{p_{R}}\to\mathbb{R}_{\ge0}$, we
 compare models $i$ and $i'$ via
 \begin{equation}
-A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)\, k_R(x_{ij},x_{i'l})}
-              {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(q_j,q_l)},
+A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(u_j,u_l)\, k_R(x_{ij},x_{i'l})}
+              {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(u_j,u_l)}.
 \label{eq:A}
 \end{equation}
-with $k_Q$ evaluated on the query embeddings.
 Each entry is normalized by its own query-kernel mass, so models that answered
 different numbers of queries, or entirely different queries, remain comparable.
 We use the induced squared distance $D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ to capture
@@ -262,7 +261,7 @@ $D$ \citep{trosset2024continuous}. That is,
 \label{eq:mds}
 \end{equation}
 We note that the definition of the \PKPS strictly generalizes previous work by
-replacing the identity query kernel ($k_{Q}(q,q')=\indone\{q=q'\}$) with a generic
+replacing the identity query kernel ($k_{Q}(u,u')=\indone\{u=u'\}$) with a generic
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
 embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\ref{eq:A}
