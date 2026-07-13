@@ -390,9 +390,10 @@ at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
 \end{definition}
 \begin{theorem}[Query efficiency of \PKPS]
 \label{thm:qeff}
-Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and let \PKPS-CV select its
-bandwidth from a finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$
-by validation on held-out reference scores. Under
+Fix a budget $m$ and pairing fraction $\rho\in[0,1]$. Write \PKPS$_\sigma$ for the
+estimator with fixed bandwidth $\sigma$, and let \PKPS-CV select its bandwidth from a
+finite grid $\Sigma$ containing the exact-matching limit $k_Q=\delta$ by validation on
+held-out reference scores. Under
 Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$:
 \emph{(i)} there exist $(n,m)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$ and
 independent of $\rho$, at which $\mathrm{MSE}(\PKPS\text{-CV})\le\epsilon$ with high
@@ -401,10 +402,10 @@ probability;
 non-degenerate scores, $v=\mathrm{Var}(y)>0$, every paired-DKPS estimator has
 $\mathrm{MSE}\ge v$ at \emph{every} $(n,m)$, so \PKPS-CV is query-efficient relative
 to paired DKPS (Definition~\ref{def:qeff}) with margin at least $v-2\epsilon$;
-\emph{(iii)} at every pairing fraction,
-$\mathrm{MSE}(\PKPS\text{-CV})\le\mathrm{MSE}(\mathrm{DKPS})+\epsilon$ with high
-probability for sufficiently many reference models, strictly whenever some bandwidth
-improves on exact matching.
+\emph{(iii)} for every pairing fraction $\rho$ there exists a bandwidth
+$\sigma\in\Sigma$ that dominates exact matching:
+$\mathrm{MSE}(\PKPS_\sigma)\le\mathrm{MSE}(\mathrm{DKPS})$ at every $(n,m)$,
+strictly whenever any bandwidth improves on exact matching.
 \end{theorem}
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
@@ -423,21 +424,25 @@ retains only the $\rho m$ shared pairs, so the same argument degrades as
 $\rho\to0$. For (ii), with no shared queries every identity-matched comparison is an
 empty sum, so a paired-DKPS prediction is a function of the reference data alone and its
 error is at least the score variance; (i) supplies a bandwidth attaining
-$\epsilon<v$. (iii) is model selection: the $\delta$ member of the grid coincides with
-paired DKPS on the shared queries with the same regression head, and validation MSEs
-concentrate uniformly over the finite grid (Hoeffding), giving an oracle inequality.
+$\epsilon<v$. For (iii), the $\delta$ member of the grid coincides with paired DKPS
+on the shared queries with the same regression head, so it attains equality; any
+bandwidth improving on exact matching witnesses strict domination. Cross-validation
+attains the best grid member up to $\epsilon$ (a Hoeffding oracle inequality over the
+finite grid), so (iii) transfers to the deployable \PKPS-CV.
 Full proofs in Appendix~\ref{app:proof}.
 \end{proof}
 Theorem~\ref{thm:qeff} states that a query budget independent of the pairing fraction
 suffices for any target accuracy (i); that under fully unpaired designs the separation
 from paired DKPS is information-theoretic---with no shared queries, a paired-DKPS
-prediction cannot depend on the target's responses at all (ii); and that
-cross-validation extends the comparison safely to every pairing fraction (iii). Only
-(iii) is a model-selection guarantee: (i) rests on the concentration of the
-self-normalized product-kernel comparison, in which the population overlap $\kappa$
-replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}), and (ii) is an
-impossibility result for exact matching. Empirically, a bridging bandwidth improves on
-exact matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
+prediction cannot depend on the target's responses at all (ii); and that at every
+pairing fraction the bandwidth family contains a member dominating exact matching,
+since exact matching is itself in the family (iii). (i) rests on the concentration of
+the self-normalized product-kernel comparison, in which the population overlap
+$\kappa$ replaces the pairing fraction $\rho$ (Theorem~\ref{prop:conc}); (ii) is an
+impossibility result for exact matching; and the guarantee of (iii) is made
+operational by cross-validation, which attains the best grid member up to $\epsilon$
+(Appendix~\ref{app:proof}). Empirically, a bridging bandwidth improves on exact
+matching at every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 \begin{figure}[t]
 \centering
@@ -1069,7 +1074,13 @@ and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKP
 guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} Split the reference models into a training
+\paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} For (iii), existence is
+witnessed by the exact-matching member: the $k_Q=\delta$ estimator coincides with
+paired DKPS on the shared queries with the same regression head (Section~3.1), so
+$\sigma=\delta$ attains $\mathrm{MSE}(\PKPS_\sigma)=\mathrm{MSE}(\mathrm{DKPS})$ at
+every $(n,m)$, and any bandwidth improving on exact matching witnesses strict
+domination. The remainder establishes the operational form: cross-validation attains
+the best grid member up to $\epsilon$. Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
 Eq.~\ref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
@@ -1087,8 +1098,9 @@ L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(\delta)+\tau
 \;\le\;L(\delta)+2\tau\;=\;\mathrm{MSE}(\mathrm{DKPS})+2\tau,
 \]
 since the $k_Q=\delta$ member of the family coincides with paired DKPS on the shared
-queries with the same regression head (Section~3.1). Taking $n_v$ large enough that
-$2\tau\le\epsilon$ gives claim (iii) at every $(m,\rho)$. If some
+queries with the same regression head. Taking $n_v$ large enough that
+$2\tau\le\epsilon$ transfers the guarantee of (iii) to \PKPS-CV at every
+$(m,\rho)$. If some
 $\sigma^\star$ has $\Delta=L(\delta)-L(\sigma^\star)>0$, the same event gives
 $L(\hat\sigma)\le L(\sigma^\star)+2\tau=\mathrm{MSE}(\mathrm{DKPS})-\Delta+2\tau$,
 strict for $2\tau<\Delta$. Finally, at $\rho=0$ with nonatomic designs,
