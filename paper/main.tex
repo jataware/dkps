@@ -283,16 +283,6 @@ correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-Throughout, we instantiate \PKPS with an RBF query kernel and a linear response
-kernel $k_R(x,x')=\langle x,x'\rangle$ (the synthetic study uses an RBF $k_R$);
-linearity makes the kernel factorize across response domains
-(Section~\ref{sec:setup}), and $A_{ii'}$ costs $|Q_i||Q_{i'}|$ kernel terms per pair,
-with one response-kernel pass serving the whole bandwidth grid. Because
-Eq.~\ref{eq:A} normalizes each pair by its own kernel mass, $A$ is only approximately
-an inner product and need not be positive semidefinite; we clamp $D^2$ at $0$ and
-embed the doubly-centered matrix by its top-$d$ nonnegative eigenvalues, as is
-standard.
-
 \subsection{Theoretical properties}
 \label{sec:theory}
 The representations concentrate around population counterparts at a rate governed
