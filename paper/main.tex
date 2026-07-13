@@ -367,41 +367,32 @@ The second gives a target model near reference neighbors in large cohorts.
 Query efficiency compares decision functions as the reference cohort grows.
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
-Fix a per-model budget $m$ and let $h_n$ denote a score estimator using $n$ scored
-reference models. $h$ is \emph{query-efficient relative to} $h'$ \emph{at budget} $m$ if
-there exists $N$ such that $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high
-probability for all $n\ge N$, and \emph{query-efficient relative to} $h'$ if this holds
-at every budget at which $\mathrm{MSE}(h'_n)$ is bounded away from zero.
+Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$
+scored reference models.
+$h$ is \emph{query-efficient relative to} $h'$ if there exists $N$ such that
+$\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
-\begin{theorem}[Query efficiency of \PKPS]
+\begin{theorem}[Query efficiency relative to paired DKPS]
 \label{thm:qeff}
-Fix a budget $m$ and pairing fraction $\rho\in[0,1]$, and write \PKPS$_\sigma$ for
-the estimator with fixed bandwidth $\sigma$; the exact-matching limit $k_Q=\delta$
-recovers paired DKPS. Under
-Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$:
-\emph{(i)} there exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
+Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$, and write
+\PKPS$_\sigma$ for the estimator with fixed bandwidth $\sigma$.
+Under Assumptions~\ref{ass:bound}--\ref{ass:support}, there exists a bandwidth
+$\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
+Under a fully unpaired design ($\rho=0$), the separation is strict: every
+paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y)$ at every $(n,m)$, while
+for any $\epsilon>0$ there exist $(n,m)$, with $m$ polynomial in
 $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
-$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability;
-\emph{(ii)} under a fully unpaired design (nonatomic design distributions) with
-non-degenerate scores, $v=\mathrm{Var}(y)>0$, every paired-DKPS estimator has
-$\mathrm{MSE}\ge v$ at \emph{every} $(n,m)$, so \PKPS$_\sigma$ is query-efficient
-relative to paired DKPS (Definition~\ref{def:qeff}) with margin at least $v-\epsilon$;
-\emph{(iii)} for every pairing fraction $\rho$ there exists a bandwidth $\sigma$
-that dominates exact matching:
-$\mathrm{MSE}(\PKPS_\sigma)\le\mathrm{MSE}(\mathrm{DKPS})$ at every $(n,m)$,
-strictly whenever any bandwidth improves on exact matching.
+$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability.
 \end{theorem}
 \begin{proof}[Proof sketch]
-For (i), Theorem~\ref{prop:conc} bounds every perspective's estimation error, and
-Assumption~\ref{ass:support} makes the population nearest-neighbor distance small
-for large $n$; choosing $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ gives
-$\mathrm{MSE}\le\epsilon$, and no step involves $\rho$.
-For (ii), with no shared queries every identity-matched comparison is an empty sum,
-so a paired-DKPS prediction cannot depend on the target's responses and its error
-is at least the score variance; (i) supplies a bandwidth attaining $\epsilon<v$.
-For (iii), the exact-matching limit coincides with paired DKPS on the shared
-queries with the same regression head, so it attains equality; any bandwidth
-improving on exact matching witnesses strict domination.
+The exact-matching limit coincides with paired DKPS on the shared queries with the
+same regression head, which gives the first claim with equality.
+For the second, Theorem~\ref{prop:conc} and Assumption~\ref{ass:support} supply a
+bandwidth attaining any $\epsilon$ with $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$,
+and no step involves $\rho$.
+With no shared queries, every identity-matched comparison is an empty sum, so a
+paired-DKPS prediction cannot depend on the target's responses and its error is at
+least the score variance.
 The full proofs are in Appendix~\ref{app:proof}.
 \end{proof}
 \citet{dkps_qeff} established that paired DKPS is query-efficient relative to the
@@ -410,25 +401,16 @@ The comparison extends to \PKPS at every pairing fraction.
 \begin{corollary}[Relative to the sample score]
 \label{cor:sample}
 The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$, where
-$\sigma_q^2$ is the per-query score variance, so by Theorem~\ref{thm:qeff}(i), \PKPS
-is query-efficient relative to the sample score
-whenever $\epsilon<\sigma_q^2/m$, at every pairing fraction.
+$\sigma_q^2$ is the per-query score variance.
+By the achievability part of Theorem~\ref{thm:qeff}, \PKPS is query-efficient
+relative to the sample score whenever $\epsilon<\sigma_q^2/m$, at every pairing
+fraction.
 \end{corollary}
-
-Theorem~\ref{thm:qeff} makes three statements.
-A query budget independent of the pairing fraction suffices for any target
-accuracy (i).
-The separation from paired DKPS under fully unpaired designs is
-information-theoretic, since with no shared queries a paired-DKPS prediction cannot
-depend on the target's responses (ii).
-The bandwidth family always contains a member that dominates exact matching, since
-exact matching is itself in the family (iii).
-In practice, the bandwidth is selected by model selection over a finite grid
-containing the exact-matching limit.
-The cross-validation of Section~\ref{sec:setup} attains the best grid member up to
-$\epsilon$ (Appendix~\ref{app:proof}).
-Empirically, a bridging bandwidth improves on exact matching at every $\rho<1$
-(Figure~\ref{fig:synthetic}e).
+In practice, the bandwidth is selected by cross-validation over a finite grid
+containing the exact-matching limit (Section~\ref{sec:setup},
+Appendix~\ref{app:proof}).
+Empirically, a bandwidth that bridges similar queries improves on exact matching at
+every $\rho<1$ (Figure~\ref{fig:synthetic}e).
 
 The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
@@ -640,9 +622,10 @@ to have a nonnegligible effect at small budgets \citep{dkps_qeff}. Second, the
 block-diagonal instantiation on the HELM suite disables bridging across response domains;
 a shared response space that would let responses in one domain inform another remains
 untested. Third, computing $A$ is quadratic in the number of queries per model pair. Fourth,
-Theorem~\ref{thm:qeff}(i) is existential (it provides no rate in $n$), and the strict
-margin of (iii) at intermediate $\rho$ rests on a bandwidth improving on exact matching,
-which we establish empirically rather than by a lower bound. Finally, per-cell gains over
+the achievability part of Theorem~\ref{thm:qeff} is existential (it provides no
+rate in $n$), and strict improvement over exact matching at intermediate $\rho$
+rests on a bandwidth improving on exact matching, which we establish empirically
+rather than by a lower bound. Finally, per-cell gains over
 score-only baselines are modest on dense low-rank matrices; they are decisive in the
 sparse, noisy, unpaired regime that motivates the problem.
 
@@ -1053,7 +1036,7 @@ Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
 distances are invariant to $W$.
 \end{proof}
 
-\paragraph{Proof of Theorem~\ref{thm:qeff}(i).} Take scores in $[0,1]$ without loss of
+\paragraph{Proof of Theorem~\ref{thm:qeff}: achievability.} Take scores in $[0,1]$ without loss of
 generality (Assumption~\ref{ass:score}). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
 the estimation error and $\epsilon'\le\sqrt{\epsilon/2}/(2\gamma)$ for the population
 nearest-neighbor distance. By Assumption~\ref{ass:support} there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
@@ -1098,7 +1081,7 @@ and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKP
 guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Proofs of Theorem~\ref{thm:qeff}(ii) and (iii).} For (iii), existence is
+\paragraph{Proof of Theorem~\ref{thm:qeff}: domination and strict separation.} Existence of a dominating bandwidth is
 witnessed by the exact-matching member: the $k_Q=\delta$ estimator coincides with
 paired DKPS on the shared queries with the same regression head (Section~3.1), so
 $\sigma=\delta$ attains $\mathrm{MSE}(\PKPS_\sigma)=\mathrm{MSE}(\mathrm{DKPS})$ at
@@ -1123,7 +1106,7 @@ L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(\delta)+\tau
 \]
 since the $k_Q=\delta$ member of the family coincides with paired DKPS on the shared
 queries with the same regression head. Taking $n_v$ large enough that
-$2\tau\le\epsilon$ transfers the guarantee of (iii) to the cross-validated
+$2\tau\le\epsilon$ transfers the domination guarantee to the cross-validated
 estimator at every $(m,\rho)$. If some
 $\sigma^\star$ has $\Delta=L(\delta)-L(\sigma^\star)>0$, the same event gives
 $L(\hat\sigma)\le L(\sigma^\star)+2\tau=\mathrm{MSE}(\mathrm{DKPS})-\Delta+2\tau$,
@@ -1132,7 +1115,8 @@ $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surel
 identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
 function of the reference data alone, independent of the target, whence
 $\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$, while under
-Assumptions~\ref{ass:bound}--\ref{ass:support} part (i) supplies a bandwidth
+Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
+supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
 validation and a joint embedding (Section~\ref{sec:method}); the split protocol is
