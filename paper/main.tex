@@ -297,11 +297,14 @@ We next establish theoretical properties of the \PKPS necessary for demonstratin
 its efficiency in sparse and unpaired benchmark prediction.
 In particular, the main result of this section shows that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
-the query distributions.
-We formally define the population \PKPS in Definition~\ref{def:pop} of
-Appendix~\ref{app:proof}.
-Broadly, it is defined by replacing the sums of Eq.~\eqref{eq:A} with the
-appropriate expectations.
+the models' designs.
+We model the evaluation data of Section~\ref{sec:setting} as sampled (model, task,
+response) triples: conditional on model $i$, each triple is an independent draw of a
+task and query from a design distribution $P_{i}$, followed by a response from the
+model.
+The population \PKPS is defined by replacing the sums of Eq.~\eqref{eq:A} with
+expectations under the designs (Definition~\ref{def:pop},
+Appendix~\ref{app:proof}).
 Our analysis and implementation use the classical MDS solution: it coincides with the
 minimizer of Eq.~\eqref{eq:mds} when $D$ is Euclidean and is its standard tractable
 surrogate otherwise.
@@ -349,11 +352,15 @@ Inference using the \PKPS is a two-step statistical problem: first embed the
 models, then train a decision function that uses the representations as proxies
 for the models \citep{dkps_qeff}.
 
-Fix a task $t$ and let $(f,Q,y),(f_{1},Q_{1},y_{1}),\hdots,(f_{n},Q_{n},y_{n})$
-be i.i.d.\ (model, query collection, true score) triples, where
-$y_{i}:=s^{(t)}(f_{i},Q^{(t)})$.
-For every model we observe the embedded responses and the sample-score vector
-$(\tilde{y}^{(1)},\hdots,\tilde{y}^{(T)})$; no true score is observed.
+Fix a task $t$ and let $f,f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
+distribution, observed through the sampled (model, task, response) triples of
+Section~\ref{sec:theory}.
+Every observed quantity is a function of the triples: the embedded responses enter
+Eq.~\eqref{eq:A}, and the sample-score vector
+$(\tilde{y}_{i}^{(1)},\hdots,\tilde{y}_{i}^{(T)})$ collects per-task statistics of
+model $i$'s responses.
+The true score $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$ is a functional of the model and is
+never observed.
 The models with $m_{i}^{(t)}>0$ serve as \emph{references} for task $t$, and the
 \emph{target} is the model whose true score we estimate---its own cell may be
 observed but noisy (query-efficient evaluation) or missing (score completion).
@@ -373,7 +380,8 @@ any response-based predictor (Figure~\ref{fig:concept}e)---and a model
 distribution that places mass on every neighborhood of it, so that the target has
 near reference neighbors (Assumptions~\ref{ass:score} and~\ref{ass:support},
 Appendix~\ref{app:proof}).
-In the following, MSE denotes mean squared error over the draw of $(f,Q,y)$,
+In the following, MSE denotes mean squared error over the draw of the target
+model and its triples,
 $m$ denotes a per-model query budget, $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
 denotes the per-query score variance.
 
@@ -973,8 +981,8 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \paragraph{Formal definitions and assumptions.} We collect the formal statements referenced in Section~\ref{sec:method}.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
-Let each model $i$'s (query, response) pairs be drawn i.i.d.\ from a design distribution
-$P_i$. The \emph{population comparison} is
+Let each model $i$'s (task, query, response) triples be drawn i.i.d.\ from a design
+distribution $P_i$. The \emph{population comparison} is
 $A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
 $P_i$ and $P_{i'}$ independent, the population squared distances are
 $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
@@ -999,8 +1007,8 @@ The model distribution places mass on every neighborhood of the population persp
 space.
 \end{assumption}
 
-\paragraph{Population quantities.} Queries for model $i$ are drawn i.i.d.\ from a design
-distribution over embedded queries; write $z=(u,x_i(u))$ for an embedded query--response
+\paragraph{Population quantities.} Tasks and queries for model $i$ are drawn i.i.d.\ from
+its design distribution; write $z=(u,x_i(u))$ for an embedded query--response
 pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
