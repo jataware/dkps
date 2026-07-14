@@ -299,9 +299,10 @@ In particular, the main result of this section shows that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the models' designs.
 We model the evaluation data of Section~\ref{sec:setting} as sampled (model, task,
-response) triples: conditional on model $i$, each triple is an independent draw of a
-task and query from a design distribution $P_{i}$, followed by a response from the
-model.
+response) triples.
+Conditional on model $i$, each triple is an independent draw from its design
+distribution $P_{i}$: a task is sampled first, then a query conditioned on the
+sampled task, and finally the model's response to the query.
 The population \PKPS is defined by replacing the sums of Eq.~\eqref{eq:A} with
 expectations under the designs (Definition~\ref{def:pop},
 Appendix~\ref{app:proof}).
@@ -1007,8 +1008,9 @@ The model distribution places mass on every neighborhood of the population persp
 space.
 \end{assumption}
 
-\paragraph{Population quantities.} Tasks and queries for model $i$ are drawn i.i.d.\ from
-its design distribution; write $z=(u,x_i(u))$ for an embedded query--response
+\paragraph{Population quantities.} Each of model $i$'s triples independently draws a
+task, then a query conditioned on the task, then the model's response
+(Section~\ref{sec:theory}); write $z=(u,x_i(u))$ for an embedded query--response
 pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
