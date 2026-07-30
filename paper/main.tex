@@ -393,15 +393,10 @@ $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$.
 Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a bandwidth
 $\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
-Under a fully unpaired design ($\rho=0$), the separation is strict: every
-paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y_{0})$ at every $(n,m)$,
-while for any $\epsilon>0$ there exist $(n,m,k)$ at which
-$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability, with $m$
-polynomial in $(1/\epsilon,1/\kappa,n)$.
 \end{theorem}
 \begin{proof}[Proof sketch]
 The exact-matching limit coincides with paired DKPS on the shared queries with the
-same regression head, which gives the first claim with equality.
+same regression head, which gives the claim with equality.
 With exact reference scores, Theorem~\ref{prop:conc} and
 Assumption~\ref{ass:support} supply a bandwidth attaining any $\epsilon$ with
 $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$, and no step involves $\rho$
@@ -410,13 +405,17 @@ The reference noises $\tilde{y}_{i}^{(t)}-y_{i}$ are mean zero, bounded, of
 variance at most $\sigma_q^2/m$, and independent across models under unpaired
 designs, so the $k$-neighbor average contributes at most $\sigma_q^2/(mk)$,
 removed by letting $k$ grow.
-With no shared queries, every identity-matched comparison is an empty sum, so a
-paired-DKPS prediction cannot depend on the target's responses and its error is at
-least the score variance.
 The full proofs are in Appendix~\ref{app:proof}.
 \end{proof}
-Query efficiency is transitive, so Theorem~\ref{thm:qeff} together with
-\citet{dkps_qeff} implies that \PKPS$_\sigma$ is also query-efficient relative to
+The separation is strict under a fully unpaired design ($\rho=0$).
+With no shared queries, every identity-matched comparison is an empty sum: a
+paired-DKPS prediction cannot depend on the target's responses, so its MSE is at
+least $\mathrm{Var}(y_{0})$ at every $(n,m)$.
+\PKPS$_\sigma$, in contrast, attains any $\epsilon>0$ with high probability at
+some $(n,m,k)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$
+(Appendix~\ref{app:proof}).
+Query efficiency is also transitive, so Theorem~\ref{thm:qeff} together with
+\citet{dkps_qeff} implies that \PKPS$_\sigma$ is query-efficient relative to
 the sample score.
 
 In practice, the bandwidth is selected by cross-validation over a finite grid
