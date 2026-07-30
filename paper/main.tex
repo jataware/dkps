@@ -289,9 +289,13 @@ its efficiency in sparse and unpaired benchmark prediction.
 The main result of this section establishes that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the query distributions.
+For the analysis, we model the evaluation data of Section~\ref{sec:setting} as
+sampled (model, task, response) triples: conditional on model $i$, each triple
+independently draws a task, then a query from the task, and finally the model's
+response.
 We formally define the population \PKPS in Definition~\ref{def:pop} of
 Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
-Eq.~\eqref{eq:A} with the appropriate expectations.
+Eq.~\eqref{eq:A} with expectations under this sampling.
 
 Our concentration results require bounded query and response kernels, bounded
 embedded responses, a positive cross-model query kernel mass, and a rank-$d$
@@ -338,17 +342,17 @@ Inference using the \PKPS is a two-step statistical problem: first embed the
 models, then train a decision function that uses the representations as proxies
 for the models.
 
-Fix a task $t$ and let $f,f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
-distribution, observed through sampled (model, task, response) triples
-(Definition~\ref{def:pop}, Appendix~\ref{app:proof}).
-Our goal is to predict the true score of $f$ on task $t$,
-$y:=s^{(t)}(f,Q^{(t)})$.
+Fix a task $t$ and let $f_{0},f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
+distribution, observed through the sampled (model, task, response) triples of
+Section~\ref{sec:theory}.
+Our goal is to predict the true score of $f_{0}$ on task $t$,
+$y_{0}:=s^{(t)}(f_{0},Q^{(t)})$.
 The (model, task) pairs with $m_{i}^{(t)}>0$ provide information potentially
-relevant to predicting $y$.
+relevant to predicting $y_{0}$.
 We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, treat $\hat\psi_{i}$
 as a proxy for $f_{i}$, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{Y}$ on
 the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
-predict $\hat y^{(t)}(f)=\hat h^{(t)}(\hat\psi)$.
+predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
 score information, so the target model is embedded alongside the references.
 Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, chen2022mental}).
@@ -386,7 +390,7 @@ on the sample scores $\tilde{y}_{i}^{(t)}$.
 Under Assumptions~\ref{ass:bound}--\ref{ass:support}, there exists a bandwidth
 $\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
 Under a fully unpaired design ($\rho=0$), the separation is strict: every
-paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y)$ at every $(n,m)$, while
+paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y_{0})$ at every $(n,m)$, while
 for any $\epsilon>0$ there exist $(n,m,k)$, with $m$ polynomial in
 $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
 $\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability.
@@ -407,7 +411,9 @@ paired-DKPS prediction cannot depend on the target's responses and its error is 
 least the score variance.
 The full proofs are in Appendix~\ref{app:proof}.
 \end{proof}
-
+Query efficiency is transitive, so Theorem~\ref{thm:qeff} together with
+\citet{dkps_qeff} implies that \PKPS$_\sigma$ is also query-efficient relative to
+the sample score.
 
 In practice, the bandwidth is selected by cross-validation over a finite grid
 containing the exact-matching limit (Section~\ref{sec:experiments},
@@ -1012,7 +1018,7 @@ inapplicable outright---no shared item block exists. At $m\ge16$ the disjointnes
 constraint exhausts the $32$-item pools and mechanically shortens the sample score's
 effective depth, so comparisons there reflect the constraint rather than the methods.
 
-\section{Proofs of Theorems~\ref{prop:conc} and \ref{thm:qeff} and Corollary~\ref{cor:sample}}
+\section{Proofs of Theorems~\ref{prop:conc} and \ref{thm:qeff}}
 \label{app:proof}
 
 \paragraph{Formal definitions and assumptions.} We collect the formal statements referenced in Section~\ref{sec:method}.
@@ -1155,11 +1161,11 @@ m\;\ge\;C'\,\frac{d\,(1+B_R)^2\,\bar B^2\,n^2\log(n/\epsilon)}{\kappa^4\,\lambda
 for an absolute constant $C'$ (this choice also satisfies the proviso
 $t_m\le\kappa/2$ of Lemma~\ref{lem:conc}), and does not involve the pairing fraction
 $\rho$. On the intersection of the two
-events, for a target model $f$ with nearest estimated reference neighbor $f^*$
-(perspectives $\psi^*,\hat\psi^*$; the target's $\psi,\hat\psi$),
+events, for the target model $f_{0}$ with nearest estimated reference neighbor $f^*$
+(perspectives $\psi^*,\hat\psi^*$; the target's $\psi_{0},\hat\psi_{0}$),
 \[
-|\hat y(f)-y(f)|\;\le\;\gamma\,\|\psi^*-\psi\|\;\le\;
-\gamma\big(\|\hat\psi^*-W\psi^*\|+\|\hat\psi^*-\hat\psi\|+\|\hat\psi-W\psi\|\big)
+|\hat y(f_{0})-y_{0}|\;\le\;\gamma\,\|\psi^*-\psi_{0}\|\;\le\;
+\gamma\big(\|\hat\psi^*-W\psi^*\|+\|\hat\psi^*-\hat\psi_{0}\|+\|\hat\psi_{0}-W\psi_{0}\|\big)
 \;\le\;\gamma\,(2c+\hat\delta),
 \]
 using Assumption~\ref{ass:score} and orthogonal invariance. The estimated nearest-neighbor distance
@@ -1169,22 +1175,6 @@ $|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding th
 failure events (squared errors are bounded by $1$),
 $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 
-\begin{corollary}[Relative to the sample score]
-\label{cor:sample}
-The sample score's MSE at budget $m$ is $\sigma_q^2/m$ for every $n$.
-By the achievability part of Theorem~\ref{thm:qeff}, \PKPS is query-efficient
-relative to the sample score whenever $\epsilon<\sigma_q^2/m$, at every pairing
-fraction.
-\end{corollary}
-\paragraph{Relative to the sample score.} The sample score at budget $m$ is the mean of
-$m$ i.i.d.\ per-query scores and uses no reference models, so its MSE is $\sigma_q^2/m$
-for every $n$, where $\sigma_q^2$ is the per-query score variance ($\le1/4$ for scores
-in $[0,1]$). For any $\epsilon<\sigma_q^2/m$ at the budget of
-Lemma~\ref{lem:exact}, the estimator satisfies
-$\mathrm{MSE}\le\epsilon<\sigma_q^2/m$ for all sufficiently large $n$: query efficiency
-relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
-Corollary~\ref{cor:sample}.
-
 \paragraph{Proof of Theorem~\ref{thm:qeff}: noisy reference scores.} Write the scoring function as
 $s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
 $r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
@@ -1193,7 +1183,7 @@ $\mathbb{E}[\tilde{y}_{i}^{(t)}\mid f_{i}]=y_{i}$ and
 $\mathrm{Var}(\tilde{y}_{i}^{(t)}\mid f_{i})\le\sigma_q^2/m$, and the noises
 $\varepsilon_{i}=\tilde{y}_{i}^{(t)}-y_{i}$ are independent across $i$ because
 the subsamples are drawn independently (unpaired designs). For the $k$-nearest-neighbor regressor, decompose
-$\hat y(f)-y=\tfrac1k\sum_{j\in N_k}(y_{j}-y)+\tfrac1k\sum_{j\in
+$\hat y(f_{0})-y_{0}=\tfrac1k\sum_{j\in N_k}(y_{j}-y_{0})+\tfrac1k\sum_{j\in
 N_k}\varepsilon_{j}$ over the neighbor set $N_k$. The first term is bounded as in
 the proof of Lemma~\ref{lem:exact}: perspective estimation error
 (Theorem~\ref{prop:conc}) plus the population $k$-th-neighbor distance, which
@@ -1249,7 +1239,7 @@ strict for $2\tau<\Delta$. Finally, at $\rho=0$ with nonatomic designs,
 $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surely every
 identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
 function of the reference data alone, independent of the target, whence
-$\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y-\hat y)^2]\ge v$, while under
+$\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y_{0}-\hat y)^2]\ge v$, while under
 Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
 supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
