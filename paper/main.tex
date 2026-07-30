@@ -591,7 +591,7 @@ levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.
 \label{fig:completion}
 \end{figure}
 
-\paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
+\paragraph{\PKPS-based methods dominate across various settings.}
 Figure~\ref{fig:qe}a--c shows the MAE for \PKPS, DKPS, IRT, the sample score, and
 the ensemble on the HELM suite: each model answers its own independently sampled
 queries -- the real-data analogue of $\rho=0$ -- and we predict its true
@@ -607,7 +607,7 @@ while DKPS, which cannot use the additional unpaired responses, is flat.
 IRT is poorly identified without a shared item block and is worse than the sample
 score at every budget.
 
-\paragraph{The query-efficiency gains are broad but tail-driven.}
+\paragraph{The gains hold cell-by-cell.}
 Figure~\ref{fig:qe}d--g shows the distribution of the per-cell difference between
 the sample score's and the ensemble's absolute errors, by dataset (d), budget (e),
 cohort (f), and task coverage (g).
