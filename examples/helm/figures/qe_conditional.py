@@ -55,7 +55,7 @@ ridge(ax[2], [(f'$n{{=}}{n}$', coh[coh.n_models == n]['d'].values) for n in [10,
       '(f) by cohort\n$m{=}4,\\ p_\\mathrm{task}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values) for q in [0.2, 0.5, 0.9]],
       '(g) by task coverage\n$m{=}4,\\ n{=}40$')
-fig.supxlabel(XLAB, fontsize=15, y=0.085)
+fig.supxlabel(XLAB, fontsize=15, y=0.175)
 fig.tight_layout(rect=[0, 0.10, 1, 0.99])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-rd1/fig_qe_conditional.{ext}', dpi=200, bbox_inches='tight')

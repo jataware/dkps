@@ -54,7 +54,7 @@ ridge(ax[2], [(f'$p_\\mathrm{{task}}{{=}}{q}$', cov[cov.p_task == q]['d'].values
       '(g) by task coverage\n$n{=}40,\\ p_\\mathrm{query}{=}0.5$')
 ridge(ax[3], [(f'$p_\\mathrm{{query}}{{=}}{q}$', pq[pq.p_query == q]['d'].values) for q in [0.25, 0.5, 1.0]],
       '(h) by query depth\n$n{=}40,\\ p_\\mathrm{task}{=}0.5$')
-fig.supxlabel(XLAB, fontsize=15, y=0.085)
+fig.supxlabel(XLAB, fontsize=15, y=0.175)
 fig.tight_layout(rect=[0, 0.10, 1, 0.99])
 for ext in ('png', 'pdf'):
     fig.savefig(f'results-pkps-unified/fig_completion_conditional.{ext}', dpi=200, bbox_inches='tight')

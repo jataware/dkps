@@ -27,13 +27,13 @@ from matplotlib.gridspec import GridSpec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 N = 12
-RED, BLUE, PURPLE, GRAY = '#3596ff', '#114471', '#486884', '#cbd5e1'
+RED, BLUE, PURPLE, GRAY = '#3596ff', '#114471', '#6d5bd0', '#cbd5e1'
 EMPTY = '#eef2f7'
-PCMAP = LinearSegmentedColormap.from_list('pk', ['#ffffff', '#e0edff', PURPLE])
+PCMAP = LinearSegmentedColormap.from_list('pk', ['#ffffff', '#e6e0f8', PURPLE])
 
 # which model answered each of the N queries (unpaired: mostly one model, a few both/neither).
 Si = np.array([0, 1, 3, 4, 6, 7, 10])      # model i  (red)
-Sip = np.array([1, 2, 4, 7, 8, 9, 11])     # model i' (blue)
+Sip = np.array([1, 2, 4, 5, 7, 8, 9, 11])  # model i' (blue)
 inI = np.zeros(N, bool); inI[Si] = True
 inP = np.zeros(N, bool); inP[Sip] = True
 overlap = np.where(inI & inP)[0]
@@ -49,8 +49,9 @@ t = (P - P.mean(0)) @ np.linalg.svd(P - P.mean(0), full_matrices=False)[2][0]   
 # order the union of the two models' answered queries by the 1-D embedding projection and
 # index BOTH axes by this single ordering. The PKPS query kernel is then a symmetric Gram
 # matrix; DKPS's identity kernel is active only on the diagonal, at the shared queries.
-U = np.union1d(Si, Sip)
-U = U[np.argsort(t[U])]
+# single global ordering by the 1-D projection, shared by the block row in (a) and
+# both matrix axes in (b, c): block j corresponds to matrix row/col j
+U = np.argsort(t)
 sharedU = np.isin(U, overlap)
 D2 = ((P[U][:, None] - P[U][None, :]) ** 2).sum(-1)
 Krbf = np.exp(-D2 / (2 * 1.7 ** 2))            # PKPS: symmetric query-similarity kernel
@@ -137,10 +138,10 @@ axEmb.set_aspect('equal'); axEmb.axis('off')
 axEmb.set_title('query embedding\n(nearby = similar)', fontsize=10.5, pad=6, linespacing=0.95)
 
 # ---- LEFT BOTTOM: same queries as a row of answered blocks --------------------
-for j in range(N):
-    axBlk.add_patch(Rectangle((j, 1), 1, 1, facecolor=RED if inI[j] else EMPTY,
+for pos, j in enumerate(U):        # same similarity ordering as the matrix axes
+    axBlk.add_patch(Rectangle((pos, 1), 1, 1, facecolor=RED if inI[j] else EMPTY,
                               edgecolor='white', lw=1.5))
-    axBlk.add_patch(Rectangle((j, 0), 1, 1, facecolor=BLUE if inP[j] else EMPTY,
+    axBlk.add_patch(Rectangle((pos, 0), 1, 1, facecolor=BLUE if inP[j] else EMPTY,
                               edgecolor='white', lw=1.5))
 axBlk.set_xlim(-0.3, N); axBlk.set_ylim(-0.4, 2.4)
 axBlk.set_aspect('equal'); axBlk.set_anchor('C'); axBlk.axis('off')
