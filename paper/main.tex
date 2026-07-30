@@ -559,14 +559,18 @@ various regimes: (a) varying the number of models, (b) varying the number of tas
 (c) varying the task coverage, (d) varying the number of observed queries per task,
 (e) varying the pairwise query overlap, and (f) varying the number of total queries
 per task.
-\PKPS outperforms DKPS in every setting and the margin is wide even when the data is
-mostly paired but sparse (a--c). When sparsity is swept directly (c), \PKPS
-outperforms DKPS in the early regime and they are matched for moderate to large
-values. For a fixed sparsity and different pairedness (e), \PKPS outperforms DKPS
-significantly throughout the regime. Importantly, \PKPS is relatively unaffected by
-actual sampled overlap since it only requires distributional overlap.
+\PKPS outperforms DKPS in every setting, and both outperform the sample score.
+The margin over DKPS is wide even when the data is mostly paired but sparse (a--c).
+When sparsity is swept directly (c), \PKPS outperforms DKPS in the early regime and
+they are matched for moderate to large values. For a fixed sparsity and different
+pairedness (e), \PKPS outperforms DKPS significantly throughout the regime.
+Importantly, \PKPS is relatively unaffected by actual sampled overlap since it only
+requires distributional overlap (Assumption~\ref{ass:overlap}).
 Similarly, DKPS is not able to take advantage of a growing collection of reference
 models (a) or a growing number of queries (d) as effectively as \PKPS.
+Finally, (f) is the empirical counterpart of Theorem~\ref{thm:qeff}: \PKPS with a
+single query matches the accuracy the sample score reaches at roughly five queries,
+whether or not the queries are paired, while DKPS denoises only when paired.
 
 \begin{figure}[t]
 \centering
