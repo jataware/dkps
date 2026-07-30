@@ -87,16 +87,16 @@ def _plot_query_efficiency(ax, df, xlabel):
 # M-query sample score. (f) runs the completion protocol (held-out cells; gray =
 # task-mean of observed scores).
 PANELS = [
-    ('query_efficiency', None, r'queries per cell $M_{ij}$', _plot_query_efficiency,
+    ('query_efficiency', None, r'queries per cell $m$', _plot_query_efficiency,
      r'$n{=}60,\ T{=}12,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
-    ('qe_rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
-     r'$n{=}60,\ T{=}12,\ M_{ij}{=}4,\ p_{\mathrm{task}}{=}1$'),
+    ('qe_rho', None, r"query overlap $\rho=m_{ii'}/m$", _plot_rho,
+     r'$n{=}60,\ T{=}12,\ m{=}4,\ p_{\mathrm{task}}{=}1$'),
     ('qe_n_models', 'n_models', r'number of models $n$', None,
-     r'$T{=}12,\ M_{ij}{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
+     r'$T{=}12,\ m{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
     ('qe_n_tasks', 'n_tasks', r'number of tasks $T$', None,
-     r'$n{=}60,\ M_{ij}{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
+     r'$n{=}60,\ m{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
     ('qe_task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$', None,
-     r'$n{=}60,\ T{=}12,\ M_{ij}{=}4,\ \rho{=}0$'),
+     r'$n{=}60,\ T{=}12,\ m{=}4,\ \rho{=}0$'),
     ('task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$ (completion)', None,
      r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}0.8$'),
 ]

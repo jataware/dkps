@@ -451,8 +451,8 @@ We evaluate completion empirically in Section~\ref{sec:experiments}.
 blue, \PKPS bright blue, sample score dashed gray; fixed parameters in each panel
 title).
 \textbf{(a--e)} Query-efficient evaluation: every observed cell is measured with
-$M_{ij}$ noisy queries and we predict its true score, as a function of the budget
-$M_{ij}$ (a), the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the
+$m$ noisy queries and we predict its true score, as a function of the budget
+$m$ (a), the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the
 number of tasks $T$ (d), and the task coverage $p_{\mathrm{task}}$ (e), at unpaired
 designs ($\rho{=}0$) except where $\rho$ is swept.
 \textbf{(f)} Score completion of held-out cells as a function of task coverage; the
@@ -470,8 +470,8 @@ $v_i \in \mathbb{R}^{5}$ and $T$ tasks with latent vectors $t_k \in \mathbb{R}^{
 scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center ($u_j = t_k +
 \eta_j$ with isotropic noise $\eta_j$; a model's embedded response to $u_j$ is
 centered at $u_j + v_i$).
-Each model answers $M_{ij}$ queries per task. We control unpairedness via
-$\rho=m_{ii'}/M_{ij}$ and sparsity via a probability of observing a task
+Each model answers $m$ queries per task. We control unpairedness via
+$\rho=m_{ii'}/m$ and sparsity via a probability of observing a task
 $p_{\mathrm{task}}$ and, conditioned on observing a task, a probability of answering
 a query $p_{\mathrm{query}}$.
 
@@ -557,7 +557,7 @@ the per-row mean.}
 \paragraph{\PKPS is query-efficient on the synthetic data.}
 Figure~\ref{fig:synthetic} shows the MAE for \PKPS, DKPS, and the sample score under
 the query-efficient evaluation protocol: every observed cell carries a budget of
-$M_{ij}$ and we predict its true score.
+$m$ queries and we predict its true score.
 The panels vary (a) the query budget, (b) the pairwise query overlap, (c) the number
 of models, (d) the number of tasks, and (e) the task coverage.
 Panel (f) studies score completion, where the targets are held-out cells and the
@@ -567,7 +567,7 @@ score-only baseline is the task mean.
 Panel (b) is the empirical counterpart of the strict separation in
 Theorem~\ref{thm:qeff}.
 At $\rho=0$, DKPS is worse than the sample score, while a
-single shared query ($\rho=0.25$ at $M_{ij}=4$) restores it to \PKPS's level.
+single shared query ($\rho=0.25$ at $m=4$) restores it to \PKPS's level.
 \PKPS itself is flat in $\rho$ as it is unaffected by the sampled overlap since it
 only requires distributional overlap (Assumption~\ref{ass:overlap}).
 As $n$ grows for a fixed sparsity and pairedness, \PKPS can take advantage of
@@ -818,12 +818,12 @@ $p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$.\end{sloppypar}
 \paragraph{Synthetic study.} $50$ seeds per configuration; latent dimension $5$, observed
 embedding dimension $20$, response noise $0.5$; both kernels RBF.
 Query-efficiency panels (Figure~\ref{fig:synthetic}a--e): every observed cell carries
-$M_{ij}$ queries and a sample score with measurement noise $4/\sqrt{M_{ij}}$; the true
+$m$ queries and a sample score with measurement noise $4/\sqrt{m}$; the true
 score is predicted by a distance-weighted average of the $k{=}8$ nearest models'
 sample scores, restricted to cells they observe.
 Completion panel (f): score noise $0.1$, held-out cells predicted by $k$-NN regression
 with $k{=}5$.
-Unswept levers default to $n{=}60$, $T{=}12$, $M_{ij}{=}4$, $\rho{=}0$,
+Unswept levers default to $n{=}60$, $T{=}12$, $m{=}4$, $\rho{=}0$,
 $p_{\mathrm{task}}{=}1$; panel-specific settings are given in each figure title.
 
 \paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
