@@ -13,6 +13,7 @@
 \newtheorem{definition}{Definition}
 \newtheorem{assumption}{Assumption}
 \theoremstyle{plain}
+\usepackage{enumitem}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -44,13 +45,11 @@ and/or different subsets of queries from a given task. The resulting collection 
 responses and the corresponding (model, task) score matrix are unpaired and sparse. In
 this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collection of
 low-dimensional representations of models based on their embedded responses. \PKPS
-generalizes existing methods by comparing responses to similar, rather than just
-identical, queries, so models that have responded to different queries are comparable with minimal
-information lost. Theoretically, we show that
-benchmark prediction using \PKPS is query-efficient relative to methods that only use
-information from dense and paired sections of the evaluation landscape. Empirically, we show that \PKPS
-outperforms relevant baselines on two tasks---query-efficient evaluation and (model, task)
-score completion---across two large benchmark suites.
+generalizes existing methods for representing black-box generative models by comparing responses to similar -- rather than just
+identical -- queries and is therefore able to utilize all available information. Theoretically, we show that
+benchmark prediction using \PKPS is query-efficient relative to methods that only use information from dense and paired portions of the evaluation data.
+Empirically, we show that \PKPS
+outperforms relevant baselines on two tasks across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
@@ -64,40 +63,42 @@ new benchmarks for, e.g., mathematics \citep{hendrycks2021math}, law
 vending machine business \citep{backlund2025vendingbench}.
 The current benchmarking landscape is correspondingly vast: BIG-bench alone contains
 more than 200 tasks \citep{srivastava2023beyond}, HELM tracks dozens of scenarios
-across multiple releases \citep{helm}, and a recent compilation counts 133
+across multiple releases \citep{helm}, and a recent compilation includes 133 different
 benchmarks for frontier models \citep{benchpress}.
 As such, a model is rarely evaluated on all benchmarks: of the (model, task) pairs in
 the compilation above, only 23\% have a reported score \citep{benchpress}.
-Further, as benchmarks evolve---queries are added, refreshed to avoid contamination
+Further, as benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
 \citep{white2024livebench}, or subsampled to reduce cost
-\citep{perlitz2024efficient}---two models evaluated on the same benchmark may have
+\citep{perlitz2024efficient} -- two models evaluated on the same benchmark may have
 responded to different sets of queries.
 
 Benchmark prediction \citep{polo2024tinybenchmarks, vivek2024anchor, li2024active,
 hofmann2025fluid, bowyer2026efficient, benchpress}
 attempts to alleviate the resource burden of evaluation by predicting scores from
-already-available information rather than computing them from newly generated
+already-available information rather than computing them just from newly generated
 responses.
 There are two main benchmark prediction tasks: query-efficient evaluation and
 (model, task) score completion.
 In query-efficient evaluation, a model responds to a small subset of a task's queries
 and its score on the full task is predicted from the resulting responses.
 Existing methods for query-efficient evaluation require access to item-level scores \citep{polo2024tinybenchmarks, hofmann2025fluid, li2024active,
-bowyer2026efficient} and/or cached embedded responses \citep{dkps_qeff} to queries that all models have responded to and are typically not applicable to settings where different models have been evaluated on different sets of queries.
+bowyer2026efficient} and/or cached embedded responses \citep{dkps_qeff} to queries that all models have responded to and are typically not effective in settings where different models have been evaluated on different sets of queries.
 In (model, task) score completion, a model has not responded to any of a task's
 queries and its score on the task is predicted from the observed entries of the score
 matrix.
 Existing methods for score completion use only the aggregate scores and discard the
 item-level responses that produced them \citep{benchpress}.
-In both tasks, the collection of responses as it is typically available is unpaired
+In both tasks, the collection of available responses is often unpaired
 and sparse.
+
 In this paper, we introduce the Product Kernel Perspective Space (\PKPS) to predict
 benchmark scores directly from sparse, unpaired collections of responses.
 Our contributions can be summarized as follows:
 \begin{enumerate}
+[wide, labelwidth=1pt, labelindent=12pt]
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
 \item \emph{Conceptual:} we unify the two main benchmark prediction
-tasks---query-efficient evaluation and (model, task) score completion---as instances
+tasks as instances
 of a single problem: predicting scores from a sparse, unpaired collection of
 responses from previously evaluated models.
 \item \emph{Methodological \& theoretical:} we propose the \PKPS, a collection of
@@ -105,12 +106,12 @@ low-dimensional representations of models defined on potentially unpaired embedd
 responses, and show that benchmark prediction using \PKPS is at least as
 query-efficient as methods that only use information from paired responses
 (Theorem~\ref{thm:qeff}).
-\item \emph{Empirical:} on two benchmark suites---93 models on 18 HELM tasks and 45
-modern models on 16 tasks from the Every Eval Ever datastore \citep{eee2026}---we show
+\item \emph{Empirical:} we show
 that \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
 query budget and, when ensembled with low-rank matrix completion, reduces score
-completion error by up to 28\% (Table~\ref{tab:suite} previews these results;
-Section~\ref{sec:experiments}).
+matrix completion error by up to 28\%. Our empirical evaluation spans 2 large benchmark
+suites -- one built from HELM \citep{helm} and one built from the Every Eval Ever
+datastore \citep{eee2026} (Table~\ref{tab:suite}).
 \end{enumerate}
 
 \begin{table}[t!]

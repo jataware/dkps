@@ -1,4 +1,4 @@
-\begin{thebibliography}{35}
+\begin{thebibliography}{36}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -55,6 +55,13 @@ Rick Chen, Joseph Ternasky, Afriyie~Samuel Kwesi, Ben Griffin, Aaron~Ontoyin
   Ihlamur.
 \newblock {VCBench}: Benchmarking {LLM}s in venture capital.
 \newblock \emph{arXiv preprint arXiv:2509.14448}, 2025{\natexlab{b}}.
+
+\bibitem[Chollet et~al.(2025)Chollet, Knoop, Kamradt, Landers, and
+  Pinkard]{chollet2025arcagi2}
+Fran\c{c}ois Chollet, Mike Knoop, Gregory Kamradt, Bryan Landers, and Henry
+  Pinkard.
+\newblock {ARC-AGI-2}: A new challenge for frontier {AI} reasoning systems.
+\newblock \emph{arXiv preprint arXiv:2505.11831}, 2025.
 
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
