@@ -517,14 +517,6 @@ collection of embedded queries and embedded responses, and use an RBF kernel on 
 reduced query space and a linear kernel on the reduced response space.
 Given the \PKPS pairwise distance matrix, we embed the models in a $d = 8$ space and
 use $k$-nearest neighbor regression with $k = 5$.
-Following \citet{benchpress}, all methods operate on a pre-processed score matrix:
-observed scores are logit-transformed, standardized per task, and centered by a
-two-way (model $+$ task) additive bias, and the methods predict the residual.
-\PKPS and LRMC share this pre-processing exactly, so differences between them are
-attributable to how the residual is modeled.
-Following \citet{dkps_qeff}, every fit is leave-one-family-out: all models from the
-target's developer are excluded, so predictions never lean on near-duplicate
-siblings.
 
 Depending on the task we include different baselines. Each produces an estimate of
 $y_{i}^{(t)}$:
@@ -540,11 +532,16 @@ $y_{i}^{(t)}$:
 \end{enumerate}
 Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
 selected via leave-one-out cross validation on the observed data.
+Following \citet{benchpress}, all methods operate on a pre-processed score matrix:
+observed scores are logit-transformed, standardized per task, and centered by a
+two-way (model $+$ task) additive bias, and the methods predict the residual.
+\PKPS and LRMC share this pre-processing exactly, so differences between them are
+attributable to how the residual is modeled.
+Following \citet{dkps_qeff}, every fit is leave-one-family-out: all models from the
+target's developer are excluded, so predictions never lean on artificially similar models.
+
 We report average mean absolute error (MAE) of the predicted score versus the true
 score for every setting over $16$ seeds ($50$ on synthetic data).
-Paired differences between methods are assessed with two-sided Wilcoxon signed-rank
-tests: for each task we average the per-cell error difference (e.g., sample score
-$-$ ensemble) over models and seeds, and test the per-task means against zero.
 Additional experimental details, such as the sweep grids, PCA dimensions, and
 cross-validation protocols, are provided in Appendix~\ref{app:details}.
 
@@ -608,7 +605,8 @@ the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
 At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
-sample score (Wilcoxon $p{=}8\times10^{-6}$, better on all $18$ tasks), so \PKPS
+sample score (two-sided Wilcoxon signed-rank test on the seed-averaged per-task
+error differences: $p{=}8\times10^{-6}$, better on all $18$ tasks), so \PKPS
 with one query matches the sample score at four (a).
 As the budget grows, the sample score eventually overtakes the representations'
 residual bias.
