@@ -605,8 +605,8 @@ the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
 At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
-sample score (two-sided Wilcoxon signed-rank test on the seed-averaged per-task
-error differences: $p{=}8\times10^{-6}$, better on all $18$ tasks), so \PKPS
+sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences,
+better on all $18$ tasks), so \PKPS
 with one query matches the sample score at four (a).
 As the budget grows, the sample score eventually overtakes the representations'
 residual bias.
