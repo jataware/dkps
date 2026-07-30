@@ -553,23 +553,18 @@ the per-row mean.}
 \subsection{Results}
 \label{sec:results}
 
-\paragraph{\PKPS outperforms DKPS on every observation lever.}
+\paragraph{\PKPS outperforms DKPS on every synthetic observation lever.}
 Figure~\ref{fig:synthetic} shows score MAE for \PKPS, DKPS, and the sample score as
-each lever of the observation process is varied. \PKPS outperforms DKPS at every
-setting, and both outperform the sample score. The margin is wide even when the data
-is mostly paired (a--c), since bridging similar queries, across tasks as well as within,
-supplies signal that exact matching does not use. The gap is largest when pairing is
-scarce: as $p_{\mathrm{query}}$ drops (d), DKPS degrades while \PKPS is stable.
-When $\rho$ is swept directly (e), DKPS approaches the sample score as $\rho\!\to\!0$
-while \PKPS is unaffected.
-
-Panel (f) considers the \emph{denoising} form of the same problem: each cell is now
-\emph{observed} with $M_{ij}$ noisy queries and we predict its true score.
-\PKPS with a single query matches the accuracy that the sample score reaches at roughly
-five queries, whether or not the queries are paired.
-DKPS denoises only when paired (dashed).
-At large budgets the sample score becomes precise enough to overtake the
-representation's residual bias.
+each lever of the observation process is varied.
+\PKPS outperforms DKPS at every setting, and both outperform the sample score.
+The margin is wide even when the data is mostly paired (a--c): bridging similar
+queries supplies signal that exact matching does not use.
+The gap is largest when pairing is scarce: as $p_{\mathrm{query}}$ drops (d), DKPS
+degrades while \PKPS is stable, and when $\rho$ is swept directly (e), DKPS
+approaches the sample score as $\rho\!\to\!0$ while \PKPS is unaffected.
+In the denoising setting (f), where each cell is observed with $M_{ij}$ noisy
+queries and we predict its true score, \PKPS with one query matches the accuracy the
+sample score reaches at roughly five, whether or not the queries are paired.
 This is the empirical counterpart of Theorem~\ref{thm:qeff}.
 
 \begin{figure}[t]
@@ -601,8 +596,16 @@ Panels (b, c) vary the cohort and coverage: \PKPS improves steadily
 ($0.157\!\to\!0.124$ and $0.154\!\to\!0.128$ on HELM, $35$--$37\%$ relative on EEE)
 while DKPS, which cannot use the additional unpaired responses, is flat.
 
+\paragraph{The query-efficiency gains are broad but tail-driven.}
+Figure~\ref{fig:qe}d--g shows the per-cell difference between the sample score's and
+the ensemble's absolute errors, by dataset, budget, cohort, and coverage.
+The ensemble outperforms the sample score on most cells and in the mean of every row.
+The distribution of gains is skewed: the largest concentrate at the smallest budgets
+and on the rich-response datasets, where a single response carries the most
+information about the model.
+
 \paragraph{The same representations complete missing cells.}
-Figure~\ref{fig:completion} shows MAE on missing cells when a fraction
+Figure~\ref{fig:completion}a--d shows MAE on missing cells when a fraction
 $p_{\mathrm{task}}$ of cells is observed, each at depth $p_{\mathrm{query}}$.
 The sample score does not exist for a missing cell, so the comparison is against LRMC.
 LRMC requires many rows to estimate its factors and degrades when models are scarce: at
@@ -611,16 +614,16 @@ dashed).
 At the full cohort ($n{=}93$, solid), \PKPS slightly edges LRMC ($0.103$ vs.\ $0.105$)
 and the ensemble performs best ($0.099$).
 
-\paragraph{The per-cell gains are broad but tail-driven.} The ensemble outperforms the
-sample score on most cells, and the distribution of per-cell gains is skewed: the
-largest concentrate at the smallest budgets and on the rich-response datasets
-(Figure~\ref{fig:qe}d--g).
-The win over LRMC is modest but stays positive in the mean across datasets, cohorts,
-coverage, and query depth (Figure~\ref{fig:completion}e--h).
+\paragraph{The completion gains are modest but consistent.}
+Figure~\ref{fig:completion}e--h shows the per-missing-cell difference between LRMC's
+and the ensemble's absolute errors, by dataset, cohort, coverage, and query depth.
+The win is smaller than in the query-efficiency task but stays positive in the mean
+across every lever: the response channel adds information wherever the score matrix
+alone is rank-deficient, and never subtracts it.
 
-\paragraph{The results replicate on the Every Eval Ever suite.} The second suite shows
-the same qualitative behavior with a larger completion margin (lever sweeps in
-Appendix~\ref{app:eee}).
+\paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
+The second suite shows the same qualitative behavior with a larger completion margin
+(lever sweeps in Appendix~\ref{app:eee}).
 At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ vs.\ $0.224$)
 and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$): an $8\times$
 smaller budget.
