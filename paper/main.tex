@@ -517,6 +517,13 @@ collection of embedded queries and embedded responses, and use an RBF kernel on 
 reduced query space and a linear kernel on the reduced response space.
 Given the \PKPS pairwise distance matrix, we embed the models in a $d = 8$ space and
 use $k$-nearest neighbor regression with $k = 5$.
+All methods operate on a pre-processed score matrix: observed scores are
+logit-transformed, standardized per task, and centered by a two-way (model $+$
+task) additive bias, and the methods predict the residual.
+\PKPS and LRMC share this pre-processing exactly, so differences between them are
+attributable to how the residual is modeled.
+Every fit is leave-one-family-out: all models from the target's developer are
+excluded, so predictions never lean on near-duplicate siblings.
 
 Depending on the task we include different baselines. Each produces an estimate of
 $y_{i}^{(t)}$:
