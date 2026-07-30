@@ -490,9 +490,11 @@ The second suite consists of $16$ tasks (MATH-MC levels $1$--$5$
 \citep{rein2023gpqa}, and nine judging categories from JudgeBench
 \citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and $45$
 models from the Every Eval Ever datastore \citep{eee2026}.
-Every model is evaluated on every task, but each cell's query pool is drawn
-independently per model with ${\sim}10\%$ incidental overlap
-($\rho_{ii'}\approx0.1$): the suite is unpaired by construction.
+Every cell is observed with a pool of $32$ queries drawn independently per model
+from the task's items, so cross-model overlap is incidental rather than designed:
+the median $\rho_{ii'}^{(t)}$ is $0.09$ (mean $0.18$), $15\%$ of model pairs share
+no query on a given task, and overlap exceeds $0.5$ only on the two smallest tasks,
+where two $32$-query subsets necessarily intersect.
 
 Both suites were chosen because they include item-level responses -- most large
 benchmark leaderboards only include overall or subtask scores.
@@ -514,7 +516,7 @@ $y_{i}^{(t)}$:
 \begin{enumerate}[wide, labelwidth=1pt, labelindent=12pt]
     \item \emph{Query-efficiency}. We compare \PKPS to the sample score (i.e.,
     $\tilde{y}_{i}^{(t)}$), paired DKPS \citep{dkps_qeff}, Item Response Theory
-    (``IRT'', \citealp{rasch1960, polo2024tinybenchmarks}) and a convex combination
+    (``IRT'', \citealp{polo2024tinybenchmarks}) and a convex combination
     of \PKPS and sample score (i.e.,
     $\alpha\,\tilde{y}_{i}^{(t)}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
     \item \emph{Score completion.} We compare \PKPS to Low-Rank Matrix Completion
@@ -818,7 +820,8 @@ levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ ta
 judging benchmarks' rationales), so all responses and queries are embedded with
 \texttt{gemini-embedding-001} and blocked by benchmark exactly as in
 Appendix~\ref{app:details}. Each cell's observable pool is $32$ queries drawn with a
-model-dependent seed, so two models share only incidental queries ($\sim\!10\%$); the
+model-dependent seed, so two models share only incidental queries (median
+$\rho_{ii'}^{(t)}=0.09$, mean $0.18$, largest on the smallest tasks); the
 query-efficiency budget $m$ and the completion depth $p_{\mathrm{query}}$ subsample this
 pool, and the prediction target is always the cell's full-depth mean over all items, which
 is never embedded.
