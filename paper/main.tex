@@ -710,7 +710,7 @@ matrices and decisive in the sparse, noisy, unpaired regime that motivates the p
 \subsubsection*{Reproducibility statement}
 All methods are released as a documented Python package (the \PKPS estimator, matrix
 completion, and IRT baselines), with the data-preparation, experiment, and figure scripts
-for both the synthetic study and the HELM suite; every experiment is seeded, all real-data
+for the synthetic study and both benchmark suites; every experiment is seeded, all real-data
 numbers are means over $16$ seeds (synthetic: $50$), and hyperparameters are selected by the
 leak-free cross-validation described in Section~\ref{sec:experiments} (leakage is checked by an
 automated test that corrupts one model's held-out scores and verifies its predictions are
@@ -724,7 +724,7 @@ all hyperparameter settings.
 \section{Experimental details}
 \label{app:details}
 
-\paragraph{Suite.} $18$ tasks over four datasets from HELM \citep{helm}: MATH ($7$
+\paragraph{Suite.} $18$ tasks over four datasets from HELM-Lite \citep{helm}: MATH ($7$
 subjects), WMT-14 ($5$ translation directions), MedQA, and LegalBench ($5$ subsets), on the
 $93$ models evaluated on all four; Table~\ref{tab:helmsuite} lists every task with its
 query count (the loader subsamples each task to at most $120$ queries with a fixed seed, so
@@ -844,6 +844,17 @@ Completion: task coverage as above and query depth
 $p_{\mathrm{query}}\in\{0.1,0.25,0.5,0.75,1.0\}$ with cohort lines $n\in\{10,\text{full}\}$;
 task count $T\in\{4,8,12,18\}$ (HELM) or $\{4,8,12,16\}$ (EEE); the cohort sweep holds
 $p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$.\end{sloppypar}
+
+\paragraph{Statistical tests.} Paired differences between methods are assessed with
+two-sided Wilcoxon signed-rank tests on per-task error differences: for each task we
+average the per-cell absolute-error difference over models and seeds, and test the
+per-task means against zero ($18$ tasks on HELM, $16$ on EEE).
+The query-efficiency tests compare the ensemble to the sample score at $m{=}1$ (full
+cohort and coverage); the completion tests compare the ensemble to LRMC at the
+central operating point ($p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$) at each
+cohort size.
+The per-cell improvement fractions quoted in Section~\ref{sec:results} are computed
+from the same per-cell records, pooled over the conditional-figure sweeps.
 
 \paragraph{Synthetic study.} $50$ seeds per configuration; latent dimension $5$, observed
 embedding dimension $20$, response noise $0.5$; both kernels RBF.
