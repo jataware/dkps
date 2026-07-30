@@ -369,9 +369,13 @@ In the following, MSE denotes mean squared error over the draw of the target mod
 and its triples,
 $m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
 denotes the per-query score variance.
-We take the query kernel to be an RBF over the query embeddings,
-$k_{Q}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$, indexed by a bandwidth $\sigma>0$;
-exact matching (paired DKPS) is the $\sigma\to0$ limit.
+We take the query kernel from a bandwidth-indexed family
+$\{k_{\sigma}\}_{\sigma>0}$ of bounded kernels whose $\sigma\to0$ limit is exact
+matching (paired DKPS); the RBF over the query embeddings,
+$k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$, is the running example.
+The proof uses no other property of the family, so any such family (e.g., Laplacian
+or Mat\'ern) suffices, with Assumptions~\ref{ass:overlap}--\ref{ass:support} read
+at the selected bandwidth.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
@@ -1054,7 +1058,7 @@ space.
 task, then a query conditioned on the task, then the model's response; write
 $z=(u,x_i(u))$ for an embedded query--response
 pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
-$k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
+$k_Q\in[0,1]$ after normalization (e.g., RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
 A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
 \qquad z\sim P_i,\; z'\sim P_{i'} \text{ independent},
