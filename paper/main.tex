@@ -554,18 +554,19 @@ the per-row mean.}
 \label{sec:results}
 
 \paragraph{\PKPS outperforms DKPS on every synthetic observation lever.}
-Figure~\ref{fig:synthetic} shows score MAE for \PKPS, DKPS, and the sample score as
-each lever of the observation process is varied.
-\PKPS outperforms DKPS at every setting, and both outperform the sample score.
-The margin is wide even when the data is mostly paired (a--c): bridging similar
-queries supplies signal that exact matching does not use.
-The gap is largest when pairing is scarce: as $p_{\mathrm{query}}$ drops (d), DKPS
-degrades while \PKPS is stable, and when $\rho$ is swept directly (e), DKPS
-approaches the sample score as $\rho\!\to\!0$ while \PKPS is unaffected.
-In the denoising setting (f), where each cell is observed with $M_{ij}$ noisy
-queries and we predict its true score, \PKPS with one query matches the accuracy the
-sample score reaches at roughly five, whether or not the queries are paired.
-This is the empirical counterpart of Theorem~\ref{thm:qeff}.
+Figure~\ref{fig:synthetic} shows MAE for \PKPS, DKPS, and the sample score across
+various regimes: (a) varying the number of models, (b) varying the number of tasks,
+(c) varying the task coverage, (d) varying the number of observed queries per task,
+(e) varying the pairwise query overlap, and (f) varying the number of total queries
+per task.
+\PKPS outperforms DKPS in every setting and the margin is wide even when the data is
+mostly paired but sparse (a--c). When sparsity is swept directly (c), \PKPS
+outperforms DKPS in the early regime and they are matched for moderate to large
+values. For a fixed sparsity and different pairedness (e), \PKPS outperforms DKPS
+significantly throughout the regime. Importantly, \PKPS is relatively unaffected by
+actual sampled overlap since it only requires distributional overlap.
+Similarly, DKPS is not able to take advantage of a growing collection of reference
+models (a) or a growing number of queries (d) as effectively as \PKPS.
 
 \begin{figure}[t]
 \centering
