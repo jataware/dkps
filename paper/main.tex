@@ -481,7 +481,7 @@ different response types -- MATH (\citealp{hendrycks2021math}, $7$ math subjects
 WMT-14 (\citealp{bojar2014wmt}, $5$ translation directions), MedQA
 (\citealp{jin2021medqa}, medical multiple-choice), and LegalBench
 (\citealp{guha2023legalbench}, $5$ legal classification subsets).
-We consider $93$ models that have been evaluated on all four tasks.
+We consider $93$ models that have been evaluated on all $18$ tasks.
 As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce sparsity and unpairedness by subsampling each model's observed queries.
 
 The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
@@ -491,8 +491,8 @@ only $15\%$ of (model, benchmark) pairs have been evaluated and $59\%$ of model
 pairs share no benchmark at all.
 Within a benchmark, pairedness is bimodal: on $26$ of $33$ multi-model benchmarks,
 models answered essentially identical item sets (mean $\rho_{ii'}>0.99$), while the
-seven benchmarks are severely unpaired (mean $\rho_{ii'}$ between
-$0.27$ and $0.66$).
+remaining seven -- all arena-style \citep{chiang2024chatbot} -- are severely
+unpaired (mean $\rho_{ii'}$ between $0.27$ and $0.66$).
 We study a dense submatrix of the store so that true scores are available and
 sparsity and pairedness can be controlled in our evaluations: $16$ tasks (MATH-MC
 levels $1$--$5$ \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k},
