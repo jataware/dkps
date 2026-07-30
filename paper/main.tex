@@ -532,9 +532,10 @@ $y_{i}^{(t)}$:
 Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
 selected via leave-one-out cross validation on the observed data.
 We report average mean absolute error (MAE) of the predicted score versus the true
-score for every setting over $16$ seeds ($50$ on synthetic data), and assess paired
-differences between methods with two-sided Wilcoxon signed-rank tests over the
-per-seed suite means.
+score for every setting over $16$ seeds ($50$ on synthetic data).
+Paired differences between methods are assessed with two-sided Wilcoxon signed-rank
+tests: for each seed we average the per-cell error difference (e.g., sample score
+$-$ ensemble) over the suite, and test the $16$ per-seed means against zero.
 Additional experimental details, such as the sweep grids, PCA dimensions, and
 cross-validation protocols, are provided in Appendix~\ref{app:details}.
 
@@ -615,7 +616,8 @@ score at every budget.
 Figure~\ref{fig:qe}d--g shows the distribution of the per-cell difference between
 the sample score's and the ensemble's absolute errors, by dataset (d), budget (e),
 cohort (f), and task coverage (g).
-The ensemble outperforms the sample score on most cells and in the mean of every row.
+The ensemble outperforms the sample score on $69\%$ of cells ($78\%$ at $m{=}1$)
+and in the mean of every row.
 The gains are largest on the rich-response datasets (d) and at the smallest budgets
 (e), where a single response carries the most information, and they shrink toward
 zero as the budget grows.
@@ -643,9 +645,10 @@ At the full cohort the methods converge and the ensemble remains best
 Figure~\ref{fig:completion}e--h shows the distribution of the per-missing-cell
 difference between LRMC's and the ensemble's absolute errors, by dataset (e),
 cohort (f), coverage (g), and query depth (h).
-The win is smaller than in the query-efficiency task but the mean gain is positive
-in every row: the responses add information wherever the score matrix alone is
-rank-deficient, and never subtract it.
+The win is smaller than in the query-efficiency task -- the ensemble improves
+$54\%$ of missing cells -- but the mean gain is positive in every row: the responses
+add information wherever the score matrix alone is rank-deficient, and never
+subtract it.
 
 \paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
 The second suite shows the same behavior with larger margins (lever sweeps in
