@@ -329,8 +329,8 @@ A Weyl--Procrustes perturbation argument \citep[Lemma~5.4]{tu2016procrustes} the
 transfers the entrywise error to the rank-$d$ spectral embedding at the stated rate
 (Lemma~\ref{lem:pert}). The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
-Theorem~\ref{prop:conc} recovers the paired DKPS rate in $m$ without
-requiring any shared queries.
+Theorem~\ref{prop:conc} recovers the rate in $m$ enjoyed by fully paired DKPS
+\citep{acharyya2025concentration} without requiring any shared queries.
 The price of unpairedness is a factor of $\kappa^{-2}$, governed by
 the overlap of the query distributions.
 
@@ -339,8 +339,8 @@ the overlap of the query distributions.
 We next describe benchmark prediction in the \PKPS and establish its query
 efficiency.
 Inference using the \PKPS is a two-step statistical problem: first embed the
-models, then train a decision function that uses the representations as proxies
-for the models.
+models (Eq.~\eqref{eq:mds}), then train a decision function that uses the
+representations as proxies for the models.
 
 Fix a task $t$ and let $f_{0},f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
 distribution, observed through the sampled (model, task, response) triples of
@@ -354,10 +354,10 @@ as a proxy for $f_{i}$, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{
 the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
 predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
-score information, so the target model is embedded alongside the references.
+score information, so the target model is embedded alongside the reference models.
 Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, chen2022mental}).
 
-\citet{dkps_qeff} establish that nearest neighbor regression using representations
+\citet{dkps_qeff} established that nearest neighbor regression using representations
 from the fully paired DKPS is query efficient relative to the sample score.
 The main result of this section shows that benchmark prediction with the \PKPS is
 query-efficient relative to paired DKPS.
@@ -369,17 +369,14 @@ In the following, MSE denotes mean squared error over the draw of the target mod
 and its triples,
 $m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
 denotes the per-query score variance.
-We take the query kernel from a bandwidth-indexed family
-$\{k_{\sigma}\}_{\sigma>0}$ of bounded kernels whose $\sigma\to0$ limit is exact
-matching (paired DKPS); the RBF over the query embeddings,
-$k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$, is the running example.
-The proof uses no other property of the family, so any such family (e.g., Laplacian
-or Mat\'ern) suffices, with Assumptions~\ref{ass:overlap}--\ref{ass:support} read
-at the selected bandwidth.
-We further assume mean-type scoring functions with uniformly subsampled cells
-(Assumption~\ref{ass:noise}, Appendix~\ref{app:proof}), and write \PKPS$_\sigma$
-for the estimator with fixed bandwidth $\sigma$ and a $k$-nearest-neighbor
-regressor fit on the sample scores $\tilde{y}_{i}^{(t)}$.
+We assume the query kernel is from a family
+$\{k_{\sigma}\}_{\sigma>0}$ of bounded kernels indexed by a bandwidth $\sigma$ whose
+$\sigma\to0$ limit is exact
+matching. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
+such an example.
+We write \PKPS$_\sigma$ for the estimator with query kernel $k_{\sigma}$ and a
+$k$-nearest-neighbor head, under mean-type scores with uniformly subsampled cells
+(Assumption~\ref{ass:noise}, Appendix~\ref{app:proof}).
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
@@ -388,24 +385,24 @@ scored reference models.
 $h$ is \emph{query-efficient relative to} $h'$ if there exists $N$ such that
 $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
-\begin{theorem}[Query efficiency relative to paired DKPS]
+\begin{theorem}[\PKPS is query efficient relative to paired DKPS]
 \label{thm:qeff}
 Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$.
 Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a bandwidth
 $\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
 \end{theorem}
 \begin{proof}[Proof sketch]
-The exact-matching limit coincides with paired DKPS on the shared queries with the
-same regression head, which gives the claim with equality.
+The exact-matching limit ($\sigma\to0$) coincides with paired DKPS on the shared
+queries with the same regressor, which gives the claim with equality.
 With exact reference scores, Theorem~\ref{prop:conc} and
-Assumption~\ref{ass:support} supply a bandwidth attaining any $\epsilon$ with
-$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$, and no step involves $\rho$
+Assumption~\ref{ass:support} guarantee a bandwidth attaining any $\epsilon$ with
+$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$. No step involves $\rho$
 (Lemma~\ref{lem:exact}).
 The reference noises $\tilde{y}_{i}^{(t)}-y_{i}$ are mean zero, bounded, of
 variance at most $\sigma_q^2/m$, and independent across models under unpaired
-designs, so the $k$-neighbor average contributes at most $\sigma_q^2/(mk)$,
-removed by letting $k$ grow.
-The full proofs are in Appendix~\ref{app:proof}.
+designs, so the $k$-neighbor average contributes at most $\sigma_q^2/(mk)$, which
+vanishes when $k \to \infty$ as $n \to \infty$ with $k/n \to 0$.
+The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
 The separation is strict under a fully unpaired design ($\rho=0$).
 With no shared queries, every identity-matched comparison is an empty sum: a
@@ -414,8 +411,8 @@ least $\mathrm{Var}(y_{0})$ at every $(n,m)$.
 \PKPS$_\sigma$, in contrast, attains any $\epsilon>0$ with high probability at
 some $(n,m,k)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$
 (Appendix~\ref{app:proof}).
-Query efficiency is also transitive, so Theorem~\ref{thm:qeff} together with
-\citet{dkps_qeff} implies that \PKPS$_\sigma$ is query-efficient relative to
+We note that query-efficiency is transitive. Theorem~\ref{thm:qeff}, together with
+\citet{dkps_qeff}, implies that \PKPS$_\sigma$ is query-efficient relative to
 the sample score.
 
 In practice, the bandwidth is selected by cross-validation over a finite grid
@@ -427,8 +424,6 @@ the same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
 queries is embedded from its responses to other tasks, and the regression transfers
 the scores of reference models evaluated on $t$.
-Identity-matched constructions have no mechanism for this regime and the sample
-score does not exist.
 We evaluate both query-efficiency and completion empirically in Section~\ref{sec:experiments}.
 
 \section{Experiments}
