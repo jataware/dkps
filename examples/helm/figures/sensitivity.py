@@ -48,7 +48,7 @@ for ax, suite in zip(axes[:2], ['helm', 'eee']):
     ax.set_xscale('log', base=2)
     ax.set_xlabel('queries per cell $m$', fontsize=14.5)
     ax.legend(frameon=False, fontsize=10.5)
-axes[0].set_ylabel(r'\PKPS MAE vs. true score'.replace(r'\PKPS', 'PKPS'), fontsize=14.5)
+axes[0].set_ylabel(r'PKPS MAE$(\hat{y}, y)$', fontsize=14.5)
 
 # (c) fixed bandwidth vs CV
 ax = axes[2]

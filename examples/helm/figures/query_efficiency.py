@@ -80,7 +80,7 @@ for ax, sweep in zip(axes[1:], ('n_models', 'coverage')):
     tag = 'off-scale' if irt > hi * 1.14 else 'not shown'
     ax.text(0.97, 0.965, f'IRT {tag} ({irt:.2f})', transform=ax.transAxes, ha='right',
             va='top', fontsize=11.5, color=STYLE['irt']['color'], fontweight='bold')
-axes[0].set_ylabel('MAE vs. true score', fontsize=15.6)
+axes[0].set_ylabel(r'MAE$(\hat{y}, y)$', fontsize=15.6)
 handles = [Line2D([0], [0], color=STYLE[m]['color'], ls=STYLE[m]['ls'],
                   lw=STYLE[m].get('lw', 2.6), marker='o', ms=4, label=STYLE[m]['label']) for m in ORDER]
 fig.tight_layout()

@@ -63,7 +63,7 @@ for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     # centered-subtitle / corner-letter collision in these narrow 4-up panels
     ax.set_title(f'$\\bf{{({letter})}}$  {spec[3]}', loc='left', fontsize=12.8)
     ax.tick_params(labelsize=13)
-axes[0].set_ylabel('MAE on missing cells', fontsize=15)
+axes[0].set_ylabel(r'MAE$(\hat{y}, y)$ on missing cells', fontsize=15)
 meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=4, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
 n_h = [Line2D([0], [0], color='#444', ls='-', label=rf'$n{{=}}{N}$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]

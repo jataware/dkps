@@ -126,7 +126,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
         else:
             _plot_standard_panel(ax, df, x_col, xlabel)
         if idx % ncols == 0:
-            ax.set_ylabel('MAE vs. true score', fontsize=15.6)
+            ax.set_ylabel(r'MAE$(\hat{y}, y)$', fontsize=15.6)
         ax.set_xlabel(ax.get_xlabel(), fontsize=15.6)
         ax.tick_params(labelsize=13.1)
         # HELM figure conventions: bold corner letter as the left title; fixed
