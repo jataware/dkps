@@ -52,7 +52,6 @@ def _plot_standard_panel(ax, df, x_col, xlabel):
         _errbar(ax, curve[x_col], curve['mean'], curve['sem'],
                 ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
     ax.set_xlabel(xlabel)
-    ax.grid(alpha=0.25, lw=0.6)
 
 
 def _plot_rho(ax, df, xlabel):
@@ -65,7 +64,6 @@ def _plot_rho(ax, df, xlabel):
         _errbar(ax, curve['rho'], curve['mean'], curve['sem'],
                 ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
     ax.set_xlabel(xlabel)
-    ax.grid(alpha=0.25, lw=0.6)
 
 
 def _plot_query_efficiency(ax, df, xlabel):
@@ -86,7 +84,6 @@ def _plot_query_efficiency(ax, df, xlabel):
     ax.set_xscale('log', base=2)
     ax.text(0.97, 0.97, 'solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
             transform=ax.transAxes, ha='right', va='top', fontsize=9.8, color='#444')
-    ax.grid(alpha=0.25, lw=0.6)
 
 
 # Panel specs: (experiment, x_col, xlabel, custom_fn, fixed-parameter title)
@@ -126,12 +123,13 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
         else:
             _plot_standard_panel(ax, df, x_col, xlabel)
         if idx % ncols == 0:
-            ax.set_ylabel('score MAE', fontsize=17.5)
-        ax.set_xlabel(ax.get_xlabel(), fontsize=17.5)
-        ax.tick_params(labelsize=14.0)
-        # single left-aligned title (bold letter + fixed params): the 4-parameter
-        # subtitles are too wide to sit under a corner letter without colliding
-        ax.set_title(f'$\\bf{{({chr(97 + idx)})}}$  {fixed}', loc='left', fontsize=11.0)
+            ax.set_ylabel('MAE vs. true score', fontsize=15.6)
+        ax.set_xlabel(ax.get_xlabel(), fontsize=15.6)
+        ax.tick_params(labelsize=13.1)
+        # HELM figure conventions: bold corner letter as the left title; fixed
+        # parameters right-aligned so the long strings never collide with it
+        ax.set_title(f'({chr(97 + idx)})', loc='left', fontweight='bold', fontsize=16.2)
+        ax.set_title(fixed, loc='right', fontsize=13.8)
 
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
@@ -146,10 +144,24 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
                 max(ax.get_position().x1 for ax in flat))
     ytop = max(ax.get_tightbbox(r).transformed(inv).y1 for ax in flat)
     lg = fig.legend(handles=handles, loc='lower center', ncol=len(handles), frameon=False,
-                    bbox_to_anchor=(xc, ytop + 0.010), fontsize=16.8)
+                    bbox_to_anchor=(xc, ytop + 0.010), fontsize=13.8)
     fig.canvas.draw()
-    fig.suptitle('Synthetic study', fontsize=21.0, fontweight='bold',
+    fig.suptitle('Synthetic study', fontsize=17.5, fontweight='bold',
                  x=xc, y=lg.get_window_extent(r).transformed(inv).y1 + 0.012, va='bottom')
+    # shrink any params title that still collides with its corner letter
+    for ax in flat:
+        params = ax.get_title(loc='right')
+        if not params:
+            continue
+        size = 13.8
+        while size > 10.5:
+            fig.canvas.draw()
+            rr = fig.canvas.get_renderer()
+            if ax._left_title.get_window_extent(rr).x1 + 4 < \
+                    ax._right_title.get_window_extent(rr).x0:
+                break
+            size -= 0.7
+            ax.set_title(params, loc='right', fontsize=size)
     return fig
 
 
