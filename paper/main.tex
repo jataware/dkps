@@ -485,18 +485,20 @@ We consider $93$ models that have been evaluated on all four.
 As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce
 sparsity and unpairedness by subsampling each model's observed queries.
 
-The second suite is built from the Every Eval Ever datastore \citep{eee2026}, whose
-item-level results exhibit the sparsity that motivates this paper: the store covers
-$36$ benchmarks and $165$ models, only $15\%$ of (model, benchmark) pairs have been
-evaluated, and $59\%$ of model pairs share no benchmark at all.
+The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
+community-maintained collection of item-level evaluation results---queries, raw
+model responses, and per-item scores---covering $36$ benchmarks and $165$ models.
+The store exhibits the sparsity and unpairedness that motivate this paper.
+Only $15\%$ of (model, benchmark) pairs have been evaluated, and $59\%$ of model
+pairs share no benchmark at all.
 Within a benchmark, pairedness is bimodal: on $26$ of $33$ multi-model benchmarks,
 models answered essentially identical item sets (mean $\rho_{ii'}>0.99$), while the
 seven arena-style benchmarks are natively unpaired (mean $\rho_{ii'}$ between
 $0.27$ and $0.66$; on six, the median model pair shares no queries).
-So that true scores are available and sparsity and pairedness can be controlled in
-our evaluations, we consider a denser submatrix: $16$ tasks (MATH-MC levels $1$--$5$
-\citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k}, GPQA-Diamond
-\citep{rein2023gpqa}, and nine judging categories from JudgeBench
+We study a denser submatrix of the store so that true scores are available and
+sparsity and pairedness can be controlled in our evaluations: $16$ tasks (MATH-MC
+levels $1$--$5$ \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k},
+GPQA-Diamond \citep{rein2023gpqa}, and nine judging categories from JudgeBench
 \citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and the
 $45$ models that answered every item of every task ($42$--$1{,}319$ items per cell).
 We then fix each cell's observable pool to $32$ queries drawn with a model-dependent
