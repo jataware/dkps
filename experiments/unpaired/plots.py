@@ -147,7 +147,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
                 max(ax.get_position().x1 for ax in flat))
     ytop = max(ax.get_tightbbox(r).transformed(inv).y1 for ax in flat)
     lg = fig.legend(handles=handles, loc='lower center', ncol=len(handles), frameon=False,
-                    bbox_to_anchor=(xc, ytop + 0.010), fontsize=13.8)
+                    bbox_to_anchor=(xc, ytop + 0.010), fontsize=13.8, handlelength=3.2)
     fig.canvas.draw()
     fig.suptitle('Synthetic study', fontsize=17.5, fontweight='bold',
                  x=xc, y=lg.get_window_extent(r).transformed(inv).y1 + 0.012, va='bottom')
