@@ -522,8 +522,9 @@ observed scores are logit-transformed, standardized per task, and centered by a
 two-way (model $+$ task) additive bias, and the methods predict the residual.
 \PKPS and LRMC share this pre-processing exactly, so differences between them are
 attributable to how the residual is modeled.
-Every fit is leave-one-family-out: all models from the target's developer are
-excluded, so predictions never lean on near-duplicate siblings.
+Following \citet{dkps_qeff}, every fit is leave-one-family-out: all models from the
+target's developer are excluded, so predictions never lean on near-duplicate
+siblings.
 
 Depending on the task we include different baselines. Each produces an estimate of
 $y_{i}^{(t)}$:
