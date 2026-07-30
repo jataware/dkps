@@ -98,7 +98,7 @@ PANELS = [
     ('qe_task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$', None,
      r'$n{=}60,\ T{=}12,\ m{=}4,\ \rho{=}0$'),
     ('task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$ (completion)', None,
-     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}0.8$'),
+     r'$n{=}100,\ T{=}20,\ M{=}10,\ p_{\mathrm{query}}{=}0.8$'),
 ]
 
 
