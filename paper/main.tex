@@ -562,9 +562,10 @@ The panels vary (a) the query budget at paired and unpaired designs, (b) the
 pairwise query overlap, (c) the number of models, (d) the number of tasks, and (e)
 the task coverage; panel (f) studies score completion, where the targets are
 held-out cells and the score-only baseline is the task mean.
-\PKPS outperforms both DKPS and the sample score throughout: with a single query it
-matches the accuracy the sample score reaches at roughly five (a), whether or not
-the queries are paired.
+\PKPS outperforms DKPS everywhere and the sample score at small budgets: with a
+single query it matches the accuracy the sample score reaches at roughly five (a),
+whether or not the queries are paired, and the sample score overtakes both
+embeddings only at large budgets.
 Panel (b) is the empirical counterpart of the strict separation in
 Theorem~\ref{thm:qeff}: at $\rho=0$, DKPS is worse than the sample score, while a
 single shared query ($\rho=0.25$ at $M_{ij}=4$) restores it to \PKPS's level.
