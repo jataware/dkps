@@ -593,17 +593,18 @@ levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.
 
 \paragraph{\PKPS-based methods dominate across various settings.}
 Figure~\ref{fig:qe}a--c shows the MAE for \PKPS, DKPS, IRT, the sample score, and
-the ensemble on the HELM suite: each model answers its own independently sampled
-queries -- the real-data analogue of $\rho=0$ -- and we predict its true
+the ensemble on the HELM suite.
+Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
 At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
 sample score, so \PKPS with one query matches the sample score at four (a).
 As the budget grows, the sample score eventually overtakes the representations'
-residual bias, and the ensemble follows the better of its two components
+residual bias.
+The ensemble follows the better of its two components
 throughout (a).
 \PKPS improves steadily with the number of reference models
-($0.157\!\to\!0.124$, b) and with the task coverage ($0.154\!\to\!0.128$, c),
-while DKPS, which cannot use the additional unpaired responses, is flat.
+(b; $0.157\!\to\!0.124$) and with the task coverage (c; $0.154\!\to\!0.128$),
+while DKPS is flat.
 IRT is poorly identified without a shared item block and is worse than the sample
 score at every budget.
 
