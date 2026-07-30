@@ -355,7 +355,7 @@ the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
 predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
 score information, so the target model is embedded alongside the reference models.
-Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, chen2022mental}).
+Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, 10.3389/fnhum.2022.930291}).
 
 \citet{dkps_qeff} established that nearest neighbor regression using representations
 from the fully paired DKPS is query efficient relative to the sample score.
@@ -375,7 +375,7 @@ $\sigma\to0$ limit is exact
 matching. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
 such an example.
 We write \PKPS$_\sigma$ for the estimator with query kernel $k_{\sigma}$ and a
-$k$-nearest-neighbor head, under mean-type scores with uniformly subsampled cells
+$k$-nearest-neighbor regressor, under mean-type scores with uniformly subsampled cells
 (Assumption~\ref{ass:noise}, Appendix~\ref{app:proof}).
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
@@ -404,13 +404,6 @@ designs, so the $k$-neighbor average contributes at most $\sigma_q^2/(mk)$, whic
 vanishes when $k \to \infty$ as $n \to \infty$ with $k/n \to 0$.
 The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
-The separation is strict under a fully unpaired design ($\rho=0$).
-With no shared queries, every identity-matched comparison is an empty sum: a
-paired-DKPS prediction cannot depend on the target's responses, so its MSE is at
-least $\mathrm{Var}(y_{0})$ at every $(n,m)$.
-\PKPS$_\sigma$, in contrast, attains any $\epsilon>0$ with high probability at
-some $(n,m,k)$, with $m$ polynomial in $(1/\epsilon,1/\kappa,n)$
-(Appendix~\ref{app:proof}).
 We note that query-efficiency is transitive. Theorem~\ref{thm:qeff}, together with
 \citet{dkps_qeff}, implies that \PKPS$_\sigma$ is query-efficient relative to
 the sample score.
@@ -553,8 +546,7 @@ Panel (f) studies score completion, where the targets are held-out cells and the
 score-only baseline is the task mean.
 
 \PKPS outperforms DKPS everywhere and the sample score at small query budgets (a).
-Panel (b) is the empirical counterpart of the strict separation in
-Theorem~\ref{thm:qeff}.
+Panel (b) is the empirical counterpart of Theorem~\ref{thm:qeff}.
 At $\rho=0$, DKPS is worse than the sample score, while a
 single shared query ($\rho=0.25$ at $m=4$) restores it to \PKPS's level.
 \PKPS itself is flat in $\rho$ as it is unaffected by the sampled overlap since it
@@ -655,7 +647,7 @@ The ensemble is the best or tied in every column.
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
 the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
-Ablations of the regression head, the response kernel, the ensemble weighting rule, and
+Ablations of the regressor, the response kernel, the ensemble weighting rule, and
 the incidental query overlap in the EEE pools are in Appendix~\ref{app:abl}.
 Our observations are generally robust across these choices.
 
@@ -787,13 +779,13 @@ classical MDS with $d{=}8$ throughout, following \citet{dkps_qeff} and fixed a p
 insensitive to $d$ over $4$--$24$, and that the cross-validated bandwidth tracks the best
 fixed choice.
 
-\paragraph{Prediction head.} All embedding methods share one head: logit-transformed
+\paragraph{Regressor.} All embedding methods share one regressor pipeline: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
 bias, and a distance-weighted $k$-NN ($k{=}5$) regression of the residual on the model
 embedding, fit \emph{leave-one-family-out}: all models from the target's developer are
 excluded from its training set, so predictions never lean on near-duplicate siblings
 \citep{dkps_qeff}. Held-out cells are predicted directly; observed cells leave their own
-target out. The head is identical to the LRMC baseline's, so the two methods differ
+target out. The pipeline is identical to the LRMC baseline's, so the two methods differ
 only in how the residual is modeled ($k$-NN on the perspective versus a low-rank
 factorization) and performance differences are attributable to the representation.
 Matching the per-task standardization is important: without it, the model offset is
@@ -998,7 +990,7 @@ $m{=}8$; on EEE from $0.084$ to $0.073$ and from $0.052$ to $0.049$. The $m/M$ s
 trails both on HELM ($0.096$ at $m{=}8$) and is close to the cross-validated weight on
 EEE, where the small pools ($M{=}32$) let $m/M$ reach $1$.
 
-\paragraph{Regression head.} Replacing the distance-weighted $k$-NN head with ordinary
+\paragraph{Regressor.} Replacing the distance-weighted $k$-NN regressor with ordinary
 least squares helps slightly on HELM ($0.132$ vs.\ $0.136$ at $m{=}1$; $0.080$ vs.\
 $0.085$ at $m{=}32$), consistent with \citet{dkps_qeff}, but hurts on EEE, increasingly
 so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $k$-NN as the robust
@@ -1209,7 +1201,7 @@ where its distance is undefined (Section~\ref{sec:method}).
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}: domination and strict separation.} Existence of a dominating bandwidth is
 witnessed by the exact-matching member: the $k_Q=\delta$ estimator coincides with
-paired DKPS on the shared queries with the same regression head
+paired DKPS on the shared queries with the same regressor
 (Section~\ref{sec:method}), so
 $\sigma=\delta$ attains $\mathrm{MSE}(\PKPS_\sigma)=\mathrm{MSE}(\mathrm{DKPS})$ at
 every $(n,m)$, and any bandwidth improving on exact matching witnesses strict
@@ -1232,7 +1224,7 @@ L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(\delta)+\tau
 \;\le\;L(\delta)+2\tau\;=\;\mathrm{MSE}(\mathrm{DKPS})+2\tau,
 \]
 since the $k_Q=\delta$ member of the family coincides with paired DKPS on the shared
-queries with the same regression head. Taking $n_v$ large enough that
+queries with the same regressor. Taking $n_v$ large enough that
 $2\tau\le\epsilon$ transfers the domination guarantee to the cross-validated
 estimator at every $(m,\rho)$. If some
 $\sigma^\star$ has $\Delta=L(\delta)-L(\sigma^\star)>0$, the same event gives
