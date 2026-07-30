@@ -560,6 +560,10 @@ various regimes: (a) varying the number of models, (b) varying the number of tas
 (c) varying the task coverage, (d) varying the number of observed queries per task,
 (e) varying the pairwise query overlap, and (f) varying the number of total queries
 per task.
+Panels (a--e) study score completion: the targets are held-out cells, predicted from
+the models' responses elsewhere.
+Panel (f) studies query-efficient evaluation: the target cell is observed and we
+predict its true score.
 \PKPS outperforms DKPS in every setting, and both outperform the score-only
 baseline (the task mean of observed scores in (a--e), the sample score in (f)).
 The margin over DKPS is wide even when the data is mostly paired but sparse (a--c).
