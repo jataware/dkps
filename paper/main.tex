@@ -485,16 +485,22 @@ We consider $93$ models that have been evaluated on all four.
 As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce
 sparsity and unpairedness by subsampling each model's observed queries.
 
-The second suite consists of $16$ tasks (MATH-MC levels $1$--$5$
+The second suite is built from the Every Eval Ever datastore \citep{eee2026}, whose
+item-level results exhibit the sparsity that motivates this paper: the store covers
+$36$ benchmarks and $165$ models, only $15\%$ of (model, benchmark) pairs have been
+evaluated, and $59\%$ of model pairs share no benchmark at all.
+So that true scores are available and sparsity and pairedness can be controlled in
+our evaluations, we consider a denser submatrix: $16$ tasks (MATH-MC levels $1$--$5$
 \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k}, GPQA-Diamond
 \citep{rein2023gpqa}, and nine judging categories from JudgeBench
-\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and $45$
-models from the Every Eval Ever datastore \citep{eee2026}.
-Every cell is observed with a pool of $32$ queries drawn independently per model
-from the task's items, so cross-model overlap is incidental rather than designed:
-the median $\rho_{ii'}^{(t)}$ is $0.09$ (mean $0.18$), $15\%$ of model pairs share
-no query on a given task, and overlap exceeds $0.5$ only on the two smallest tasks,
-where two $32$-query subsets necessarily intersect.
+\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and the
+$45$ models that answered every item of every task ($42$--$1{,}319$ items per cell).
+We then fix each cell's observable pool to $32$ queries drawn with a model-dependent
+seed, keeping the full-depth mean as the never-embedded prediction target.
+Cross-model overlap in the pools is incidental rather than designed: the median
+$\rho_{ii'}^{(t)}$ is $0.09$ (mean $0.18$), $15\%$ of model pairs share no query on
+a given task, and overlap exceeds $0.5$ only on the two smallest tasks, where two
+$32$-query subsets necessarily intersect.
 
 Both suites were chosen because they include item-level responses -- most large
 benchmark leaderboards only include overall or subtask scores.
@@ -812,9 +818,13 @@ hours (HELM) on the same node.
 
 The second suite is built from the Every Eval Ever datastore \citep{eee2026}, an
 MIT-licensed, community-maintained collection of item-level evaluation results in a
-unified format (inputs, raw model outputs, and per-item scores). We take the five benchmarks with the
+unified format (inputs, raw model outputs, and per-item scores). The full store
+covers $36$ benchmarks and $165$ models with only $15\%$ of (model, benchmark)
+pairs evaluated (median $5$ benchmarks per model), and $59\%$ of model pairs share
+no benchmark. We take the five benchmarks with the
 widest item-level model coverage---MATH-MC, GSM-MC, GPQA-Diamond, JudgeBench, and
-RewardBench~2---restricted to the $45$ models present on all five; sub-tasks (MATH-MC
+RewardBench~2---restricted to the $45$ models present on all five, for which every
+model answered every item; sub-tasks (MATH-MC
 levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks
 (Table~\ref{tab:eeesuite}). Every domain is free text (including the
 judging benchmarks' rationales), so all responses and queries are embedded with
