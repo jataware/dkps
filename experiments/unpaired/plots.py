@@ -24,6 +24,8 @@ import pandas as pd
 # (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
 ESTIMATOR_COLORS = {'sample': '#9ca3af', 'dkps': '#93aacc', 'pkps': '#3596ff'}
 ESTIMATOR_LABELS = {'sample': 'Sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
+# HELM figure convention: score-only methods dashed, embedding methods solid
+ESTIMATOR_LS = {'sample': '--', 'dkps': '-', 'pkps': '-'}
 ESTIMATOR_ORDER = ['sample', 'dkps', 'pkps']
 
 
@@ -50,7 +52,7 @@ def _plot_standard_panel(ax, df, x_col, xlabel):
             continue
         curve = summary[summary['estimator'] == est].sort_values(x_col)
         _errbar(ax, curve[x_col], curve['mean'], curve['sem'],
-                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
+                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est], ls=ESTIMATOR_LS[est])
     ax.set_xlabel(xlabel)
 
 
@@ -62,7 +64,7 @@ def _plot_rho(ax, df, xlabel):
             continue
         curve = summary[summary['estimator'] == est].sort_values('rho')
         _errbar(ax, curve['rho'], curve['mean'], curve['sem'],
-                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
+                ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est], ls=ESTIMATOR_LS[est])
     ax.set_xlabel(xlabel)
 
 
@@ -73,7 +75,8 @@ def _plot_query_efficiency(ax, df, xlabel):
     ls_map = {min(rhos): '--', max(rhos): '-'}      # dashed = unpaired, solid = paired
     # sample score is rho-independent (it ignores queries): a single reference line
     s = _aggregate(df[df['estimator'] == 'sample'], ['budget'], 'mae').sort_values('budget')
-    _errbar(ax, s['budget'], s['mean'], s['sem'], ESTIMATOR_COLORS['sample'], None, '-')
+    _errbar(ax, s['budget'], s['mean'], s['sem'], ESTIMATOR_COLORS['sample'], None,
+            ESTIMATOR_LS['sample'])
     summary = _aggregate(df, ['budget', 'rho', 'estimator'], 'mae')
     for est in ('dkps', 'pkps'):
         for rho in rhos:
@@ -82,7 +85,7 @@ def _plot_query_efficiency(ax, df, xlabel):
                     ESTIMATOR_COLORS[est], None, ls_map.get(rho, '-'))
     ax.set_xlabel(xlabel)
     ax.set_xscale('log', base=2)
-    ax.text(0.97, 0.97, 'solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
+    ax.text(0.97, 0.97, 'DKPS/PKPS solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
             transform=ax.transAxes, ha='right', va='top', fontsize=9.8, color='#444')
 
 
@@ -133,7 +136,7 @@ def plot_figure(results, nrows=2, ncols=3, figsize=(11.5, 4.9)):
 
     axes[0][0].set_ylim(top=2.5)  # shared y; cap so panel (f)'s high-noise tail doesn't stretch all panels
     handles = [Line2D([0], [0], color=ESTIMATOR_COLORS[e], marker='o', lw=2.6,
-                      label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
+                      ls=ESTIMATOR_LS[e], label=ESTIMATOR_LABELS[e]) for e in ESTIMATOR_ORDER]
     fig.tight_layout()
     # legend flush above the top row's panel titles, suptitle flush above the legend,
     # both centred on the panel span (canvas centre is skewed left by the shared ylabel)
