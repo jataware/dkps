@@ -619,21 +619,29 @@ zero as the budget grows.
 The mean gain is positive at every cohort size (f) and every coverage (g).
 
 \paragraph{The same representations complete missing cells.}
-Figure~\ref{fig:completion}a--d shows MAE on missing cells when a fraction
-$p_{\mathrm{task}}$ of cells is observed, each at depth $p_{\mathrm{query}}$.
-The sample score does not exist for a missing cell, so the comparison is against LRMC.
-LRMC requires many rows to estimate its factors and degrades when models are scarce: at
-$n{=}10$ its MAE is $0.139$ versus $0.120$ for \PKPS (Figure~\ref{fig:completion},
-dashed).
-At the full cohort ($n{=}93$, solid), \PKPS slightly edges LRMC ($0.103$ vs.\ $0.105$)
-and the ensemble performs best ($0.099$).
+Figure~\ref{fig:completion}a--d shows the MAE for LRMC, \PKPS, and the ensemble on
+missing cells when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed
+at query depth $p_{\mathrm{query}}$, at cohort sizes $n{=}93$ (solid) and $n{=}10$
+(dashed).
+No responses from a missing cell exist, so the sample score is unavailable and the
+score-only baseline is LRMC.
+The ensemble matches or outperforms LRMC at every operating point, and the margin is
+largest when observations are scarce: at the small cohort it is more accurate at
+every task coverage (a), query depth (b), and number of tasks (c)
+($0.120$ versus $0.139$ at the central operating point).
+LRMC requires many models to estimate its factors: with $n{=}10$, additional tasks
+do not close the gap (c), and the cohort sweep (d) shows the ensemble is accurate
+from $n{=}20$ while LRMC approaches it only near the full cohort.
+At the full cohort the methods converge and the ensemble performs best
+($0.099$ versus $0.105$).
 
-\paragraph{The completion gains are modest but consistent.}
-Figure~\ref{fig:completion}e--h shows the per-missing-cell difference between LRMC's
-and the ensemble's absolute errors, by dataset, cohort, coverage, and query depth.
-The win is smaller than in the query-efficiency task but stays positive in the mean
-across every lever: the response channel adds information wherever the score matrix
-alone is rank-deficient, and never subtracts it.
+\paragraph{The completion gains are modest but hold cell-by-cell.}
+Figure~\ref{fig:completion}e--h shows the distribution of the per-missing-cell
+difference between LRMC's and the ensemble's absolute errors, by dataset (e),
+cohort (f), coverage (g), and query depth (h).
+The win is smaller than in the query-efficiency task but the mean gain is positive
+in every row: the responses add information wherever the score matrix alone is
+rank-deficient, and never subtract it.
 
 \paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
 The second suite shows the same qualitative behavior with a larger completion margin
