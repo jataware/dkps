@@ -557,26 +557,27 @@ the per-row mean.}
 \paragraph{\PKPS is query-efficient on every synthetic observation lever.}
 Figure~\ref{fig:synthetic} shows MAE for \PKPS, DKPS, and the sample score under
 the query-efficient evaluation protocol: every observed cell carries a budget of
-$M_{ij}$ queries and we predict its true score.
+$M_{ij}$ queries and we predict its true score, at a fully unpaired design
+($\rho=0$) except where $\rho$ is swept.
 The panels vary (a) the query budget, (b) the pairwise query overlap, (c) the
 number of models, (d) the number of tasks, and (e) the task coverage; panel (f)
 studies score completion, where the targets are held-out cells and the score-only
 baseline is the task mean.
-\PKPS outperforms DKPS everywhere and the sample score at small budgets: with a
-single query it matches the accuracy the sample score reaches at roughly five (a),
-and the sample score overtakes both embeddings only at large budgets.
+\PKPS outperforms DKPS in every panel and the sample score at small budgets: with
+one query it matches the accuracy the sample score reaches at roughly five (a).
+The sample score overtakes both representation-based methods only at large budgets.
 Panel (b) is the empirical counterpart of the strict separation in
-Theorem~\ref{thm:qeff}: at $\rho=0$, DKPS is worse than the sample score, while a
+Theorem~\ref{thm:qeff}: at $\rho=0$, DKPS is worse than the sample score, and a
 single shared query ($\rho=0.25$ at $M_{ij}=4$) restores it to \PKPS's level.
-\PKPS itself is flat in $\rho$: it is unaffected by the sampled overlap since it
-only requires distributional overlap (Assumption~\ref{ass:overlap}).
-Under unpaired designs, \PKPS converts reference models into accuracy while DKPS
-cannot: as $n$ grows (c), \PKPS improves monotonically and overtakes the sample
-score by $n=20$, while DKPS stays worse than the sample score at every $n$.
+\PKPS itself is flat in $\rho$: it depends on distributional overlap
+(Assumption~\ref{ass:overlap}), not on sampled overlap.
+\PKPS converts reference models into accuracy while unpaired DKPS cannot: as $n$
+grows (c), \PKPS improves monotonically and overtakes the sample score by $n=20$,
+while DKPS stays worse than the sample score at every $n$.
 Task coverage behaves the same way (e), and the number of tasks matters little for
 either method (d).
 In the completion panel (f), \PKPS outperforms DKPS when observed cells are scarce
-and they are matched for moderate to large coverage.
+and they are matched at moderate to large coverage.
 
 \begin{figure}[t]
 \centering
