@@ -116,7 +116,7 @@ matrix completion error by up to 28\%. Our empirical evaluation spans 2 large be
 \centering
 \caption{MAE of benchmark prediction methods on both suites and tasks (best per column
 bolded, with ties both bolded; second best underlined; setup described in
-Section~\ref{sec:setup}):
+Section~\ref{sec:experiments}):
 query-efficiency at budgets $m\in\{1,8\}$ queries per cell at full task coverage, and
 completion of missing cells at cohort sizes $n\in\{10,\max\}$ with task coverage
 $p_{\mathrm{task}}$ and query depth $p_{\mathrm{query}}$ fixed at $0.5$, except for the
@@ -431,7 +431,7 @@ relative to the sample score whenever $\epsilon<\sigma_q^2/m$, at every pairing
 fraction.
 \end{corollary}
 In practice, the bandwidth is selected by cross-validation over a finite grid
-containing the exact-matching limit (Section~\ref{sec:setup},
+containing the exact-matching limit (Section~\ref{sec:experiments},
 Appendix~\ref{app:proof}).
 Empirically, a bandwidth that bridges similar queries improves on exact matching at
 every $\rho<1$ (Figure~\ref{fig:synthetic}e).
@@ -462,93 +462,71 @@ when paired.}
 
 \section{Experiments}
 \label{sec:experiments}
-We evaluate \PKPS on synthetic data, where every lever of the observation process can be
-swept, and on two heterogeneous benchmark suites. Throughout, the two regimes of
-Section~\ref{sec:setting} structure the experiments: query-efficient
-evaluation ($m_i^{(t)}>0$) and score completion ($m_i^{(t)}=0$).
+We evaluate \PKPS on synthetic data and on two large benchmark suites.
 
-\subsection{Evaluation setup}
-\label{sec:setup}
+\paragraph{Synthetic data.} We generate $n$ models with latent ability vectors
+$v_i \in \mathbb{R}^{5}$ and $T$ tasks with latent vectors $t_k \in \mathbb{R}^{5}$,
+scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center ($u_j = t_k +
+\eta_j$ with isotropic noise $\eta_j$; a model's embedded response to $u_j$ is
+centered at $u_j + v_i$).
+Each model answers $M_{ij}$ queries per task. We control unpairedness via
+$\rho=m_{ii'}/M_{ij}$ and sparsity via a probability of observing a task
+$p_{\mathrm{task}}$ and, conditioned on observing a task, a probability of answering
+a query $p_{\mathrm{query}}$.
 
-\paragraph{Synthetic data.} We generate $n$ models with latent ability vectors $v_i$ and
-$T$ tasks with latent vectors $t_k$.
-Scores are $v_i\cdot t_k+\epsilon$ and queries are drawn near each task center.
-Each model answers $M_{ij}$ queries per task, of which $m_{ii'}$ are shared with another
-model (overlap $\rho=m_{ii'}/M_{ij}$).
-A task is observed with probability $p_{\mathrm{task}}$ and a query with probability
-$p_{\mathrm{query}}$.
+\paragraph{Benchmark suites.}
+We consider two large benchmark suites.
+The first consists of $18$ tasks from HELM-Lite \citep{helm}. The tasks have very
+different response types -- MATH (\citealp{hendrycks2021math}, $7$ math subjects),
+WMT-14 (\citealp{bojar2014wmt}, $5$ translation directions), MedQA
+(\citealp{jin2021medqa}, medical multiple-choice), and LegalBench
+(\citealp{guha2023legalbench}, $5$ legal classification subsets).
+We consider $93$ models that have been evaluated on all four.
+As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce
+sparsity and unpairedness by subsampling each model's observed queries.
 
-\paragraph{Benchmark suites.} The first suite is $18$ tasks across four HELM
-datasets---MATH ($7$ math subjects), WMT-14 ($5$ translation directions), MedQA (medical
-multiple-choice), and LegalBench ($5$ legal classification subsets)---on the $93$ models
-evaluated on all four.
-The response types differ by dataset: MATH and WMT-14 responses are rich free text,
-while MedQA and LegalBench responses are single tokens for which text embeddings are
-degenerate.
-We therefore encode each dataset's responses natively (Gemini embeddings or one-hot
-answers) in disjoint blocks.
-With a linear $k_R$, cross-dataset response similarity is exactly zero, and a single
-shared query embedding with a within-domain bandwidth keeps $k_Q$ near zero across
-datasets, so the product kernel factorizes by dataset.
-The second suite is $45$ modern models on $16$ tasks from the Every Eval Ever datastore
-\citep{eee2026}: MATH-MC levels $1$--$5$, GSM-MC, GPQA-Diamond, and nine judging
-categories from JudgeBench and RewardBench~2.
-Each cell's query pool is drawn independently per model with ${\sim}10\%$ incidental
-overlap, so the suite is unpaired by construction (Appendix~\ref{app:eee}).
+The second suite consists of $16$ tasks (MATH-MC levels $1$--$5$
+\citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k}, GPQA-Diamond
+\citep{rein2023gpqa}, and nine judging categories from JudgeBench
+\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and $45$
+models from the Every Eval Ever datastore \citep{eee2026}.
+Every model is evaluated on every task, but each cell's query pool is drawn
+independently per model with ${\sim}10\%$ incidental overlap
+($\rho_{ii'}\approx0.1$): the suite is unpaired by construction.
 
-\paragraph{Prediction methods.} We compare six predictors. The \emph{sample score} is a
-cell's own $m$-query average. \emph{IRT} fits a one-parameter logistic model on the
-largest shared item block \citep{polo2024tinybenchmarks}. \emph{Low-rank matrix
-completion} (LRMC) is the logit-space imputation of \citet{benchpress} (missing cells only). \emph{DKPS}
-and \emph{\PKPS} regress scores on the model representations of Section~\ref{sec:method},
-with DKPS the identity-query-kernel limit.
-The \emph{ensemble} combines \PKPS with whichever score signal a cell has (described
-below).
+Both suites were chosen because they include item-level responses -- most large
+benchmark leaderboards only include overall or subtask scores.
+Details describing the HELM and EEE data such as the included models, included
+tasks, the number of queries per task, etc.\ are provided in
+Appendices~\ref{app:details} and~\ref{app:eee}.
 
-\paragraph{\PKPS implementation and ensembling.} The optimal $\sigma$
-depends on the degree of pairing in the data. We choose it per run by cross-validation
-over a median-scaled grid $\sigma\in\{0.03,\dots,3\}\cdot\mathrm{med}$, selecting the
-$\sigma$ whose perspective best predicts the \emph{observed} scores under
-leave-one-model-out $k$-NN.
-We note that the selection criterion uses only observed scores and never the held-out
-scores we report.
-Because the grid includes near-zero bandwidths,
-cross-validation recovers paired DKPS when query overlap is high.
+\paragraph{Methods and baselines.} We evaluate \PKPS on both query-efficiency and
+(model, task) score prediction.
+Unless otherwise stated we embed all responses and queries into a $3072$-dimensional
+space via \texttt{gemini-embedding-001} \citep{lee2025gemini}, apply PCA on the
+collection of embedded queries and embedded responses, and use an RBF kernel on the
+reduced query space and a linear kernel on the reduced response space.
+Given the \PKPS pairwise distance matrix, we embed the models in a $d = 8$ space and
+use $k$-nearest neighbor regression with $k = 5$.
 
-For each
-replicate we (i) PCA-reduce response and query embeddings on the \emph{observed} rows
-only (dimension by the second Zhu--Ghodsi elbow); (ii) form $D$ from Eq.~\eqref{eq:A};
-(iii) embed models by classical MDS; (iv) regress scores on the representations, fit
-leave-one-family-out.
-The score head---logit transform, per-task standardization, two-way (model $+$ task)
-bias---is identical to that of the LRMC baseline.
-The two methods differ only in how the residual is modeled ($k$-NN on the perspective
-versus a low-rank factorization), so performance differences are attributable to the
-representation.
-Matching the per-task standardization is important: without it, the model offset is
-dominated by the tasks with the largest logit variance.
-
-The ensemble combines the \PKPS estimate with whichever score signal is available for
-a cell.
-On an \emph{observed} cell, the score signal is the cell's own sample score and the
-blend weight is a scalar fit by the same leave-one-family-out cross-validation as the
-regressor, against the reference models' cached full scores.
-The fitted weight grows with the budget, so the sample score dominates as queries
-accumulate.
-On a \emph{missing} cell, the score signal is LRMC and the blend weight is
-cross-validated on observed scores.
-No weight uses the scores of the family being predicted.
-A closed-form inverse-variance weighting performs slightly worse at every budget
-(Appendix~\ref{app:abl}).
-
-
-\paragraph{Measurement.} Every experiment predicts held-out or true cell scores and
-reports MAE against the full-evaluation score, mean $\pm1$ SEM over $16$ seeds ($50$ on
-synthetic data).
-Sweeps vary one observation lever at a time, holding the others fixed (grids in
-Appendix~\ref{app:details}).
-All hyperparameters, including the query bandwidth, are chosen per run by the leak-free
-cross-validation described above.
+Depending on the task we include different baselines. Each produces an estimate of
+$y_{i}^{(t)}$:
+\begin{enumerate}[wide, labelwidth=1pt, labelindent=12pt]
+    \item \emph{Query-efficiency}. We compare \PKPS to the sample score (i.e.,
+    $\tilde{y}_{i}^{(t)}$), paired DKPS \citep{dkps_qeff}, Item Response Theory
+    (``IRT'', \citealp{rasch1960, polo2024tinybenchmarks}) and a convex combination
+    of \PKPS and sample score (i.e.,
+    $\alpha\,\tilde{y}_{i}^{(t)}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
+    \item \emph{Score completion.} We compare \PKPS to Low-Rank Matrix Completion
+    (``LRMC'', \citealp{benchpress}) and a convex combination of \PKPS and LRMC
+    (i.e., $\alpha\,\hat{y}^{(t)}_{i,\mathrm{LRMC}}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
+\end{enumerate}
+Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
+selected via leave-one-out cross validation on the observed data.
+We report average mean absolute error (MAE) of the predicted score versus the true
+score for every setting over $16$ seeds ($50$ on synthetic data).
+Additional experimental details, such as the sweep grids, PCA dimensions, and
+cross-validation protocols, are provided in Appendix~\ref{app:details}.
 
 \begin{figure}[t]
 \centering
@@ -684,7 +662,7 @@ All methods are released as a documented Python package (the \PKPS estimator, ma
 completion, and IRT baselines), with the data-preparation, experiment, and figure scripts
 for both the synthetic study and the HELM suite; every experiment is seeded, all real-data
 numbers are means over $16$ seeds (synthetic: $50$), and hyperparameters are selected by the
-leak-free cross-validation described in Section~\ref{sec:setup} (leakage is checked by an
+leak-free cross-validation described in Section~\ref{sec:experiments} (leakage is checked by an
 automated test that corrupts one model's held-out scores and verifies its predictions are
 unchanged). Appendix~\ref{app:details} lists the suite composition, embedding models, and
 all hyperparameter settings.
@@ -703,7 +681,10 @@ query count (the loader subsamples each task to at most $120$ queries with a fix
 datasets contribute comparably). MATH and WMT-14 responses are free text and are embedded
 with \texttt{gemini-embedding-001} ($3072$-d); MedQA and LegalBench responses are
 single-token answers, encoded one-hot. Queries share a single \texttt{gemini-embedding-001}
-embedding space. Response and query embeddings are reduced by PCA fit on observed rows
+embedding space. Each dataset's responses occupy a disjoint block: with a linear
+$k_R$, cross-dataset response similarity is exactly zero, and a within-domain query
+bandwidth keeps $k_Q$ near zero across datasets, so the product kernel factorizes by
+dataset. Response and query embeddings are reduced by PCA fit on observed rows
 only, with dimension chosen by the second Zhu--Ghodsi elbow.
 
 \begin{table}[h]
@@ -781,7 +762,11 @@ bias, and a distance-weighted $k$-NN ($k{=}5$) regression of the residual on the
 embedding, fit \emph{leave-one-family-out}: all models from the target's developer are
 excluded from its training set, so predictions never lean on near-duplicate siblings
 \citep{dkps_qeff}. Held-out cells are predicted directly; observed cells leave their own
-target out.
+target out. The head is identical to the LRMC baseline's, so the two methods differ
+only in how the residual is modeled ($k$-NN on the perspective versus a low-rank
+factorization) and performance differences are attributable to the representation.
+Matching the per-task standardization is important: without it, the model offset is
+dominated by the tasks with the largest logit variance.
 
 \paragraph{Baselines.} Low-rank matrix completion (LRMC) follows BenchPress \citep{benchpress}: logit
 space, per-task standardization, two-way bias, rank-$2$ ALS with ridge $\lambda{=}0.1$,
@@ -962,8 +947,8 @@ default across suites.
 
 \paragraph{Response kernel.} An RBF response kernel in place of the linear one changes
 \PKPS's MAE by at most $0.003$ at every budget on both suites; the linear choice is
-justified by the block-diagonal factorization (Section~\ref{sec:setup}) at no accuracy
-cost.
+justified by the block-diagonal factorization (Appendix~\ref{app:details}) at no
+accuracy cost.
 
 \paragraph{Incidental overlap.} The EEE pools share ${\sim}10\%$ of items across
 models by chance. Enforcing exactly disjoint query sets (true $\rho=0$) changes \PKPS
@@ -1204,6 +1189,6 @@ Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
 supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
-validation and a joint embedding (Section~\ref{sec:setup}); the split protocol is
+validation and a joint embedding (Section~\ref{sec:experiments}); the split protocol is
 analyzed for independence of the validation losses. \hfill$\qed$
 \end{document}

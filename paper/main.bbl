@@ -1,4 +1,4 @@
-\begin{thebibliography}{36}
+\begin{thebibliography}{44}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -24,6 +24,15 @@ Axel Backlund and Lukas Petersson.
 \newblock Vending-bench: A benchmark for long-term coherence of autonomous
   agents.
 \newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
+
+\bibitem[Bojar et~al.(2014)Bojar, Buck, Federmann, Haddow, Koehn, Leveling,
+  Monz, Pecina, Post, Saint-Amand, Soricut, Specia, and Tamchyna]{bojar2014wmt}
+Ond{\v{r}}ej Bojar, Christian Buck, Christian Federmann, Barry Haddow, Philipp
+  Koehn, Johannes Leveling, Christof Monz, Pavel Pecina, Matt Post, Herve
+  Saint-Amand, Radu Soricut, Lucia Specia, and Ale{\v{s}} Tamchyna.
+\newblock Findings of the 2014 workshop on statistical machine translation.
+\newblock In \emph{Proceedings of the Ninth Workshop on Statistical Machine
+  Translation}, 2014.
 
 \bibitem[Bowyer et~al.(2026)Bowyer, Locatelli, and Cao]{bowyer2026efficient}
 Sam Bowyer, Acyr Locatelli, and Kris Cao.
@@ -62,6 +71,14 @@ Fran\c{c}ois Chollet, Mike Knoop, Gregory Kamradt, Bryan Landers, and Henry
   Pinkard.
 \newblock {ARC-AGI-2}: A new challenge for frontier {AI} reasoning systems.
 \newblock \emph{arXiv preprint arXiv:2505.11831}, 2025.
+
+\bibitem[Cobbe et~al.(2021)Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser,
+  Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman]{cobbe2021gsm8k}
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz
+  Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano,
+  Christopher Hesse, and John Schulman.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
 
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
@@ -145,6 +162,19 @@ Pranab Islam, Anand Kannappan, Douwe Kiela, Rebecca Qian, Nino Scherrer, and
 \newblock Financebench: A new benchmark for financial question answering.
 \newblock \emph{arXiv preprint arXiv:2311.11944}, 2023.
 
+\bibitem[Jin et~al.(2021)Jin, Pan, Oufattole, Weng, Fang, and
+  Szolovits]{jin2021medqa}
+Di~Jin, Eileen Pan, Nassim Oufattole, Wei-Hung Weng, Hanyi Fang, and Peter
+  Szolovits.
+\newblock What disease does this patient have? a large-scale open domain
+  question answering dataset from medical exams.
+\newblock \emph{Applied Sciences}, 11\penalty0 (14), 2021.
+
+\bibitem[Lee et~al.(2025)Lee, Dai, Duddu, and et~al.]{lee2025gemini}
+Jinhyuk Lee, Zhuyun Dai, Sai Meher~Karthik Duddu, and et~al.
+\newblock Gemini embedding: Generalizable embeddings from {Gemini}.
+\newblock \emph{arXiv preprint arXiv:2503.07891}, 2025.
+
 \bibitem[Li et~al.(2024)Li, Ma, Ballesteros, Benajiba, and
   Horwood]{li2024active}
 Yang Li, Jie Ma, Miguel Ballesteros, Yassine Benajiba, and Graham Horwood.
@@ -178,6 +208,13 @@ Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu~Gu,
 \newblock {AgentBench}: Evaluating {LLM}s as agents.
 \newblock In \emph{International Conference on Learning Representations}, 2024.
 
+\bibitem[Malik et~al.(2025)Malik, Pyatkin, Land, Morrison, Smith, Hajishirzi,
+  and Lambert]{malik2025rewardbench2}
+Saumya Malik, Valentina Pyatkin, Sander Land, Jacob Morrison, Noah~A. Smith,
+  Hannaneh Hajishirzi, and Nathan Lambert.
+\newblock {RewardBench} 2: Advancing reward model evaluation.
+\newblock \emph{arXiv preprint arXiv:2506.01937}, 2025.
+
 \bibitem[Perlitz et~al.(2024)Perlitz, Bandel, Gera, Arviv, Ein-Dor, Shnarch,
   Slonim, Shmueli-Scheuer, and Choshen]{perlitz2024efficient}
 Yotam Perlitz, Elron Bandel, Ariel Gera, Ofir Arviv, Liat Ein-Dor, Eyal
@@ -193,6 +230,19 @@ Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
 \newblock {tinyBenchmarks}: Evaluating {LLM}s with fewer examples.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
 
+\bibitem[Rasch(1960)]{rasch1960}
+Georg Rasch.
+\newblock \emph{Probabilistic Models for Some Intelligence and Attainment
+  Tests}.
+\newblock Danish Institute for Educational Research, 1960.
+
+\bibitem[Rein et~al.(2024)Rein, Hou, Stickland, Petty, Pang, Dirani, Michael,
+  and Bowman]{rein2023gpqa}
+David Rein, Betty~Li Hou, Asa~Cooper Stickland, Jackson Petty, Richard~Yuanzhe
+  Pang, Julien Dirani, Julian Michael, and Samuel~R. Bowman.
+\newblock {GPQA}: A graduate-level google-proof {Q\&A} benchmark.
+\newblock In \emph{First Conference on Language Modeling}, 2024.
+
 \bibitem[Ruan et~al.(2024)Ruan, Maddison, and Hashimoto]{ruan2024observational}
 Yangjun Ruan, Chris~J. Maddison, and Tatsunori Hashimoto.
 \newblock Observational scaling laws and the predictability of language model
@@ -205,6 +255,13 @@ Aarohi Srivastava, Abhinav Rastogi, Abhishek Rao, et~al.
 \newblock Beyond the imitation game: Quantifying and extrapolating the
   capabilities of language models.
 \newblock \emph{Transactions on Machine Learning Research}, 2023.
+
+\bibitem[Tan et~al.(2025)Tan, Zhuang, Montgomery, Tang, Cuadron, Wang, Popa,
+  and Stoica]{tan2024judgebench}
+Sijun Tan, Siyuan Zhuang, Kyle Montgomery, William~Y. Tang, Alejandro Cuadron,
+  Chenguang Wang, Raluca~Ada Popa, and Ion Stoica.
+\newblock {JudgeBench}: A benchmark for evaluating {LLM}-based judges.
+\newblock In \emph{International Conference on Learning Representations}, 2025.
 
 \bibitem[Trosset and Priebe(2008)]{trosset2008out}
 Michael~W. Trosset and Carey~E. Priebe.
