@@ -532,7 +532,9 @@ $y_{i}^{(t)}$:
 Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
 selected via leave-one-out cross validation on the observed data.
 We report average mean absolute error (MAE) of the predicted score versus the true
-score for every setting over $16$ seeds ($50$ on synthetic data).
+score for every setting over $16$ seeds ($50$ on synthetic data), and assess paired
+differences between methods with two-sided Wilcoxon signed-rank tests over the
+per-seed suite means.
 Additional experimental details, such as the sweep grids, PCA dimensions, and
 cross-validation protocols, are provided in Appendix~\ref{app:details}.
 
@@ -597,7 +599,8 @@ the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
 At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
-sample score, so \PKPS with one query matches the sample score at four (a).
+sample score (Wilcoxon $p{=}3\times10^{-5}$, better on all $16$ seeds), so \PKPS
+with one query matches the sample score at four (a).
 As the budget grows, the sample score eventually overtakes the representations'
 residual bias.
 The ensemble follows the better of its two components
@@ -628,12 +631,13 @@ score-only baseline is LRMC.
 The ensemble matches or outperforms LRMC at every operating point, and the margin is
 largest when observations are scarce: at the small cohort it is more accurate at
 every task coverage (a), query depth (b), and number of tasks (c)
-($0.120$ versus $0.139$ at the central operating point).
+($0.120$ versus $0.139$ at the central operating point; Wilcoxon
+$p{=}4\times10^{-4}$).
 LRMC requires many models to estimate its factors: with $n{=}10$, additional tasks
 do not close the gap (c), and the cohort sweep (d) shows the ensemble is accurate
 from $n{=}20$ while LRMC approaches it only near the full cohort.
-At the full cohort the methods converge and the ensemble performs best
-($0.099$ versus $0.105$).
+At the full cohort the methods converge and the ensemble remains best
+($0.099$ versus $0.105$; Wilcoxon $p{=}5\times10^{-3}$).
 
 \paragraph{The completion gains are modest but hold cell-by-cell.}
 Figure~\ref{fig:completion}e--h shows the distribution of the per-missing-cell
@@ -644,15 +648,19 @@ in every row: the responses add information wherever the score matrix alone is
 rank-deficient, and never subtract it.
 
 \paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
-The second suite shows the same qualitative behavior with a larger completion margin
-(lever sweeps in Appendix~\ref{app:eee}).
-At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ vs.\ $0.224$)
-and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$): an $8\times$
-smaller budget.
-On missing cells, the ensemble outperforms LRMC at every operating point, including the
-full cohort ($0.069$ vs.\ $0.096$ at $n{=}45$).
-Table~\ref{tab:suite} collects both tasks on both suites, and the ensemble is best or
-tied in every column.
+The second suite shows the same behavior with larger margins (lever sweeps in
+Appendix~\ref{app:eee}).
+At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ versus
+$0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$): an
+$8\times$ smaller budget.
+On missing cells, the ensemble outperforms LRMC at every operating point, including
+the full cohort ($0.069$ versus $0.096$ at $n{=}45$).
+Both comparisons are significant at the smallest $p$ attainable with $16$ seeds
+(Wilcoxon $p{=}3\times10^{-5}$, better on every seed), and the corresponding HELM
+comparisons are likewise significant: the magnitudes of the effects differ across
+suites, but the ordering of the methods does not.
+Table~\ref{tab:suite} collects both tasks on both suites, and the ensemble is best
+or tied in every column.
 
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
 the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
