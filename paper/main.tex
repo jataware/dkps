@@ -489,6 +489,10 @@ The second suite is built from the Every Eval Ever datastore \citep{eee2026}, wh
 item-level results exhibit the sparsity that motivates this paper: the store covers
 $36$ benchmarks and $165$ models, only $15\%$ of (model, benchmark) pairs have been
 evaluated, and $59\%$ of model pairs share no benchmark at all.
+Within a benchmark, pairedness is bimodal: on $26$ of $33$ multi-model benchmarks,
+models answered essentially identical item sets (mean $\rho_{ii'}>0.99$), while the
+seven arena-style benchmarks are natively unpaired (mean $\rho_{ii'}$ between
+$0.27$ and $0.66$; on six, the median model pair shares no queries).
 So that true scores are available and sparsity and pairedness can be controlled in
 our evaluations, we consider a denser submatrix: $16$ tasks (MATH-MC levels $1$--$5$
 \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k}, GPQA-Diamond
@@ -821,7 +825,12 @@ MIT-licensed, community-maintained collection of item-level evaluation results i
 unified format (inputs, raw model outputs, and per-item scores). The full store
 covers $36$ benchmarks and $165$ models with only $15\%$ of (model, benchmark)
 pairs evaluated (median $5$ benchmarks per model), and $59\%$ of model pairs share
-no benchmark. We take the five benchmarks with the
+no benchmark. Within a benchmark, $26$ of the $33$ with at least two models are
+essentially fully paired ($23$ with identical item sets across every model pair),
+while the seven arena-style benchmarks (six Fibble arenas and Wordle arena) are
+natively unpaired: mean per-pair overlap $0.27$--$0.66$, median zero on six of the
+seven, and per-model coverage of the item union $0.15$--$0.33$---in interactive
+evaluation, the queries a model sees depend on its matchups. We take the five benchmarks with the
 widest item-level model coverage---MATH-MC, GSM-MC, GPQA-Diamond, JudgeBench, and
 RewardBench~2---restricted to the $45$ models present on all five, for which every
 model answered every item; sub-tasks (MATH-MC
