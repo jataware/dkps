@@ -47,12 +47,12 @@ def panel(ax, sweep, xcol, xlabel, fixed, family):
             for n, ls in NLS.items():
                 sub = df[df['n_models'] == n]
                 g = sub.groupby(xcol)[meth].agg(['mean', 'sem'])
-                ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3,
-                            lw=LW[meth], color=COL[meth], ls=ls, capsize=2, elinewidth=0.7)
+                ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=4,
+                            lw=LW[meth], color=COL[meth], ls=ls, capsize=2, elinewidth=0.8)
         else:
             g = df.groupby(xcol)[meth].agg(['mean', 'sem'])
-            ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=3,
-                        lw=LW[meth], color=COL[meth], ls='-', capsize=2, elinewidth=0.7)
+            ax.errorbar(g.index.values, g['mean'], yerr=g['sem'], marker='o', ms=4,
+                        lw=LW[meth], color=COL[meth], ls='-', capsize=2, elinewidth=0.8)
     ax.set_xlabel(xlabel, fontsize=15)
 
 
@@ -64,7 +64,7 @@ for ax, spec, letter in zip(axes, PANELS, 'abcd'):
     ax.set_title(f'$\\bf{{({letter})}}$  {spec[3]}', loc='left', fontsize=12.8)
     ax.tick_params(labelsize=13)
 axes[0].set_ylabel('MAE on missing cells', fontsize=15)
-meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=3, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
+meth_h = [Line2D([0], [0], color=COL[m], lw=LW[m], marker='o', ms=4, label=LBL[m]) for m in ('mc', 'pkps', 'ens')]
 n_h = [Line2D([0], [0], color='#444', ls='-', label=rf'$n{{=}}{N}$'),
        Line2D([0], [0], color='#444', ls='--', label='$n{=}10$')]
 fig.tight_layout()
