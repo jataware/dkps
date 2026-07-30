@@ -46,7 +46,7 @@ responses and the corresponding (model, task) score matrix are unpaired and spar
 this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collection of
 low-dimensional representations of models based on their embedded responses. \PKPS
 generalizes existing methods for representing black-box generative models by comparing responses to similar -- rather than just
-identical -- queries and is therefore able to utilize all available information. Theoretically, we show that
+identical -- queries and is therefore able to utilize sparse and unpaired information. Theoretically, we show that
 benchmark prediction using \PKPS is query-efficient relative to methods that only use information from dense and paired portions of the evaluation data.
 Empirically, we show that \PKPS
 outperforms relevant baselines on two tasks across two large benchmark suites.
@@ -56,8 +56,7 @@ outperforms relevant baselines on two tasks across two large benchmark suites.
 \label{sec:introduction}
 Evaluating a generative model is necessary for understanding its capabilities.
 As the capabilities of generative models increase \citep{wei2022emergent, bubeck2023sparks},
-their applicability expands to ever more domains---often necessitating the creation of
-new benchmarks for, e.g., mathematics \citep{hendrycks2021math}, law
+their applicability expands to more domains---often necessitating the creation of benchmarks for, e.g., mathematics \citep{hendrycks2021math}, law
 \citep{guha2023legalbench}, finance \citep{islam2023financebench}, venture capital
 \citep{chen2025vcbench}, agentic tasks \citep{liu2023agentbench}, and even running a
 vending machine business \citep{backlund2025vendingbench}.
@@ -66,14 +65,14 @@ more than 200 tasks \citep{srivastava2023beyond}, HELM tracks dozens of scenario
 across multiple releases \citep{helm}, and a recent compilation includes 133 different
 benchmarks for frontier models \citep{benchpress}.
 As such, a model is rarely evaluated on all benchmarks: of the (model, task) pairs in
-the compilation above, only 23\% have a reported score \citep{benchpress}.
+the compilation above, only 23\% have a reported score.
 Further, as benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
 \citep{white2024livebench}, or subsampled to reduce cost
-\citep{perlitz2024efficient} -- two models evaluated on the same benchmark may have
-responded to different sets of queries.
+\citep{perlitz2024efficient} -- two models evaluated on the same benchmark may have responded to different sets of queries.
 
-Benchmark prediction \citep{polo2024tinybenchmarks, vivek2024anchor, li2024active,
-hofmann2025fluid, bowyer2026efficient, benchpress}
+Benchmark prediction
+% \citep{polo2024tinybenchmarks, vivek2024anchor, li2024active,
+% hofmann2025fluid, bowyer2026efficient, benchpress}
 attempts to alleviate the resource burden of evaluation by predicting scores from
 already-available information rather than computing them just from newly generated
 responses.
@@ -88,7 +87,7 @@ queries and its score on the task is predicted from the observed entries of the 
 matrix.
 Existing methods for score completion use only the aggregate scores and discard the
 item-level responses that produced them \citep{benchpress}.
-In both tasks, the collection of available responses is often unpaired
+For both tasks the collection of available responses is often unpaired
 and sparse.
 
 In this paper, we introduce the Product Kernel Perspective Space (\PKPS) to predict
@@ -97,7 +96,7 @@ Our contributions can be summarized as follows:
 \begin{enumerate}
 [wide, labelwidth=1pt, labelindent=12pt]
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
-\item \emph{Conceptual:} we unify the two main benchmark prediction
+\item \emph{Conceptual:} we unify two prediction
 tasks as instances
 of a single problem: predicting scores from a sparse, unpaired collection of
 responses from previously evaluated models.
@@ -177,14 +176,12 @@ For example, representations can be induced by comparing internal activations
 \citep{duderstadt2023comparing, huh2024platonic} and/or weights
 \citep{chen2025weights} in the white-box setting.
 Evaluators do not necessarily have white-box access and instead rely on black-box methods such as
-the Data Kernel Perspective Space (DKPS) \citep{helm2024tracking}, which constructs low-dimensional representations by applying multidimensional scaling to
-distances between matrices of embedded responses on a paired set of queries.
-Recent theoretical work has established desirable theoretical properties such as consistency, concentration, and applicability to inference \citep{acharyya2024consistent,
-acharyya2025concentration, helm2025inference}.
+the Data Kernel Perspective Space (DKPS) \citep{helm2024tracking,helm2025inference}, which constructs low-dimensional representations based on distances between matrices of embedded responses on a paired set of queries.
+% Recent theoretical work has established desirable theoretical properties such as consistency, concentration, and applicability to inference \citep{acharyya2024consistent,acharyya2025concentration, helm2025inference}.
 Most relevant to our setting, \citet{dkps_qeff} regress benchmark scores of
 previously evaluated models on DKPS representations and prove that the resulting
 predictions are query-efficient relative to the sample score.
-The proposed Product Kernel Perspective Space generalizes this construction with a kernel on the query space, enabling comparisons in the sparse and unpaired evaluation regime.
+The proposed Product Kernel Perspective Space generalizes this construction with a kernel on the query space, enabling comparisons in the sparse and unpaired regime.
 
 \section{Benchmark Prediction}
 \label{sec:setting}
@@ -197,11 +194,11 @@ $t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)})$.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
-query $q\in Q^{(t)}$ may or may not have been generated.
-Let $Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
+query $q\in Q^{(t)}$ may or may not have been generated and scored.
+Let $Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response (and score) is
 observed, with $m_{i}^{(t)}:=|Q^{(t)}_{i}|$ and $Q_i:=\cup_{t}Q_i^{(t)}$.
 The corresponding \emph{sample score}
-$\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is a noisy estimate of
+$\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is an estimate of
 $y_{i}^{(t)}$.
 
 Evaluation data is \emph{sparse} when few models have
@@ -234,7 +231,7 @@ evaluation data of Section~\ref{sec:setting} by constructing low-dimensional
 representations of the models based on an appropriately defined pairwise distance
 matrix.
 We assume access to the responses for each observed (model, task, query) triple and
-to two embedding functions $g_{\mathrm{query}}$ and $g_{\mathrm{response}}$ that map
+to two embedding functions $g_{Q}$ and $g_{R}$ that map
 queries and responses to $\mathbb{R}^{p_{Q}}$ and $\mathbb{R}^{p_{R}}$, respectively.
 Let $q_{1},\hdots,q_{M}$ be an enumeration of all queries and let
 $x_{ij}$ denote the embedded response $f_{i}(q_{j})$ and $u_{j}$ denote the embedded
@@ -251,7 +248,7 @@ A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(u_j,u_l)\, k_R(x_{ij},x_{i
 \end{equation}
 Each entry is normalized by its own query-kernel mass, so models that answered
 different numbers of queries, or entirely different queries, remain comparable.
-We use the induced squared distance $D^2(i,i')=A_{ii}+A_{i'i'}-2A_{ii'}$ to capture
+We use the induced squared distance $D^2_{ii'}=A_{ii}+A_{i'i'}-2A_{ii'}$ to capture
 model (dis)similarity \citep{gretton2012kernel}.
 Finally, the Product Kernel Perspective Space representations of the
 models---$\widehat{\psi}_{1},\hdots,\widehat{\psi}_{n}$---are defined as the
@@ -259,17 +256,16 @@ $d$-dimensional Euclidean configuration that minimizes the raw stress criterion 
 $D$ \citep{trosset2024continuous}. That is,
 \begin{equation}
 (\hat\psi_1,\dots,\hat\psi_n)=\operatorname*{arg\,min}_{z_1,\dots,z_n\in\mathbb{R}^d}\
-\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D(i,i')\big)^2.
+\sum_{i,i'=1}^{n}\big(\|z_i-z_{i'}\|-D_{ii'}\big)^2.
 \label{eq:mds}
 \end{equation}
 We note that the definition of the \PKPS strictly generalizes previous work by
-replacing the identity query kernel ($k_{Q}(u,u')=\indone\{u=u'\}$) with a generic
+replacing the identity query kernel ($k_{Q}(u,u')=\mathbf{1}\{u=u'\}$) with a generic
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
-embeddings, $D(i,i')$ includes information from unpaired responses and Eq.~\eqref{eq:A}
-is defined even on disjoint query sets.
-We highlight the difference between the previously proposed Data Kernel Perspective
-Space and the \PKPS in Figure~\ref{fig:concept}.
+embeddings, $D_{ii'}$ includes information from unpaired responses and Eq.~\eqref{eq:A}
+is therefore always defined.
+We highlight the difference between the previous approaches and the \PKPS in Figure~\ref{fig:concept}.
 
 \begin{figure}[t]
 \centering
@@ -277,48 +273,39 @@ Space and the \PKPS in Figure~\ref{fig:concept}.
 \caption{An illustration of the difference between the Product Kernel Perspective
 Space (\PKPS) and the previously proposed Data Kernel Perspective Space (DKPS).
 \textbf{(a)} Top: two models respond to different sets of queries; bottom: queries
-represented as vectors. \textbf{(b)} The query kernel matrix used by DKPS: only
-information from queries both models have responded to is included in the dissimilarity
-matrix. \textbf{(c)} The query kernel matrix used by \PKPS: information is weighted by
-query similarity in the embedding space. \textbf{(d--e$'$)} A toy benchmark-prediction
+represented as vectors, colored by which model has responded to it. \textbf{(b)} The query kernel used by DKPS: only
+information from queries both models have responded to is included in $ D $. \textbf{(c)} The query kernel used by \PKPS: information is weighted by
+query similarity in the embedding space. \textbf{(d--e$'$)} A toy unpaired benchmark prediction
 example. Top: restricted to the rare shared queries, DKPS is noisy and correlates poorly
 with benchmark score (MAE $0.31$). Bottom: \PKPS leverages unpaired queries and is highly
 correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-\subsection{Theoretical properties}
+\subsection{Concentration of \PKPS representations}
 \label{sec:theory}
 We next establish theoretical properties of the \PKPS necessary for demonstrating
 its efficiency in sparse and unpaired benchmark prediction.
-In particular, the main result of this section shows that the representations
+The main result of this section establishes that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
-the models' designs.
-We model the evaluation data of Section~\ref{sec:setting} as sampled (model, task,
-response) triples.
-Conditional on model $i$, each triple is an independent draw from its design
-distribution $P_{i}$: a task is sampled first, then a query conditioned on the
-sampled task, and finally the model's response to the query.
-The population \PKPS is defined by replacing the sums of Eq.~\eqref{eq:A} with
-expectations under the designs (Definition~\ref{def:pop},
-Appendix~\ref{app:proof}).
-Our analysis and implementation use the classical MDS solution: it coincides with the
-minimizer of Eq.~\eqref{eq:mds} when $D$ is Euclidean and is its standard tractable
-surrogate otherwise.
+the query distributions.
+We formally define the population \PKPS in Definition~\ref{def:pop} of
+Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
+Eq.~\eqref{eq:A} with the appropriate expectations.
 
 Our concentration results require bounded query and response kernels, bounded
 embedded responses, a positive cross-model query kernel mass, and a rank-$d$
 spectral gap in the population Gram matrix (see
 Assumptions~\ref{ass:bound}--\ref{ass:spec}, Appendix~\ref{app:proof}).
 The required boundedness and the spectral gap are standard in spectral-embedding
-analyses \citep{yu2015useful, acharyya2025concentration}.
+analyses \citep{yu2015useful, acharyya2024consistent, acharyya2025concentration}.
 The atypical requirement in our setting is the positive cross-model query kernel
 mass, though this holds trivially under a strictly positive $k_Q$ and importantly
 does not assume that any individual query is shared.
-Let $(\psi_1,\dots,\psi_n)$ denote the population \PKPS,
-$\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model query kernel mass, and
-$\lambda_d$ the $d$-th largest eigenvalue of the population Gram matrix.
-\begin{theorem}[Concentration of \PKPS perspectives]
+
+Let $(\psi_1,\dots,\psi_n)$ denote the population \PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
+query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the population Gram matrix.
+\begin{theorem}[Concentration of \PKPS representations]
 \label{prop:conc}
 Suppose Assumptions~\ref{ass:bound}--\ref{ass:spec} hold and that every model has
 responded to at least $m$ queries, $\min_i|Q_i|\ge m$. Then for any
@@ -338,8 +325,10 @@ A Weyl--Procrustes perturbation argument \citep[Lemma~5.4]{tu2016procrustes} the
 transfers the entrywise error to the rank-$d$ spectral embedding at the stated rate
 (Lemma~\ref{lem:pert}). The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
-The rate of \PKPS concentration is the rate of paired DKPS concentration scaled by
-the population overlap ($\kappa^{-2}$), and does not require paired queries.
+Theorem~\ref{prop:conc} recovers the paired DKPS rate in $m$ without
+requiring any shared queries.
+The price of unpairedness is a factor of $\kappa^{-2}$, governed by
+the overlap of the query distributions.
 
 \subsection{Inference in the \PKPS}
 \label{sec:qeff}
@@ -350,8 +339,8 @@ models, then train a decision function that uses the representations as proxies
 for the models \citep{dkps_qeff}.
 
 Fix a task $t$ and let $f,f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
-distribution, observed through the sampled (model, task, response) triples of
-Section~\ref{sec:theory}.
+distribution, observed through sampled (model, task, response) triples
+(Definition~\ref{def:pop}, Appendix~\ref{app:proof}).
 Every observed quantity is a function of the triples: the embedded responses enter
 Eq.~\eqref{eq:A}, and the sample-score vector
 $(\tilde{y}_{i}^{(1)},\hdots,\tilde{y}_{i}^{(T)})$ collects per-task statistics of
@@ -1068,8 +1057,8 @@ space.
 \end{assumption}
 
 \paragraph{Population quantities.} Each of model $i$'s triples independently draws a
-task, then a query conditioned on the task, then the model's response
-(Section~\ref{sec:theory}); write $z=(u,x_i(u))$ for an embedded query--response
+task, then a query conditioned on the task, then the model's response; write
+$z=(u,x_i(u))$ for an embedded query--response
 pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
 $k_Q\in[0,1]$ after normalization (RBF) and $|k_R|\le B_R$. Define the population comparison
 \[
@@ -1080,6 +1069,9 @@ population squared distances $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, the 
 matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
 population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
 which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:spec} (cf.\ Definition~\ref{def:pop}).
+Throughout, the analysis and the implementation use the classical (spectral) MDS
+solution: it coincides with the minimizer of Eq.~\eqref{eq:mds} when $D$ is exactly
+Euclidean and is its standard tractable surrogate otherwise.
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
