@@ -448,8 +448,9 @@ We evaluate completion empirically in Section~\ref{sec:experiments}.
 \centering
 \includegraphics[width=0.96\textwidth]{fig_synthetic.pdf}
 \caption{Score MAE on the synthetic benchmark as each lever of the observation process
-is varied ($\pm1$ SEM over $50$ seeds; DKPS light blue, \PKPS bright blue, sample score gray;
-fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
+is varied ($\pm1$ SEM over $50$ seeds; DKPS light blue, \PKPS bright blue; gray is the
+score-only baseline---the task mean of observed scores in (a--e), the cell's own sample
+score in (f); fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
 function of cohort size $n$, number of tasks $T$, task coverage $p_{\mathrm{task}}$,
 query depth $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
 (e), only DKPS degrades as $\rho\!\to\!0$.
@@ -559,7 +560,8 @@ various regimes: (a) varying the number of models, (b) varying the number of tas
 (c) varying the task coverage, (d) varying the number of observed queries per task,
 (e) varying the pairwise query overlap, and (f) varying the number of total queries
 per task.
-\PKPS outperforms DKPS in every setting, and both outperform the sample score.
+\PKPS outperforms DKPS in every setting, and both outperform the score-only
+baseline (the task mean of observed scores in (a--e), the sample score in (f)).
 The margin over DKPS is wide even when the data is mostly paired but sparse (a--c).
 When sparsity is swept directly (c), \PKPS outperforms DKPS in the early regime and
 they are matched for moderate to large values. For a fixed sparsity and different
