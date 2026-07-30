@@ -434,7 +434,7 @@ In practice, the bandwidth is selected by cross-validation over a finite grid
 containing the exact-matching limit (Section~\ref{sec:experiments},
 Appendix~\ref{app:proof}).
 Empirically, a bandwidth that bridges similar queries improves on exact matching at
-every $\rho<1$ (Figure~\ref{fig:synthetic}e).
+every $\rho<1$ (Figure~\ref{fig:synthetic}b).
 
 The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
@@ -444,22 +444,6 @@ Identity-matched constructions have no mechanism for this regime and the sample
 score does not exist.
 We evaluate completion empirically in Section~\ref{sec:experiments}.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.96\textwidth]{fig_synthetic.pdf}
-\caption{Score MAE on the synthetic benchmark ($\pm1$ SEM over $50$ seeds; DKPS light
-blue, \PKPS bright blue, sample score dashed gray; fixed parameters in each panel
-title).
-\textbf{(a--e)} Query-efficient evaluation: every observed cell is measured with
-$m$ noisy queries and we predict its true score, as a function of the budget
-$m$ (a), the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the
-number of tasks $T$ (d), and the task coverage $p_{\mathrm{task}}$ (e), at unpaired
-designs ($\rho{=}0$) except where $\rho$ is swept.
-\textbf{(f)} Score completion of held-out cells as a function of task coverage; the
-gray line is the task mean of observed scores (no sample score exists for a held-out
-cell).}
-\label{fig:synthetic}
-\end{figure}
 
 \section{Experiments}
 \label{sec:experiments}
@@ -475,6 +459,23 @@ $\rho=m_{ii'}/m$ and sparsity via a probability of observing a task
 $p_{\mathrm{task}}$ and, conditioned on observing a task, a probability of answering
 a query $p_{\mathrm{query}}$.
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/fig_synthetic.pdf}
+    \caption{Score MAE on the synthetic benchmark ($\pm1$ SEM over $50$ seeds; DKPS light
+blue, \PKPS bright blue, sample score dashed gray; fixed parameters in each panel
+title).
+\textbf{(a--e)} Query-efficient evaluation: every observed cell is measured with
+$m$ noisy queries and we predict its true score, as a function of the budget
+$m$ (a), the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the
+number of tasks $T$ (d), and the task coverage $p_{\mathrm{task}}$ (e), at unpaired
+designs ($\rho{=}0$) except where $\rho$ is swept.
+\textbf{(f)} Score completion of held-out cells as a function of task coverage; the
+gray line is the task mean of observed scores (no sample score exists for a held-out
+cell).}
+    \label{fig:synthetic}
+\end{figure}
+
 \paragraph{Benchmark suites.}
 We consider two large benchmark suites.
 The first consists of $18$ tasks from HELM-Lite \citep{helm}. The tasks have very
@@ -482,11 +483,11 @@ different response types -- MATH (\citealp{hendrycks2021math}, $7$ math subjects
 WMT-14 (\citealp{bojar2014wmt}, $5$ translation directions), MedQA
 (\citealp{jin2021medqa}, medical multiple-choice), and LegalBench
 (\citealp{guha2023legalbench}, $5$ legal classification subsets).
-We consider $93$ models that have been evaluated on all $18$ tasks.
+We consider $93$ models that have been evaluated on all four tasks.
 As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce sparsity and unpairedness by subsampling each model's observed queries.
 
 The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
-community-maintained collection of item-level evaluation results covering $36$ benchmarks and $165$ models and growing.
+community-maintained collection of item-level evaluation results covering $36$ benchmarks and $165$ models (and growing).
 The store exhibits the sparsity and unpairedness that motivate this paper:
 only $15\%$ of (model, benchmark) pairs have been evaluated and $59\%$ of model
 pairs share no benchmark at all.
@@ -543,14 +544,13 @@ cross-validation protocols, are provided in Appendix~\ref{app:details}.
 \centering
 \includegraphics[width=0.96\textwidth]{fig_suite_query_efficiency.pdf}\\[2pt]
 \includegraphics[width=0.96\textwidth]{fig_qe_conditional.pdf}
-\caption{Query-efficient evaluation on the HELM suite. \textbf{(a--c)} MAE against the
-true full-evaluation score when each model answers $m$ unpaired queries per observed cell
+\caption{Query-efficiency on the HELM suite.
+\textbf{(a--c)} MAE against the true full-evaluation score when each model answers $m$ unpaired queries per observed cell
 ($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
-$p_{\mathrm{task}}$. IRT is poorly identified without a shared item block and is omitted
-from (b, c); its value is annotated. \textbf{(d--g)} Per-cell difference $\Delta=$
-Sample score $-$ Ensemble MAE (blue $=$ Ensemble better) by dataset, budget, cohort, and
-coverage, with the other levers fixed at their sweep median; $\blacktriangledown$ marks
-the per-row mean.}
+$p_{\mathrm{task}}$.
+\textbf{(d--g)} Per-cell difference in MAE between
+Sample score and Ensemble (positive difference favors Ensemble) by dataset, budget, cohort, and
+coverage. $\blacktriangledown$ indicates the per-row mean.}
 \label{fig:qe}
 \end{figure}
 
@@ -661,17 +661,16 @@ On missing cells, the ensemble outperforms LRMC at every operating point, includ
 the full cohort ($0.069$ versus $0.096$ at $n{=}45$).
 Both comparisons are significant at the smallest $p$ attainable with $16$ tasks
 (Wilcoxon $p{=}3\times10^{-5}$, better on every task), including full-cohort
-completion, which is not significant on HELM: the effects on this suite are larger
-and broader, and the ordering of the methods is unchanged.
-Table~\ref{tab:suite} collects both tasks on both suites, and the ensemble is best
-or tied in every column.
+completion, which is not significant on HELM.
+Table~\ref{tab:suite} shows the performance of all methods on both tasks on both suites.
+The ensemble is the best or tied in every column.
 
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
 the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
 Ablations of the regression head, the response kernel, the ensemble weighting rule, and
 the incidental query overlap in the EEE pools are in Appendix~\ref{app:abl}.
-In general, our observations are robust across these choices.
+Our observations are generally robust across these choices.
 
 \section{Discussion}
 In this paper we introduced the \PKPS, which compares models through their responses
