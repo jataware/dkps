@@ -69,24 +69,16 @@ def _plot_rho(ax, df, xlabel):
 
 
 def _plot_query_efficiency(ax, df, xlabel):
-    """MAE vs per-cell query budget for DKPS and PKPS at paired (rho=1) / unpaired (rho=0).
-    Method by colour (shared legend); overlap by line style, noted inline."""
-    rhos = sorted(df['rho'].unique())
-    ls_map = {min(rhos): '--', max(rhos): '-'}      # dashed = unpaired, solid = paired
-    # sample score is rho-independent (it ignores queries): a single reference line
-    s = _aggregate(df[df['estimator'] == 'sample'], ['budget'], 'mae').sort_values('budget')
-    _errbar(ax, s['budget'], s['mean'], s['sem'], ESTIMATOR_COLORS['sample'], None,
-            ESTIMATOR_LS['sample'])
-    summary = _aggregate(df, ['budget', 'rho', 'estimator'], 'mae')
-    for est in ('dkps', 'pkps'):
-        for rho in rhos:
-            curve = summary[(summary['estimator'] == est) & (summary['rho'] == rho)].sort_values('budget')
-            _errbar(ax, curve['budget'], curve['mean'], curve['sem'],
-                    ESTIMATOR_COLORS[est], None, ls_map.get(rho, '-'))
+    """MAE vs per-cell query budget at the unpaired design (rho=0), matching the other
+    panels; the pairing dimension itself is the rho-sweep panel."""
+    df = df[(df['rho'] == 0) | (df['estimator'] == 'sample')]
+    summary = _aggregate(df, ['budget', 'estimator'], 'mae')
+    for est in ESTIMATOR_ORDER:
+        curve = summary[summary['estimator'] == est].sort_values('budget')
+        _errbar(ax, curve['budget'], curve['mean'], curve['sem'],
+                ESTIMATOR_COLORS[est], None, ls=ESTIMATOR_LS[est])
     ax.set_xlabel(xlabel)
     ax.set_xscale('log', base=2)
-    ax.text(0.97, 0.97, 'DKPS/PKPS solid: paired ($\\rho{=}1$)\ndashed: unpaired ($\\rho{=}0$)',
-            transform=ax.transAxes, ha='right', va='top', fontsize=9.8, color='#444')
 
 
 # Panel specs: (experiment, x_col, xlabel, custom_fn, fixed-parameter title)
@@ -96,7 +88,7 @@ def _plot_query_efficiency(ax, df, xlabel):
 # task-mean of observed scores).
 PANELS = [
     ('query_efficiency', None, r'queries per cell $M_{ij}$', _plot_query_efficiency,
-     r'$n{=}60,\ T{=}12,\ p_{\mathrm{task}}{=}1$'),
+     r'$n{=}60,\ T{=}12,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
     ('qe_rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
      r'$n{=}60,\ T{=}12,\ M_{ij}{=}4,\ p_{\mathrm{task}}{=}1$'),
     ('qe_n_models', 'n_models', r'number of models $n$', None,
