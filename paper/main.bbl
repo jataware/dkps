@@ -65,6 +65,15 @@ Rick Chen, Joseph Ternasky, Afriyie~Samuel Kwesi, Ben Griffin, Aaron~Ontoyin
 \newblock {VCBench}: Benchmarking {LLM}s in venture capital.
 \newblock \emph{arXiv preprint arXiv:2509.14448}, 2025{\natexlab{b}}.
 
+\bibitem[Chiang et~al.(2024)Chiang, Zheng, Sheng, Angelopoulos, Li, Li, Zhang,
+  Zhu, Jordan, Gonzalez, and Stoica]{chiang2024chatbot}
+Wei-Lin Chiang, Lianmin Zheng, Ying Sheng, Anastasios~N. Angelopoulos, Tianle
+  Li, Dacheng Li, Hao Zhang, Banghua Zhu, Michael Jordan, Joseph~E. Gonzalez,
+  and Ion Stoica.
+\newblock {Chatbot Arena}: An open platform for evaluating {LLM}s by human
+  preference.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
+
 \bibitem[Chollet et~al.(2025)Chollet, Knoop, Kamradt, Landers, and
   Pinkard]{chollet2025arcagi2}
 Fran\c{c}ois Chollet, Mike Knoop, Gregory Kamradt, Bryan Landers, and Henry
@@ -229,12 +238,6 @@ Felipe~Maia Polo, Lucas Weber, Leshem Choshen, Yuekai Sun, Gongjun Xu, and
   Mikhail Yurochkin.
 \newblock {tinyBenchmarks}: Evaluating {LLM}s with fewer examples.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2024.
-
-\bibitem[Rasch(1960)]{rasch1960}
-Georg Rasch.
-\newblock \emph{Probabilistic Models for Some Intelligence and Attainment
-  Tests}.
-\newblock Danish Institute for Educational Research, 1960.
 
 \bibitem[Rein et~al.(2024)Rein, Hou, Stickland, Petty, Pang, Dirani, Michael,
   and Bowman]{rein2023gpqa}
