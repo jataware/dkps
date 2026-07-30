@@ -158,18 +158,27 @@ def _embed_cv_rbf(data, target, mask, response_kernel, k=8):
     return best if best is not None else _embed(data, query_kernel='rbf', response_kernel=response_kernel)
 
 
-def _denoise_mae(embeddings, noisy, true, k=8):
+def _denoise_mae(embeddings, noisy, true, k=8, observed=None):
     """Predict each cell's true score by a distance-weighted average of the noisy scores of its
-    model's k nearest perspective neighbours (leave-one-out). MAE vs the true scores."""
+    model's k nearest perspective neighbours (leave-one-out). MAE vs the true scores.
+    With an `observed` mask, only observed neighbour cells enter each average and MAE is
+    evaluated on observed cells only."""
     from sklearn.neighbors import NearestNeighbors
     n = embeddings.shape[0]
+    if observed is None:
+        observed = np.ones_like(true, dtype=bool)
     dist, idx = NearestNeighbors(n_neighbors=min(k + 1, n)).fit(embeddings).kneighbors(embeddings)
-    pred = np.empty_like(true)
+    pred = np.full_like(true, np.nan)
     for i in range(n):
         nb, d = idx[i][1:], dist[i][1:]
-        w = 1.0 / (d + 1e-9); w /= w.sum()
-        pred[i] = (w[:, None] * noisy[nb]).sum(axis=0)
-    return float(np.mean(np.abs(pred - true)))
+        w = 1.0 / (d + 1e-9)
+        for t in np.where(observed[i])[0]:
+            m = observed[nb, t]
+            if m.any():
+                wt = w[m] / w[m].sum()
+                pred[i, t] = (wt * noisy[nb[m], t]).sum()
+    ok = observed & ~np.isnan(pred)
+    return float(np.mean(np.abs(pred[ok] - true[ok])))
 
 
 def _run_estimators(data, scores, observed, experiment, k_neighbors, n_components, extra_fields):
@@ -351,3 +360,43 @@ def run_exp_noise_x_queries(
     results = Parallel(n_jobs=8, verbose=10)(
         delayed(_run)(rn, nq, s) for rn, nq, s in params)
     return pd.DataFrame(results)
+
+
+def run_exp_qe_lever(experiment_name, sweep_param, sweep_values, budget=4, rho=0.0,
+                     n_models=60, n_tasks=12, obs_prob=1.0, k_neighbors=8, n_seeds=50,
+                     meas_noise=4.0, **gen_kwargs):
+    """Query-efficiency (denoising) protocol with one lever swept: every observed cell has a
+    budget of M queries and a noisy sample score; we predict its TRUE score. Levers beyond the
+    budget: n_models, n_tasks, obs_prob (task coverage), rho (pairing of the M queries)."""
+    kw = {k: v for k, v in {**_DEFAULTS, **gen_kwargs}.items()
+          if k not in ('n_queries_per_task', 'score_noise')}
+    ests = {'dkps': dict(query_kernel='delta', response_kernel=RESPONSE_KERNEL),
+            'pkps': dict(query_kernel='rbf', response_kernel=RESPONSE_KERNEL)}
+    base = dict(budget=budget, rho=rho, n_models=n_models, n_tasks=n_tasks, obs_prob=obs_prob)
+
+    def _run(value, seed):
+        cfg = dict(base); cfg[sweep_param] = value
+        n_sh = int(round(cfg['rho'] * cfg['budget']))
+        data, true, observed, _, _ = generate_benchmark_data(
+            n_models=cfg['n_models'], n_tasks=cfg['n_tasks'], n_queries_per_task=cfg['budget'],
+            obs_prob=cfg['obs_prob'], n_shared_queries=n_sh,
+            n_unique_queries=cfg['budget'] - n_sh, score_noise=0.0, random_state=seed, **kw)
+        rng = np.random.default_rng(10_000 + seed)
+        noisy = true + meas_noise * rng.normal(size=true.shape) / np.sqrt(cfg['budget'])
+        fields = {'seed': seed, sweep_param: value}
+        out = [{'experiment': experiment_name, 'estimator': 'sample',
+                'mae': float(np.mean(np.abs((noisy - true)[observed]))), **fields}]
+        d = _reduce_df(data)
+        for name, ek in ests.items():
+            if ek['query_kernel'] == 'rbf':
+                emb = _embed_cv_rbf(d, noisy, observed, ek['response_kernel'], k=k_neighbors)
+            else:
+                emb = _embed(d, **ek)
+            mae = (_denoise_mae(emb, noisy, true, k=k_neighbors, observed=observed)
+                   if emb is not None else np.nan)
+            out.append({'experiment': experiment_name, 'estimator': name, 'mae': mae, **fields})
+        return out
+
+    params = [(v, s_) for v in sweep_values for s_ in range(n_seeds)]
+    nested = Parallel(n_jobs=-1, verbose=10)(delayed(_run)(v, s_) for v, s_ in params)
+    return pd.DataFrame([r for sub in nested for r in sub])

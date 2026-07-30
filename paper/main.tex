@@ -447,17 +447,16 @@ We evaluate completion empirically in Section~\ref{sec:experiments}.
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.96\textwidth]{fig_synthetic.pdf}
-\caption{Score MAE on the synthetic benchmark as each lever of the observation process
-is varied ($\pm1$ SEM over $50$ seeds; DKPS light blue, \PKPS bright blue; gray is the
-score-only baseline---the task mean of observed scores in (a--e), the cell's own sample
-score in (f); fixed parameters in each panel title). \textbf{(a--e)} Completion of held-out cells as a
-function of cohort size $n$, number of tasks $T$, task coverage $p_{\mathrm{task}}$,
-query depth $p_{\mathrm{query}}$, and cross-model overlap $\rho=m_{ii'}/M_{ij}$; in
-(e), only DKPS degrades as $\rho\!\to\!0$.
-\textbf{(f)} Denoising of observed cells: each cell is measured with $M_{ij}$ noisy
-queries and we predict its true score, at paired ($\rho{=}1$, solid) and unpaired
-($\rho{=}0$, dashed) designs; \PKPS improves on the sample score at both, DKPS only
-when paired.}
+\caption{Score MAE on the synthetic benchmark ($\pm1$ SEM over $50$ seeds; DKPS light
+blue, \PKPS bright blue, sample score gray; fixed parameters in each panel title).
+\textbf{(a--e)} Query-efficient evaluation: every observed cell is measured with
+$M_{ij}$ noisy queries and we predict its true score, as a function of the budget
+$M_{ij}$ at paired ($\rho{=}1$, solid) and unpaired ($\rho{=}0$, dashed) designs (a),
+the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the number of tasks $T$
+(d), and the task coverage $p_{\mathrm{task}}$ (e).
+\textbf{(f)} Score completion of held-out cells as a function of task coverage; the
+gray line is the task mean of observed scores (no sample score exists for a held-out
+cell).}
 \label{fig:synthetic}
 \end{figure}
 
@@ -554,29 +553,29 @@ the per-row mean.}
 \subsection{Results}
 \label{sec:results}
 
-\paragraph{\PKPS outperforms DKPS on every synthetic observation lever.}
-Figure~\ref{fig:synthetic} shows MAE for \PKPS, DKPS, and the sample score across
-various regimes: (a) varying the number of models, (b) varying the number of tasks,
-(c) varying the task coverage, (d) varying the number of observed queries per task,
-(e) varying the pairwise query overlap, and (f) varying the number of total queries
-per task.
-Panels (a--e) study score completion: the targets are held-out cells, predicted from
-the models' responses elsewhere.
-Panel (f) studies query-efficient evaluation: the target cell is observed and we
-predict its true score.
-\PKPS outperforms DKPS in every setting, and both outperform the score-only
-baseline (the task mean of observed scores in (a--e), the sample score in (f)).
-The margin over DKPS is wide even when the data is mostly paired but sparse (a--c).
-When sparsity is swept directly (c), \PKPS outperforms DKPS in the early regime and
-they are matched for moderate to large values. For a fixed sparsity and different
-pairedness (e), \PKPS outperforms DKPS significantly throughout the regime.
-Importantly, \PKPS is relatively unaffected by actual sampled overlap since it only
-requires distributional overlap (Assumption~\ref{ass:overlap}).
-Similarly, DKPS is not able to take advantage of a growing collection of reference
-models (a) or a growing number of queries (d) as effectively as \PKPS.
-Finally, (f) is the empirical counterpart of Theorem~\ref{thm:qeff}: \PKPS with a
-single query matches the accuracy the sample score reaches at roughly five queries,
-whether or not the queries are paired, while DKPS denoises only when paired.
+\paragraph{\PKPS is query-efficient on every synthetic observation lever.}
+Figure~\ref{fig:synthetic} shows MAE for \PKPS, DKPS, and the sample score under
+the query-efficient evaluation protocol: every observed cell carries a budget of
+$M_{ij}$ queries and we predict its true score.
+The panels vary (a) the query budget at paired and unpaired designs, (b) the
+pairwise query overlap, (c) the number of models, (d) the number of tasks, and (e)
+the task coverage; panel (f) studies score completion, where the targets are
+held-out cells and the score-only baseline is the task mean.
+\PKPS outperforms both DKPS and the sample score throughout: with a single query it
+matches the accuracy the sample score reaches at roughly five (a), whether or not
+the queries are paired.
+Panel (b) is the empirical counterpart of the strict separation in
+Theorem~\ref{thm:qeff}: at $\rho=0$, DKPS is worse than the sample score, while a
+single shared query ($\rho=0.25$ at $M_{ij}=4$) restores it to \PKPS's level.
+\PKPS itself is flat in $\rho$: it is unaffected by the sampled overlap since it
+only requires distributional overlap (Assumption~\ref{ass:overlap}).
+Under unpaired designs, \PKPS converts reference models into accuracy while DKPS
+cannot: as $n$ grows (c), \PKPS improves monotonically and overtakes the sample
+score by $n=20$, while DKPS stays worse than the sample score at every $n$.
+Task coverage behaves the same way (e), and the number of tasks matters little for
+either method (d).
+In the completion panel (f), \PKPS outperforms DKPS when observed cells are scarce
+and they are matched for moderate to large coverage.
 
 \begin{figure}[t]
 \centering
@@ -817,8 +816,15 @@ task count $T\in\{4,8,12,18\}$ (HELM) or $\{4,8,12,16\}$ (EEE); the cohort sweep
 $p_{\mathrm{task}}{=}p_{\mathrm{query}}{=}0.5$.\end{sloppypar}
 
 \paragraph{Synthetic study.} $50$ seeds per configuration; latent dimension $5$, observed
-embedding dimension $20$, score noise $0.1$, response noise $0.5$; both kernels RBF;
-$k$-NN regression with $k{=}5$. Panel-specific settings are given in each figure title.
+embedding dimension $20$, response noise $0.5$; both kernels RBF.
+Query-efficiency panels (Figure~\ref{fig:synthetic}a--e): every observed cell carries
+$M_{ij}$ queries and a sample score with measurement noise $4/\sqrt{M_{ij}}$; the true
+score is predicted by a distance-weighted average of the $k{=}8$ nearest models'
+sample scores, restricted to cells they observe.
+Completion panel (f): score noise $0.1$, held-out cells predicted by $k$-NN regression
+with $k{=}5$.
+Unswept levers default to $n{=}60$, $T{=}12$, $M_{ij}{=}4$, $\rho{=}0$,
+$p_{\mathrm{task}}{=}1$; panel-specific settings are given in each figure title.
 
 \paragraph{Compute.} All experiments run on a single multi-core CPU node; text embeddings
 are precomputed once through the embedding API and cached. Embedding the EEE suite

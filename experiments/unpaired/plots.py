@@ -23,7 +23,7 @@ import pandas as pd
 # ablations get their own colours (teal/orange) so they never collide with a method's colour
 # (blue = matrix completion, green = DKPS, purple = IRT in the other figures).
 ESTIMATOR_COLORS = {'sample': '#9ca3af', 'dkps': '#93aacc', 'pkps': '#3596ff'}
-ESTIMATOR_LABELS = {'sample': 'Score-only baseline', 'dkps': 'DKPS', 'pkps': 'PKPS'}
+ESTIMATOR_LABELS = {'sample': 'Sample score', 'dkps': 'DKPS', 'pkps': 'PKPS'}
 ESTIMATOR_ORDER = ['sample', 'dkps', 'pkps']
 
 
@@ -59,6 +59,8 @@ def _plot_rho(ax, df, xlabel):
     """Cross-model overlap rho: DKPS (delta) collapses as rho->0, PKPS (rbf) holds."""
     summary = _aggregate(df, ['rho', 'estimator'], 'mae')
     for est in ESTIMATOR_ORDER:
+        if est not in summary['estimator'].values:
+            continue
         curve = summary[summary['estimator'] == est].sort_values('rho')
         _errbar(ax, curve['rho'], curve['mean'], curve['sem'],
                 ESTIMATOR_COLORS[est], ESTIMATOR_LABELS[est])
@@ -88,19 +90,23 @@ def _plot_query_efficiency(ax, df, xlabel):
 
 
 # Panel specs: (experiment, x_col, xlabel, custom_fn, fixed-parameter title)
+# (a)-(e) run the query-efficiency (denoising) protocol: every observed cell has a
+# budget of M queries and we predict its TRUE score; the gray line is the cell's own
+# M-query sample score. (f) runs the completion protocol (held-out cells; gray =
+# task-mean of observed scores).
 PANELS = [
-    ('n_models', 'n_models', r'number of models $n$', None,
-     r'$T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}0.8$'),
-    ('n_tasks', 'n_tasks', r'number of tasks $T$', None,
-     r'$n{=}100,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3,\ p_{\mathrm{query}}{=}0.8$'),
-    ('task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$', None,
-     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}0.8$'),
-    ('query_sparsity', 'query_obs_prob', r'query depth $p_{\mathrm{query}}$', None,
-     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
-    ('rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
-     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{task}}{=}0.3$'),
     ('query_efficiency', None, r'queries per cell $M_{ij}$', _plot_query_efficiency,
      r'$n{=}60,\ T{=}12,\ p_{\mathrm{task}}{=}1$'),
+    ('qe_rho', None, r"query overlap $\rho=m_{ii'}/M_{ij}$", _plot_rho,
+     r'$n{=}60,\ T{=}12,\ M_{ij}{=}4,\ p_{\mathrm{task}}{=}1$'),
+    ('qe_n_models', 'n_models', r'number of models $n$', None,
+     r'$T{=}12,\ M_{ij}{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
+    ('qe_n_tasks', 'n_tasks', r'number of tasks $T$', None,
+     r'$n{=}60,\ M_{ij}{=}4,\ \rho{=}0,\ p_{\mathrm{task}}{=}1$'),
+    ('qe_task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$', None,
+     r'$n{=}60,\ T{=}12,\ M_{ij}{=}4,\ \rho{=}0$'),
+    ('task_parity', 'obs_prob', r'task coverage $p_{\mathrm{task}}$ (completion)', None,
+     r'$n{=}100,\ T{=}20,\ M_{ij}{=}10,\ p_{\mathrm{query}}{=}0.8$'),
 ]
 
 
