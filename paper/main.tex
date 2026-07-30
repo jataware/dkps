@@ -592,27 +592,30 @@ levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.
 \end{figure}
 
 \paragraph{\PKPS-based methods outperform the sample score at small query budgets.}
-Figure~\ref{fig:qe} shows MAE as a function of the query budget $m$.
-Each model answers its own independently sampled queries, the real-data analogue of
-$\rho{=}0$, and we predict the true full-evaluation score.
-IRT is poorly identified in this regime.
-At small budgets the representation-based methods are substantially more accurate than
-the sample score: at $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus
-$0.292$, so \PKPS with one query matches the sample score at four.
-As the budget grows, the sample score eventually overtakes the representation's residual
-bias ($0.034$ vs.\ $0.085$ at $m{=}32$).
-The ensemble follows the better of its two components throughout.
-Panels (b, c) vary the cohort and coverage: \PKPS improves steadily
-($0.157\!\to\!0.124$ and $0.154\!\to\!0.128$ on HELM, $35$--$37\%$ relative on EEE)
+Figure~\ref{fig:qe}a--c shows the MAE for \PKPS, DKPS, IRT, the sample score, and
+the ensemble on the HELM suite: each model answers its own independently sampled
+queries -- the real-data analogue of $\rho=0$ -- and we predict its true
+full-evaluation score.
+At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
+sample score, so \PKPS with one query matches the sample score at four (a).
+As the budget grows, the sample score eventually overtakes the representations'
+residual bias, and the ensemble follows the better of its two components
+throughout (a).
+\PKPS improves steadily with the number of reference models
+($0.157\!\to\!0.124$, b) and with the task coverage ($0.154\!\to\!0.128$, c),
 while DKPS, which cannot use the additional unpaired responses, is flat.
+IRT is poorly identified without a shared item block and is worse than the sample
+score at every budget.
 
 \paragraph{The query-efficiency gains are broad but tail-driven.}
-Figure~\ref{fig:qe}d--g shows the per-cell difference between the sample score's and
-the ensemble's absolute errors, by dataset, budget, cohort, and coverage.
+Figure~\ref{fig:qe}d--g shows the distribution of the per-cell difference between
+the sample score's and the ensemble's absolute errors, by dataset (d), budget (e),
+cohort (f), and task coverage (g).
 The ensemble outperforms the sample score on most cells and in the mean of every row.
-The distribution of gains is skewed: the largest concentrate at the smallest budgets
-and on the rich-response datasets, where a single response carries the most
-information about the model.
+The gains are largest on the rich-response datasets (d) and at the smallest budgets
+(e), where a single response carries the most information, and they shrink toward
+zero as the budget grows.
+The mean gain is positive at every cohort size (f) and every coverage (g).
 
 \paragraph{The same representations complete missing cells.}
 Figure~\ref{fig:completion}a--d shows MAE on missing cells when a fraction
