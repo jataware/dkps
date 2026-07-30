@@ -190,24 +190,18 @@ The proposed Product Kernel Perspective Space generalizes this construction with
 \label{sec:setting}
 For our purposes, a model is a random mapping
 $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space.
-A task is a pair $(Q^{(t)}, s^{(t)})$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a
-collection of queries with $M^{(t)}:=|Q^{(t)}|$ and $s^{(t)}$ is a scoring function
-mapping a model and a query collection to a score. Model $i$'s true score on task
-$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)})$. We emphasize that
-$s^{(t)}(f_{i},\cdot)$ is valid for any query collection, including the empty
-collection: $s^{(t)}(f_{i},\emptyset)$ carries no information about $f_{i}$ and
-corresponds to a missing entry of the (model, task) score matrix.
+A task is a pair $(Q^{(t)}, s)$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a collection
+of queries with $M^{(t)}:=|Q^{(t)}|$ and $s$ is a scoring function mapping a model
+and a query collection to a score. Model $i$'s true score on task $t$ is
+$y_i^{(t)}:=s(f_{i},Q^{(t)})$.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
 query $q\in Q^{(t)}$ may or may not have been generated.
 Let $Q_{i}^{(t)}\subseteq Q^{(t)}$ be the queries for which model $i$'s response is
 observed, with $m_{i}^{(t)}:=|Q^{(t)}_{i}|$ and $Q_i:=\cup_{t}Q_i^{(t)}$.
-The corresponding \emph{sample score}
-$\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is a noisy estimate of
-$y_{i}^{(t)}$.
 
-The evaluation data is \emph{sparse} when few models have
+Evaluation data is \emph{sparse} when few models have
 $m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the cross-model overlaps
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
 $\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
@@ -215,15 +209,15 @@ given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly cura
 leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
 The goal of benchmark prediction is to estimate a model's score from the available
 evaluation data.
-The two tasks introduced in Section~\ref{sec:introduction} are the two regimes of the
+The two tasks introduced in \S\ref{sec:introduction} are the two regimes of the
 observation count $m_i^{(t)}$:
-\begin{enumerate}
+\begin{enumerate}[wide, labelwidth=1pt, labelindent=12pt]
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
 \item \emph{Query-efficient evaluation} is the case
-$m_{i}^{(t)}>0$. Responses or scores from other models on task $t$ are
+with $m_{i}^{(t)}>0$. Responses or scores from other models on task $t$ are
 typically available, and the goal is to outperform the naive sample score
-$\tilde{y}_{i}^{(t)}$.
-\item \emph{(Model, task) score completion} is the case $m_{i}^{(t)}=0$.
+$s(f_{i},Q_i^{(t)})$.
+\item \emph{(Model, task) score matrix completion} is the case with $m_{i}^{(t)}=0$.
 No responses from the target (model, task) slice exist and prediction
 must be based on model $i$'s responses to other tasks and on responses from
 other models evaluated on task $t$.
@@ -357,9 +351,10 @@ distribution, observed through the sampled (model, task, response) triples of
 Section~\ref{sec:theory}.
 Every observed quantity is a function of the triples: the embedded responses enter
 Eq.~\eqref{eq:A}, and the sample-score vector
-$(\tilde{y}_{i}^{(1)},\hdots,\tilde{y}_{i}^{(T)})$ collects per-task statistics of
+$(\tilde{y}_{i}^{(1)},\hdots,\tilde{y}_{i}^{(T)})$, with
+$\tilde{y}_{i}^{(t)}:=s(f_{i},Q_{i}^{(t)})$, collects per-task statistics of
 model $i$'s responses.
-The true score $y_{i}:=s^{(t)}(f_{i},Q^{(t)})$ is a functional of the model and is
+The true score $y_{i}:=s(f_{i},Q^{(t)})$ is a functional of the model and is
 never observed.
 The models with $m_{i}^{(t)}>0$ serve as \emph{references} for task $t$, and the
 \emph{target} is the model whose true score we estimate---its own cell may be
@@ -395,7 +390,7 @@ $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \begin{theorem}[Query efficiency relative to paired DKPS]
 \label{thm:qeff}
 Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$.
-Let the scoring functions be means of bounded per-query scores, let each observed
+Let the scoring function be a mean of bounded per-query scores, let each observed
 cell be a uniform subsample at budget $m$, and write \PKPS$_\sigma$ for the
 estimator with fixed bandwidth $\sigma$ and a $k$-nearest-neighbor regressor fit
 on the sample scores $\tilde{y}_{i}^{(t)}$.
@@ -1139,7 +1134,7 @@ relative to the sample score in the sense of Definition~\ref{def:qeff}, proving
 Corollary~\ref{cor:sample}.
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}: noisy reference scores.} Write the scoring function as
-$s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
+$s(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
 $r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
 $Q^{(t)}$ of size $m$. Then
 $\mathbb{E}[\tilde{y}_{i}^{(t)}\mid f_{i}]=y_{i}$ and
