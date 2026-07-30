@@ -376,6 +376,10 @@ $k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$, is the running example.
 The proof uses no other property of the family, so any such family (e.g., Laplacian
 or Mat\'ern) suffices, with Assumptions~\ref{ass:overlap}--\ref{ass:support} read
 at the selected bandwidth.
+We further assume mean-type scoring functions with uniformly subsampled cells
+(Assumption~\ref{ass:noise}, Appendix~\ref{app:proof}), and write \PKPS$_\sigma$
+for the estimator with fixed bandwidth $\sigma$ and a $k$-nearest-neighbor
+regressor fit on the sample scores $\tilde{y}_{i}^{(t)}$.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
@@ -387,17 +391,13 @@ $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \begin{theorem}[Query efficiency relative to paired DKPS]
 \label{thm:qeff}
 Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$.
-Let the scoring functions be means of bounded per-query scores, let each observed
-cell be a uniform subsample at budget $m$, and write \PKPS$_\sigma$ for the
-estimator with fixed bandwidth $\sigma$ and a $k$-nearest-neighbor regressor fit
-on the sample scores $\tilde{y}_{i}^{(t)}$.
-Under Assumptions~\ref{ass:bound}--\ref{ass:support}, there exists a bandwidth
+Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a bandwidth
 $\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
 Under a fully unpaired design ($\rho=0$), the separation is strict: every
-paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y_{0})$ at every $(n,m)$, while
-for any $\epsilon>0$ there exist $(n,m,k)$, with $m$ polynomial in
-$(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
-$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability.
+paired-DKPS estimator has $\mathrm{MSE}\ge\mathrm{Var}(y_{0})$ at every $(n,m)$,
+while for any $\epsilon>0$ there exist $(n,m,k)$ at which
+$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability, with $m$
+polynomial in $(1/\epsilon,1/\kappa,n)$.
 \end{theorem}
 \begin{proof}[Proof sketch]
 The exact-matching limit coincides with paired DKPS on the shared queries with the
@@ -1053,6 +1053,10 @@ The benchmark score is bounded and $\gamma$-Lipschitz on the population perspect
 The model distribution places mass on every neighborhood of the population perspective
 space.
 \end{assumption}
+\begin{assumption}[Observation model]\label{ass:noise}
+Each scoring function is the mean of bounded per-query scores, and each observed cell
+$Q_{i}^{(t)}$ is a uniform subsample of $Q^{(t)}$ at the budget $m$.
+\end{assumption}
 
 \paragraph{Population quantities.} Each of model $i$'s triples independently draws a
 task, then a query conditioned on the task, then the model's response; write
@@ -1182,7 +1186,7 @@ $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 \paragraph{Proof of Theorem~\ref{thm:qeff}: noisy reference scores.} Write the scoring function as
 $s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
 $r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
-$Q^{(t)}$ of size $m$. Then
+$Q^{(t)}$ of size $m$ (Assumption~\ref{ass:noise}). Then
 $\mathbb{E}[\tilde{y}_{i}^{(t)}\mid f_{i}]=y_{i}$ and
 $\mathrm{Var}(\tilde{y}_{i}^{(t)}\mid f_{i})\le\sigma_q^2/m$, and the noises
 $\varepsilon_{i}=\tilde{y}_{i}^{(t)}-y_{i}$ are independent across $i$ because
