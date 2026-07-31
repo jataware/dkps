@@ -680,17 +680,14 @@ on which benchmarks correlates with developer, release date, and expected
 performance.
 Extending the analysis to modeled observation processes is a natural and important
 next step.
-(iii) \textit{Where else could \PKPS be used?}
-Benchmark prediction is one instance of a broader problem: comparing populations of
-black-box models from whatever behavior happens to be cached.
-Monitoring is a natural next instance.
-Existing perspective-based monitoring---change-point tests on agent trajectories
-\citep{bridgeford2026change} and control charts for deployed systems
-\citep{helm2026control}---re-administers a fixed probe set at every timepoint, a
-paired design.
-\PKPS removes that requirement: agents can be monitored from the heterogeneous
-interactions they actually have, as on open agent platforms such as Moltbook, where
-no two agents see the same prompts.
+(iii) \textit{Unpaired monitoring.}
+Paired DKPS has been used as a tool for tracking the perspectives of multi-agent
+systems \citep{helm2024tracking, bridgeford2026change, helm2026control}.
+These approaches require asking each agent a collection of fixed queries each time
+point and are prohibitively expensive at scale.
+The \PKPS removes this requirement: agents can be monitored through the
+heterogeneous interactions they naturally produce, as on open agent platforms such
+as Moltbook, where no two agents see the same prompts.
 
 \subsubsection*{Reproducibility statement}
 All methods are released as a documented Python package (the \PKPS estimator, matrix
