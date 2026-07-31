@@ -657,20 +657,11 @@ tasks, and cohort size. \textbf{(e--h)} Per-cell difference in MAE between LRMC 
 \section{Discussion}
 \label{sec:discussion}
 In this paper we introduced the \PKPS, a collection of low-dimensional
-representations of models defined on sparse, unpaired collections of embedded
-responses.
-Outside of curated leaderboards, evaluation data is typically unpaired: each model
-answers the queries its evaluators chose, and methods that require a shared block
-of identical queries do not apply.
-Our central finding is that benchmark prediction remains possible in this regime.
-As $\rho\to0$, DKPS and IRT degrade sharply while \PKPS does not.
+representations of models defined on sparse and unpaired collections of embedded
+responses --- a realistic setting outside of highly curated leaederboards and evaluation collections.
+We prove that the \PKPS is query-efficient relative to its fully-paired counterpart and that, as $\rho\to0$, DKPS and IRT degrade sharply empirically while \PKPS does not.
 The same representations support both benchmark prediction tasks, and the ensemble
 performs at least as well as either component alone.
-The Every Eval Ever datastore suggests where this matters most: pairedness in the
-wild is bimodal, and the natively unpaired benchmarks are the arena-style
-ones---interactive evaluations in which the queries a model sees depend on its
-matchups.
-As interactive evaluation grows, so does the regime \PKPS targets.
 
 \paragraph{Limitations and future work.} We close with the current limitations and
 the extensions they suggest.
