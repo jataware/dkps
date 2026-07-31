@@ -347,15 +347,17 @@ distribution, observed through the sampled (model, task, response) triples of
 Section~\ref{sec:theory}.
 Our goal is to predict the true score of $f_{0}$ on task $t$,
 $y_{0}:=s^{(t)}(f_{0},Q^{(t)})$.
-The (model, task) pairs with $m_{i}^{(t)}>0$ provide information potentially
-relevant to predicting $y_{0}$.
+The (model, task) pairs with $m_{i}^{(t)}>0$ and model $f_{0}$'s responses from
+tasks $t' \neq t$ provide information potentially relevant to predicting $y_{0}$.
+
 We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, treat $\hat\psi_{i}$
 as a proxy for $f_{i}$, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{Y}$ on
 the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
 predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
 score information, so the target model is embedded alongside the reference models.
-Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, 10.3389/fnhum.2022.930291}).
+Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out,
+10.3389/fnhum.2022.930291}), but we do not analyze or study them here.
 
 \citet{dkps_qeff} established that nearest neighbor regression using representations
 from the fully paired DKPS is query efficient relative to the sample score.
@@ -371,25 +373,26 @@ $m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^
 denotes the per-query score variance.
 We assume the query kernel is from a family
 $\{k_{\sigma}\}_{\sigma>0}$ of bounded kernels indexed by a bandwidth $\sigma$ whose
-$\sigma\to0$ limit is exact
-matching. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
-such an example.
-We write \PKPS$_\sigma$ for the estimator with query kernel $k_{\sigma}$ and a
-$k$-nearest-neighbor regressor, under mean-type scores with uniformly subsampled cells
-(Assumption~\ref{ass:noise}, Appendix~\ref{app:proof}).
+$\sigma\to0$ limit $k_{0}$ satisfies $k_{0}(u,u') > 0$ if $u = u'$ and
+$k_{0}(u,u')=0$ otherwise. The RBF kernel
+($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is such an example.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
 Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$
-scored reference models.
-$h$ is \emph{query-efficient relative to} $h'$ if there exists $N$ such that
+reference models.
+The sequence of estimators $(h_{1}, h_{2}, \hdots)$ is \emph{query-efficient
+relative to} $(h'_{1}, h'_{2}, \hdots)$ if there exists $N$ such that
 $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
+We write $h_{n,\sigma}^{(k)}$ for an estimator that uses a $k$-nearest-neighbor
+regressor on the \PKPS constructed with a query kernel with bandwidth $\sigma$.
 \begin{theorem}[\PKPS is query efficient relative to paired DKPS]
 \label{thm:qeff}
-Fix a per-model budget $m$ and pairing fraction $\rho\in[0,1]$.
-Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a bandwidth
-$\sigma$ such that \PKPS$_\sigma$ is query-efficient relative to paired DKPS.
+Fix a pairing fraction $\rho\in[0,1]$.
+Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a sequence
+$(h_{1,\sigma_{1}}^{(k_{1})}, h_{2,\sigma_{2}}^{(k_{2})}, \hdots)$
+that is query-efficient relative to paired DKPS.
 \end{theorem}
 \begin{proof}[Proof sketch]
 The exact-matching limit ($\sigma\to0$) coincides with paired DKPS on the shared
@@ -405,7 +408,7 @@ vanishes when $k \to \infty$ as $n \to \infty$ with $k/n \to 0$.
 The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
 We note that query-efficiency is transitive. Theorem~\ref{thm:qeff}, together with
-\citet{dkps_qeff}, implies that \PKPS$_\sigma$ is query-efficient relative to
+\citet{dkps_qeff}, implies that this sequence is query-efficient relative to
 the sample score.
 
 In practice, the bandwidth is selected by cross-validation over a finite grid
