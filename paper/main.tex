@@ -1139,13 +1139,24 @@ Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
 distances are invariant to $W$.
 \end{proof}
 
+\paragraph{Proof of Theorem~\ref{thm:qeff}.} Taking $\sigma_{n}=0$ and
+$k_{n}=k'_{n}$ makes $h_{n,\sigma_{n}}^{(k_{n})}=h_{n,0}^{(k'_{n})}$ for every $n$:
+the two sequences have equal MSE at every $n$, and Definition~\ref{def:qeff} is
+satisfied with $N=1$. \hfill$\qed$
+
+The remainder of this appendix quantifies when the improvement is strict.
+Lemma~\ref{lem:exact} and its noisy-score extension show that positive bandwidths
+attain any $\epsilon$ with polynomially many queries; the contrast paragraph shows
+that the $\sigma=0$ members degrade as $\rho\to0$; and the final paragraph shows
+that cross-validation selects such a bandwidth from data.
+
 \begin{lemma}[Achievability with exact reference scores]
 \label{lem:exact}
 Suppose the reference scores are observed exactly ($\tilde{y}_{i}^{(t)}=y_{i}$).
 Under Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$ there
 exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
 $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
-$\mathrm{MSE}(\PKPS_\sigma)\le\epsilon$ with high probability.
+$\mathrm{MSE}(h_{n,\sigma}^{(1)})\le\epsilon$ with high probability.
 \end{lemma}
 \paragraph{Proof of Lemma~\ref{lem:exact}.} Take scores in $[0,1]$ without loss of
 generality (Assumption~\ref{ass:score}). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
@@ -1177,7 +1188,7 @@ $|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding th
 failure events (squared errors are bounded by $1$),
 $\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
 
-\paragraph{Proof of Theorem~\ref{thm:qeff}: noisy reference scores.} Write the scoring function as
+\paragraph{Achievability with noisy reference scores.} Write the scoring function as
 $s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
 $r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
 $Q^{(t)}$ of size $m$ (Assumption~\ref{ass:noise}). Then
@@ -1192,30 +1203,25 @@ the proof of Lemma~\ref{lem:exact}: perspective estimation error
 Assumption~\ref{ass:support} makes small for $n$ large with $k/n\to0$, times the
 Lipschitz constant. The second term is a mean of $k$ independent, bounded,
 mean-zero variables, so its conditional variance is at most $\sigma_q^2/(mk)$ and
-it concentrates by Hoeffding. Choosing $k\to\infty$ with $k/n\to0$ (e.g.,
-$k=\lceil\log n\rceil$) gives
-$\mathrm{MSE}\le\epsilon+\sigma_q^2/(mk)\to\epsilon$. Under a common
+it concentrates by Hoeffding. Choosing $k_{n}\to\infty$ with $k_{n}/n\to0$ (e.g.,
+$k_{n}=\lceil\log n\rceil$) gives
+$\mathrm{MSE}(h_{n,\sigma}^{(k_{n})})\le\epsilon+\sigma_q^2/(mk_{n})\to\epsilon$. Under a common
 (paired) subsample the $\varepsilon_{i}$ share the draw of the query set and
 $\mathrm{Cov}(\varepsilon_{i},\varepsilon_{j})$ equals the variance of the
 common query-difficulty component, which the neighbor average does not reduce.
 \qed
 
-\paragraph{Contrast with paired DKPS.} With the exact-matching kernel $k_Q=\delta$
-($k_Q(u,u')=\indone\{u=u'\}$), only identical query pairs enter the double sum, so the
+\paragraph{Contrast with paired DKPS.} Under the limit kernel $k_{0}$
+($k_{0}(u,u')>0$ iff $u=u'$), only identical query pairs enter the double sum, so the
 $U$-statistic runs over the $\rho m$ shared queries
 and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKPS's
 guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Proof of Theorem~\ref{thm:qeff}: domination and strict separation.} Existence of a dominating bandwidth is
-witnessed by the exact-matching member: the $k_Q=\delta$ estimator coincides with
-paired DKPS on the shared queries with the same regressor
-(Section~\ref{sec:method}), so
-$\sigma=\delta$ attains $\mathrm{MSE}(\PKPS_\sigma)=\mathrm{MSE}(\mathrm{DKPS})$ at
-every $(n,m)$, and any bandwidth improving on exact matching witnesses strict
-domination. The remainder establishes the operational form: cross-validation attains
+\paragraph{Strict improvement and bandwidth selection.} Cross-validation attains
 the best grid member up to $\epsilon$. Split the reference models into a training
-set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma\in\Sigma$, build the
+set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma$ in a finite grid
+$\Sigma$ containing $0$, build the
 perspective space on $T$, embed any model outside $T$ out of sample by its
 Eq.~\eqref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
 $\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
@@ -1228,20 +1234,21 @@ $\sup_{\sigma\in\Sigma}|\hat L(\sigma)-L(\sigma)|\le
 \tau=\sqrt{\log(2|\Sigma|/\delta')/2n_v}$, where $L(\sigma)$ is the MSE on a fresh
 target. On this event,
 \[
-L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(\delta)+\tau
-\;\le\;L(\delta)+2\tau\;=\;\mathrm{MSE}(\mathrm{DKPS})+2\tau,
+L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(0)+\tau
+\;\le\;L(0)+2\tau,
 \]
-since the $k_Q=\delta$ member of the family coincides with paired DKPS on the shared
-queries with the same regressor. Taking $n_v$ large enough that
-$2\tau\le\epsilon$ transfers the domination guarantee to the cross-validated
-estimator at every $(m,\rho)$. If some
-$\sigma^\star$ has $\Delta=L(\delta)-L(\sigma^\star)>0$, the same event gives
-$L(\hat\sigma)\le L(\sigma^\star)+2\tau=\mathrm{MSE}(\mathrm{DKPS})-\Delta+2\tau$,
+and $L(0)$ is the paired-DKPS MSE since the $\sigma=0$ member coincides with paired
+DKPS on the shared queries with the same regressor (Section~\ref{sec:qeff}). Taking
+$n_v$ large enough that $2\tau\le\epsilon$ transfers the guarantee to the
+cross-validated estimator at every $(m,\rho)$. If some
+$\sigma^\star\in\Sigma$ has $\Delta=L(0)-L(\sigma^\star)>0$, the same event gives
+$L(\hat\sigma)\le L(\sigma^\star)+2\tau=L(0)-\Delta+2\tau$,
 strict for $2\tau<\Delta$. Finally, at $\rho=0$ with nonatomic designs,
 $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surely every
-identity-matched sum is empty: any measurable completion of the DKPS member predicts as a
-function of the reference data alone, independent of the target, whence
-$\mathrm{MSE}(\mathrm{DKPS})=v+\mathbb{E}[(\mathbb{E}y_{0}-\hat y)^2]\ge v$, while under
+identity-matched sum is empty: any measurable completion of the $\sigma=0$ member
+predicts as a function of the reference data alone, independent of the target, whence
+$L(0)=v+\mathbb{E}[(\mathbb{E}y_{0}-\hat y)^2]\ge v$ with $v=\mathrm{Var}(y_{0})$,
+while under
 Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
 supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
