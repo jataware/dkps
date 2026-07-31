@@ -387,16 +387,19 @@ $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
 We write $h_{n,\sigma}^{(k)}$ for an estimator that uses a $k$-nearest-neighbor
 regressor on the \PKPS constructed with a query kernel with bandwidth $\sigma$.
+Since $k_{0}$ matches only identical queries, $h_{n,0}^{(k)}$ is $k$-nearest-neighbor
+regression on the paired DKPS.
 \begin{theorem}[\PKPS is query efficient relative to paired DKPS]
 \label{thm:qeff}
 Fix a pairing fraction $\rho\in[0,1]$.
-Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, there exists a sequence
-$(h_{1,\sigma_{1}}^{(k_{1})}, h_{2,\sigma_{2}}^{(k_{2})}, \hdots)$
-that is query-efficient relative to paired DKPS.
+Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every sequence
+$(h_{n,0}^{(k'_{n})})_{n\ge1}$ there exists a sequence
+$(h_{n,\sigma_{n}}^{(k_{n})})_{n\ge1}$ that is query-efficient relative to
+$(h_{n,0}^{(k'_{n})})_{n\ge1}$.
 \end{theorem}
 \begin{proof}[Proof sketch]
-The exact-matching limit ($\sigma\to0$) coincides with paired DKPS on the shared
-queries with the same regressor, which gives the claim with equality.
+Taking $\sigma_{n}=0$ and $k_{n}=k'_{n}$ recovers the comparison sequence exactly,
+which gives the claim with equality.
 With exact reference scores, Theorem~\ref{prop:conc} and
 Assumption~\ref{ass:support} guarantee a bandwidth attaining any $\epsilon$ with
 $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$. No step involves $\rho$
