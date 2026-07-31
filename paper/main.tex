@@ -679,22 +679,23 @@ As interactive evaluation grows, so does the regime \PKPS targets.
 
 \paragraph{Limitations and future work.} We close with the current limitations and
 the extensions they suggest.
-First, \PKPS embeds every observed response and query with a single fixed embedder.
+(i) \textit{Fixed embedder.} \PKPS embeds every observed response and query with a
+single fixed embedder.
 We did not ablate this choice, and embedding functions are known to have a
 nonnegligible effect at small budgets \citep{dkps_qeff}.
-Second, the block-diagonal instantiation on the HELM suite disables bridging across
-response domains.
+(ii) \textit{Block-diagonal responses.} The block-diagonal instantiation on the
+HELM suite disables bridging across response domains.
 A shared response space that lets responses in one domain inform another remains
 untested.
-Third, computing Eq.~\eqref{eq:A} is quadratic in the number of queries per model
-pair.
-Fourth, Theorem~\ref{thm:qeff} guarantees parity with paired DKPS: strict
-improvement at intermediate $\rho$ rests on some positive bandwidth improving on
-exact matching, which we establish empirically (Figure~\ref{fig:synthetic}b) rather
-than by a lower bound, and neither result provides a rate in $n$.
-Finally, the per-cell gains over score-only baselines are modest on dense low-rank
-matrices and decisive in the sparse, noisy, unpaired regime that motivates the
-problem.
+(iii) \textit{Cost.} Computing Eq.~\eqref{eq:A} is quadratic in the number of
+queries per model pair.
+(iv) \textit{Theory.} Theorem~\ref{thm:qeff} guarantees parity with paired DKPS:
+strict improvement at intermediate $\rho$ rests on some positive bandwidth improving
+on exact matching, which we establish empirically (Figure~\ref{fig:synthetic}b)
+rather than by a lower bound, and neither result provides a rate in $n$.
+(v) \textit{Dense regime.} The per-cell gains over score-only baselines are modest
+on dense low-rank matrices and decisive in the sparse, noisy, unpaired regime that
+motivates the problem.
 Evaluating \PKPS on natively unpaired evaluations---where no full-depth ground
 truth exists and validation itself requires care---is the natural next step.
 
