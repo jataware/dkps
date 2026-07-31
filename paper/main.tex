@@ -398,16 +398,18 @@ $(h_{n,\sigma_{n}}^{(k_{n})})_{n\ge1}$ that is query-efficient relative to
 $(h_{n,0}^{(k'_{n})})_{n\ge1}$.
 \end{theorem}
 \begin{proof}[Proof sketch]
-Taking $\sigma_{n}=0$ and $k_{n}=k'_{n}$ recovers the comparison sequence exactly,
-which gives the claim with equality.
-With exact reference scores, Theorem~\ref{prop:conc} and
-Assumption~\ref{ass:support} guarantee a bandwidth attaining any $\epsilon$ with
-$m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$. No step involves $\rho$
-(Lemma~\ref{lem:exact}).
+Taking $\sigma_{n}=0$ and $k_{n}=k'_{n}$ recovers the comparison sequence, which
+gives the claim with equality.
+Positive bandwidths can do strictly better: with exact reference scores,
+Theorem~\ref{prop:conc} and Assumption~\ref{ass:support} guarantee bandwidths
+attaining any $\epsilon$ with $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ at every
+pairing fraction (Lemma~\ref{lem:exact}), while at $\rho=0$ every identity-matched
+comparison is an empty sum and no paired-DKPS sequence can depend on the target's
+responses.
 The reference noises $\tilde{y}_{i}^{(t)}-y_{i}$ are mean zero, bounded, of
 variance at most $\sigma_q^2/m$, and independent across models under unpaired
-designs, so the $k$-neighbor average contributes at most $\sigma_q^2/(mk)$, which
-vanishes when $k \to \infty$ as $n \to \infty$ with $k/n \to 0$.
+designs, so the $k_{n}$-neighbor average contributes at most $\sigma_q^2/(mk_{n})$,
+which vanishes when $k_{n}\to\infty$ with $k_{n}/n\to0$.
 The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
 We note that query-efficiency is transitive. Theorem~\ref{thm:qeff}, together with
