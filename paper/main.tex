@@ -649,6 +649,8 @@ the full cohort ($0.069$ versus $0.096$ at $n{=}45$).
 Both comparisons are significant at the smallest $p$ attainable with $16$ tasks
 (Wilcoxon $p{=}3\times10^{-5}$, better on every task), including full-cohort
 completion, which is not significant on HELM.
+The conclusions are unchanged when the five MATH-MC tasks, whose problems overlap
+the HELM suite's MATH tasks, are excluded (Appendix~\ref{app:eee}).
 Table~\ref{tab:suite} shows the performance of all methods on both tasks on both suites.
 The ensemble is the best or tied in every column.
 
@@ -882,6 +884,21 @@ query-efficiency budget $m$ and the completion depth $p_{\mathrm{query}}$ subsam
 pool, and the prediction target is always the cell's full-depth mean over all items, which
 is never embedded.
 All scores are binary, so IRT applies to every task (on the HELM suite it excludes WMT).
+
+\paragraph{Overlap with the HELM suite.} MATH-MC is a multiple-choice conversion of
+MATH \citep{hendrycks2021math}, the source of the HELM suite's seven MATH tasks:
+$430$ of the $437$ HELM MATH problems appear verbatim in the MATH-MC item bank, and
+$429$ ($10\%$) of the $4{,}292$ MATH-MC queries in the analyzed EEE pools are HELM
+MATH problems ($5.6\%$ of all analyzed EEE queries).
+The suites nonetheless share no task: the response formats (free-form versus
+multiple-choice), scoring functions, and task partitions (subject versus level)
+differ, and only two of the $45$ EEE models (the two Gemma-2 sizes) appear among the
+$93$ HELM models.
+Excluding the five MATH-MC tasks changes no conclusion: at $m{=}1$ the ensemble
+attains $0.084$ versus $0.280$ for the sample score, and on missing cells $0.091$
+versus $0.124$ at $n{=}10$ and $0.080$ versus $0.113$ at $n{=}45$, each better on
+all $11$ remaining tasks (Wilcoxon $p{=}9.8\times10^{-4}$, the smallest attainable
+with $11$ tasks).
 Figures~\ref{fig:eeeqe} and \ref{fig:eeecomp} repeat the lever sweeps of
 Figures~\ref{fig:qe} and \ref{fig:completion} on this suite; Table~\ref{tab:suite}
 summarizes.
