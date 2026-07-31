@@ -671,42 +671,26 @@ where scores are stochastic and may depend on contextual factors beyond the
 individual response.
 If each score takes the form $s(f(q))+\epsilon$ with $\epsilon$ i.i.d., repeated
 scoring recovers the current setting in the limit and the extension is conceptually
-straightforward; judges whose errors correlate with response style are the harder
-and more realistic case.
+straightforward.
 (ii) \textit{Beyond uniform observation.}
 Assumption~\ref{ass:noise} models observed cells as uniform subsamples, and our
 experiments induce sparsity and unpairedness by uniform masking.
 Missingness in deployed evaluation data is not uniform: which models are evaluated
 on which benchmarks correlates with developer, release date, and expected
 performance.
-Extending the analysis to modeled observation processes---for example,
-importance-weighting the sums of Eq.~\eqref{eq:A} by estimated observation
-propensities---is a natural next step.
-(iii) \textit{Prediction bounds for frontier models.}
-Nearest-neighbor prediction is inherently bounded by the scores of the reference
-models, which may limit accuracy when the target model substantially outperforms
-all references.
-In practice, most evaluation traffic concerns non-frontier models or verifying that
-modifications do not degrade performance, rather than the boundary of benchmark
-performance.
-Supporting inductive (extrapolative) prediction would require stronger assumptions
-on the relationships between the task, the model distribution, and the embedding
-function.
-(iv) \textit{When does bridging help?}
-Our results reveal heterogeneity across tasks: the per-cell gains are largest for
-rich free-text responses and smallest for single-token formats.
-The query kernel bridges queries that the embedding function deems similar, so
-\PKPS inherits the embedder's notion of similarity.
-Understanding which task properties---response diversity, the alignment between
-embedding similarity and score-relevant similarity, the geometry of the query
-space---predict when bridging helps would let practitioners assess applicability
-before deployment.
-In terms of practical deployment, our results suggest a simple workflow: maintain
-caches of embedded responses, use the ensemble with the cross-validated bandwidth,
-and expect the largest returns exactly where evaluation is hardest---few reference
-models, few queries, little pairing.
-As interactive, natively unpaired evaluation grows, so does the regime \PKPS
-targets.
+Extending the analysis to modeled observation processes is a natural and important
+next step.
+(iii) \textit{Where else could \PKPS be used?}
+Benchmark prediction is one instance of a broader problem: comparing populations of
+black-box models from whatever behavior happens to be cached.
+Monitoring is a natural next instance.
+Existing perspective-based monitoring---change-point tests on agent trajectories
+\citep{bridgeford2026change} and control charts for deployed systems
+\citep{helm2026control}---re-administers a fixed probe set at every timepoint, a
+paired design.
+\PKPS removes that requirement: agents can be monitored from the heterogeneous
+interactions they actually have, as on open agent platforms such as Moltbook, where
+no two agents see the same prompts.
 
 \subsubsection*{Reproducibility statement}
 All methods are released as a documented Python package (the \PKPS estimator, matrix

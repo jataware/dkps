@@ -1,4 +1,4 @@
-\begin{thebibliography}{48}
+\begin{thebibliography}{50}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -44,6 +44,12 @@ Sam Bowyer, Acyr Locatelli, and Kris Cao.
 \newblock Efficient benchmarking is just feature selection and multiple
   regression.
 \newblock \emph{arXiv preprint arXiv:2605.25773}, 2026.
+
+\bibitem[Bridgeford and Helm(2026)]{bridgeford2026change}
+Eric~W. Bridgeford and Hayden~S. Helm.
+\newblock Statistical tests for change detection in populations of interacting
+  agents.
+\newblock In \emph{International Conference on Machine Learning}, 2026.
 
 \bibitem[Bubeck et~al.(2023)Bubeck, Chandrasekaran, Eldan, Gehrke, Horvitz,
   Kamar, Lee, Lee, Li, Lundberg, Nori, Palangi, Ribeiro, and
@@ -145,10 +151,16 @@ Hayden Helm, Aranyak Acharyya, Youngser Park, Brandon Duderstadt, and Carey
 \newblock In \emph{Findings of the Association for Computational Linguistics
   (ACL)}, 2025.
 
-\bibitem[Helm et~al.(2026)Helm, Johnson, and Priebe]{dkps_qeff}
+\bibitem[Helm et~al.(2026{\natexlab{a}})Helm, Johnson, and Priebe]{dkps_qeff}
 Hayden Helm, Ben Johnson, and Carey~E. Priebe.
 \newblock Query-efficient model evaluation using cached responses.
-\newblock \emph{arXiv preprint arXiv:2605.07096}, 2026.
+\newblock \emph{arXiv preprint arXiv:2605.07096}, 2026{\natexlab{a}}.
+
+\bibitem[Helm et~al.(2026{\natexlab{b}})Helm, Priebe, and
+  Duderstadt]{helm2026control}
+Hayden~S. Helm, Carey~E. Priebe, and Brandon Duderstadt.
+\newblock Control charts for monitoring black-box generative systems.
+\newblock \emph{arXiv preprint arXiv:2605.11135}, 2026{\natexlab{b}}.
 
 \bibitem[Hendrycks et~al.(2021)Hendrycks, Burns, Kadavath, Arora, Basart, Tang,
   Song, and Steinhardt]{hendrycks2021math}
