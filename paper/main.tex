@@ -42,14 +42,14 @@
 Evaluating a generative model on all queries from all available benchmark tasks is
 prohibitively expensive. As such, models are often evaluated on different subsets of tasks
 and/or different subsets of queries from a given task. The resulting collection of
-responses and the corresponding (model, task) score matrix are unpaired and sparse. In
+responses and the corresponding (model, task) score matrix is unpaired and sparse. In
 this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collection of
 low-dimensional representations of models based on their embedded responses. \PKPS
 generalizes existing methods for representing black-box generative models by comparing responses to similar -- rather than just
 identical -- queries and is therefore able to utilize sparse and unpaired information. Theoretically, we show that
 benchmark prediction using \PKPS is query-efficient relative to methods that only use information from dense and paired portions of the evaluation data.
 Empirically, we show that \PKPS
-outperforms relevant baselines on two tasks across two large benchmark suites.
+outperforms baselines on two benchmark prediction tasks across two large benchmark suites.
 \end{abstract}
 
 \section{Introduction}
@@ -66,15 +66,15 @@ across multiple releases \citep{helm}, and a recent compilation includes 133 dif
 benchmarks for frontier models \citep{benchpress}.
 As such, a model is rarely evaluated on all benchmarks: of the (model, task) pairs in
 the compilation above, only 23\% have a reported score.
-Further, as benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
+Further, benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
 \citep{white2024livebench}, or subsampled to reduce cost
-\citep{perlitz2024efficient} -- two models evaluated on the same benchmark may have responded to different sets of queries.
+\citep{perlitz2024efficient} -- and two models evaluated on the same benchmark may have responded to different sets of queries.
 
 Benchmark prediction
 % \citep{polo2024tinybenchmarks, vivek2024anchor, li2024active,
 % hofmann2025fluid, bowyer2026efficient, benchpress}
-attempts to alleviate the resource burden of evaluation by predicting scores from
-already-available information rather than computing them just from newly generated
+attempts to alleviate the resource burden of evaluation by leveraging from
+already-available information rather than computing scores solely from newly generated
 responses.
 There are two main benchmark prediction tasks: query-efficient evaluation and
 (model, task) score completion.
@@ -87,11 +87,11 @@ queries and its score on the task is predicted from the observed entries of the 
 matrix.
 Existing methods for score completion use only the aggregate scores and discard the
 item-level responses that produced them \citep{benchpress}.
-For both tasks the collection of available responses is often unpaired
-and sparse.
+% For both tasks the collection of available responses is often unpaired
+% and sparse.
 
 In this paper, we introduce the Product Kernel Perspective Space (\PKPS) to predict
-benchmark scores directly from sparse, unpaired collections of responses.
+benchmark scores directly from sparse and unpaired collections of responses.
 Our contributions can be summarized as follows:
 \begin{enumerate}
 [wide, labelwidth=1pt, labelindent=12pt]
@@ -162,11 +162,11 @@ All previous methods proposed for query-efficient benchmarking implicitly requir
 paired responses from previously evaluated models.
 
 Methods for (model, task) score completion predict entries of the score matrix that
-were never evaluated, via cross-task predictability \citep{ye2023predictable},
+were never evaluated via cross-task predictability \citep{ye2023predictable},
 observational scaling laws \citep{ruan2024observational}, or low-rank matrix
 completion \citep{benchpress}. All operate exclusively on aggregate scores and
 discard information in the item-level scores or responses.
-Our proposed method uses item-level information from sparse and unpaired evaluation
+Our proposed method uses item-level information from sparse and unpaired cross-task evaluation
 data to improve on methods from both literatures.
 
 \paragraph{Low-dimensional representations of models.}
@@ -189,8 +189,9 @@ For our purposes, a model is a random mapping
 $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space.
 A task is a pair $(Q^{(t)}, s^{(t)})$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a
 collection of queries with $M^{(t)}:=|Q^{(t)}|$ and $s^{(t)}$ is a scoring function
-mapping a model and a query collection to a score. Model $i$'s true score on task
-$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)})$.
+mapping a model and a query collection to a nonnegative real number.
+Model $i$'s true score on task
+$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)}) \in \mathbb{R}$.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
@@ -202,7 +203,7 @@ $\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is an estimate of
 $y_{i}^{(t)}$.
 
 Evaluation data is \emph{sparse} when few models have
-$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the cross-model overlaps
+$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
 $\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
@@ -215,8 +216,9 @@ observation count $m_i^{(t)}$:
 \setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
 \item \emph{Query-efficient evaluation} is the case
 with $m_{i}^{(t)}>0$. Responses or scores from other models on task $t$ are
-typically available, and the goal is to outperform the naive sample score
-$\tilde{y}_{i}^{(t)}$.
+typically available.
+% , and the goal is to outperform the naive sample score
+% $\tilde{y}_{i}^{(t)}$.
 \item \emph{(Model, task) score matrix completion} is the case with $m_{i}^{(t)}=0$.
 No responses from the target (model, task) slice exist and prediction
 must be based on model $i$'s responses to other tasks and on responses from
@@ -226,8 +228,8 @@ other models evaluated on task $t$.
 \section{The Product Kernel Perspective Space}
 \label{sec:method}
 
-We estimate a model's score $y_i^{(t)}$ from the sparse, unpaired
-evaluation data of Section~\ref{sec:setting} by constructing low-dimensional
+We estimate $y_i^{(t)}$ from sparse and unpaired
+evaluation data by constructing low-dimensional
 representations of the models based on an appropriately defined pairwise distance
 matrix.
 We assume access to the responses for each observed (model, task, query) triple and
@@ -264,8 +266,10 @@ replacing the identity query kernel ($k_{Q}(u,u')=\mathbf{1}\{u=u'\}$) with a ge
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
 embeddings, $D_{ii'}$ includes information from unpaired responses and Eq.~\eqref{eq:A}
-is therefore always defined.
+is therefore always defined when $ |Q_{i}| > 1 $.
 We highlight the difference between the previous approaches and the \PKPS in Figure~\ref{fig:concept}.
+Finally, the solution to Eq. \eqref{eq:mds} is solved by classical multi-dimensional scaling [berg, torgenson] whenever $ D $ is a Euclidean distance matrix.
+Unless otherwise stated we analyze \PKPS under this assumption.
 
 \begin{figure}[t]
 \centering
@@ -282,8 +286,17 @@ correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-\subsection{Concentration of \PKPS representations}
+\subsection{Concentration of PKPS representations}
 \label{sec:theory}
+% We next establish theoretical properties of the \PKPS necessary for demonstrating
+% its efficiency in sparse and unpaired benchmark prediction.
+% The main result of this section establishes that the representations
+% concentrate around their population counterparts at a rate governed by the the number of queries and the overlap of
+% the query distributions.
+% We formally define the population \PKPS in Definition~\ref{def:pop} of
+% Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
+% Eq.~\eqref{eq:A} with the appropriate expectations.
+
 We next establish theoretical properties of the \PKPS necessary for demonstrating
 its efficiency in sparse and unpaired benchmark prediction.
 The main result of this section establishes that the representations
@@ -307,7 +320,7 @@ The atypical requirement in our setting is the positive cross-model query kernel
 mass, though this holds trivially under a strictly positive $k_Q$ and importantly
 does not assume that any individual query is shared.
 
-Let $(\psi_1,\dots,\psi_n)$ denote the population \PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
+Let $(\psi_1,\dots,\psi_n)$ denote the population PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
 query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the population Gram matrix.
 \begin{theorem}[Concentration of \PKPS representations]
 \label{prop:conc}
@@ -329,8 +342,7 @@ A Weyl--Procrustes perturbation argument \citep[Lemma~5.4]{tu2016procrustes} the
 transfers the entrywise error to the rank-$d$ spectral embedding at the stated rate
 (Lemma~\ref{lem:pert}). The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
-Theorem~\ref{prop:conc} recovers the rate in $m$ enjoyed by fully paired DKPS
-\citep{acharyya2025concentration} without requiring any shared queries.
+Theorem~\ref{prop:conc} recovers the rate in $ m $ enjoyed by fully paired DKPS \citep{acharyya2025concentration} without requiring any shared queries.
 The price of unpairedness is a factor of $\kappa^{-2}$, governed by
 the overlap of the query distributions.
 
@@ -347,42 +359,36 @@ distribution, observed through the sampled (model, task, response) triples of
 Section~\ref{sec:theory}.
 Our goal is to predict the true score of $f_{0}$ on task $t$,
 $y_{0}:=s^{(t)}(f_{0},Q^{(t)})$.
-The (model, task) pairs with $m_{i}^{(t)}>0$ and model $f_{0}$'s responses from
-tasks $t' \neq t$ provide information potentially relevant to predicting $y_{0}$.
+The (model, task) pairs with $m_{i}^{(t)}>0$ and model $ f_{0}$'s responses from tasks $ t' \neq t $ provide information potentially
+relevant to predicting $y_{0}$.
 
-We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, treat $\hat\psi_{i}$
-as a proxy for $f_{i}$, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{Y}$ on
+We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{Y}$ on
 the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
 predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
 score information, so the target model is embedded alongside the reference models.
-Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out,
-10.3389/fnhum.2022.930291}), but we do not analyze or study them here.
+Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, 10.3389/fnhum.2022.930291}).
 
 \citet{dkps_qeff} established that nearest neighbor regression using representations
-from the fully paired DKPS is query efficient relative to the sample score.
+from paired DKPS is query efficient relative to the sample score.
 The main result of this section shows that benchmark prediction with the \PKPS is
 query-efficient relative to paired DKPS.
 Beyond Assumptions~\ref{ass:bound}--\ref{ass:spec}, our result requires a bounded
 and Lipschitz score on the population perspective space, and a model
 distribution that has positive mass everywhere (Assumptions~\ref{ass:score} and~\ref{ass:support},
 Appendix~\ref{app:proof}).
-In the following, MSE denotes mean squared error over the draw of the target model
-and its triples,
+In the following, MSE denotes mean squared error,
 $m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
 denotes the per-query score variance.
 We assume the query kernel is from a family
-$\{k_{\sigma}\}_{\sigma>0}$ of bounded kernels indexed by a bandwidth $\sigma$ whose
-$\sigma\to0$ limit $k_{0}$ satisfies $k_{0}(u,u') > 0$ if $u = u'$ and
-$k_{0}(u,u')=0$ otherwise. The RBF kernel
-($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is such an example.
+of bounded kernels indexed by a bandwidth $\sigma$ whose
+$\sigma\to0$ limit is such that $ \kappa_{0}(u, u') > 0 $ if $ u = u' $ and $ 0 $ otherwise. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
+such an example.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
-Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$
-reference models.
-The sequence of estimators $(h_{1}, h_{2}, \hdots)$ is \emph{query-efficient
-relative to} $(h'_{1}, h'_{2}, \hdots)$ if there exists $N$ such that
+Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$ reference models.
+The sequence of estimators $(h_{1}, h_{2}, ...)$ is \emph{query-efficient relative to} $(h'_{1}, h'_{2}, \hdots )$ if there exists $N$ such that
 $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
 We write $h_{n,\sigma}^{(k)}$ for an estimator that uses a $k$-nearest-neighbor
@@ -393,9 +399,9 @@ regression on the paired DKPS.
 \label{thm:qeff}
 Fix a pairing fraction $\rho\in[0,1]$.
 Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every sequence
-$(h_{n,0}^{(k'_{n})})_{n\ge1}$ there exists a sequence
-$(h_{n,\sigma_{n}}^{(k_{n})})_{n\ge1}$ that is query-efficient relative to
-$(h_{n,0}^{(k'_{n})})_{n\ge1}$.
+$(h_{1,0}^{(k'_{1})}, h_{2,0}^{(k'_{2})}, \hdots)$ there exists a sequence
+$(h_{1,\sigma_{1}}^{(k_{1})}, (h_{2,\sigma_{2}}^{(k_{2})}, \hdots)$ that is query-efficient relative to
+$(h_{1,0}^{(k'_{1})}, h_{2,0}^{(k'_{2})}, \hdots)$.
 \end{theorem}
 \begin{proof}[Proof sketch]
 Taking $\sigma_{n}=0$ and $k_{n}=k'_{n}$ recovers the comparison sequence, which
@@ -403,25 +409,19 @@ gives the claim with equality.
 Positive bandwidths can do strictly better: with exact reference scores,
 Theorem~\ref{prop:conc} and Assumption~\ref{ass:support} guarantee bandwidths
 attaining any $\epsilon$ with $m=\mathrm{poly}(n,1/\kappa,1/\epsilon)$ at every
-pairing fraction (Lemma~\ref{lem:exact}), while at $\rho=0$ every identity-matched
-comparison is an empty sum and no paired-DKPS sequence can depend on the target's
+pairing fraction (Lemma~\ref{lem:exact}), while at $\rho=0$ every paired comparison is an empty sum and no paired DKPS sequence can depend on the target's
 responses.
 The reference noises $\tilde{y}_{i}^{(t)}-y_{i}$ are mean zero, bounded, of
 variance at most $\sigma_q^2/m$, and independent across models under unpaired
-designs, so the $k_{n}$-neighbor average contributes at most $\sigma_q^2/(mk_{n})$,
+designs under Assumption \ref{ass:score}, so the $k_{n}$-neighbor average contributes at most $\sigma_q^2/(mk_{n})$,
 which vanishes when $k_{n}\to\infty$ with $k_{n}/n\to0$.
 The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
 We note that query-efficiency is transitive. Theorem~\ref{thm:qeff}, together with
-\citet{dkps_qeff}, implies that this sequence is query-efficient relative to
-the sample score.
+\citet{dkps_qeff}, therefore implies that $ h_{n,\sigma}^{(k)} $ is query-efficient relative to the sample score.
+In practice, the bandwidth is selected by cross-validation over a finite grid.
 
-In practice, the bandwidth is selected by cross-validation over a finite grid
-containing the exact-matching limit (Section~\ref{sec:experiments},
-Appendix~\ref{app:proof}).
-Empirically, a bandwidth that bridges similar queries improves on exact matching at
-every $\rho<1$ (Figure~\ref{fig:synthetic}b). We note that
-the same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
+The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
 queries is embedded from its responses to other tasks, and the regression transfers
 the scores of reference models evaluated on $t$.
@@ -434,9 +434,9 @@ We evaluate \PKPS on synthetic data and on two large benchmark suites.
 \paragraph{Synthetic data.} We generate $n$ models with latent ability vectors
 $v_i \in \mathbb{R}^{5}$ and $T$ tasks with latent vectors $t_k \in \mathbb{R}^{5}$,
 scores $v_i\cdot t_k+\epsilon$, and queries drawn near each task center ($u_j = t_k +
-\eta_j$ with isotropic noise $\eta_j$; a model's embedded response to $u_j$ is
-centered at $u_j + v_i$).
-Each model answers $m$ queries per task. We control unpairedness via
+\eta_j$ with isotropic noise $\eta_j$).
+Each model answers $m$ queries per task.
+We control unpairedness via
 $\rho=m_{ii'}/m$ and sparsity via a probability of observing a task
 $p_{\mathrm{task}}$ and, conditioned on observing a task, a probability of answering
 a query $p_{\mathrm{query}}$.
@@ -444,46 +444,41 @@ a query $p_{\mathrm{query}}$.
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{figures/fig_synthetic.pdf}
-    \caption{Score MAE on the synthetic benchmark ($\pm1$ SEM over $50$ seeds; DKPS light
-blue, \PKPS bright blue, sample score dashed gray; fixed parameters in each panel
-title).
+    \caption{MAE on the synthetic benchmark ($\pm1$ SEM over $50$ seeds).
 \textbf{(a--e)} Query-efficient evaluation: every observed cell is measured with
 $m$ noisy queries and we predict its true score, as a function of the budget
 $m$ (a), the cross-model overlap $\rho$ (b), the cohort size $n$ (c), the
 number of tasks $T$ (d), and the task coverage $p_{\mathrm{task}}$ (e), at unpaired
 designs ($\rho{=}0$) except where $\rho$ is swept.
-\textbf{(f)} Score completion of held-out cells as a function of task coverage; the
-gray line is the task mean of observed scores (no sample score exists for a held-out
-cell).}
+\textbf{(f)} Score completion of held-out cells as a function of task coverage.}
     \label{fig:synthetic}
 \end{figure}
 
 \paragraph{Benchmark suites.}
 We consider two large benchmark suites.
-The first consists of $18$ tasks from HELM-Lite \citep{helm}. The tasks have very
-different response types -- MATH (\citealp{hendrycks2021math}, $7$ math subjects),
+The first consists of $18$ tasks from HELM-Lite \citep{helm}.
+-- MATH (\citealp{hendrycks2021math}, $7$ math subjects),
 WMT-14 (\citealp{bojar2014wmt}, $5$ translation directions), MedQA
 (\citealp{jin2021medqa}, medical multiple-choice), and LegalBench
 (\citealp{guha2023legalbench}, $5$ legal classification subsets).
-We consider $93$ models that have been evaluated on all four tasks.
-As collected, the suite is dense and fully paired ($\rho_{ii'}=1$): we induce sparsity and unpairedness by subsampling each model's observed queries.
+We consider $93$ models that have been evaluated on all $ 18 $ tasks: we induce sparsity and unpairedness by subsampling each model's observed queries.
 
 The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
 community-maintained collection of item-level evaluation results covering $36$ benchmarks and $165$ models (and growing).
 The store exhibits the sparsity and unpairedness that motivate this paper:
 only $15\%$ of (model, benchmark) pairs have been evaluated and $59\%$ of model
 pairs share no benchmark at all.
-Within a benchmark, pairedness is bimodal: on $26$ of $33$ multi-model benchmarks,
+Within a benchmark, pairedness is bimodal: on $26$ of $33$ tasks,
 models answered essentially identical item sets (mean $\rho_{ii'}>0.99$), while the
 remaining seven -- all arena-style \citep{chiang2024chatbot} -- are severely
 unpaired (mean $\rho_{ii'}$ between $0.27$ and $0.66$).
-We study a dense submatrix of the store so that true scores are available and
-sparsity and pairedness can be controlled in our evaluations: $16$ tasks (MATH-MC
+We study a dense 45 model and 16 task submatrix of the store so that true scores are available and
+sparsity and pairedness can be controlled in our evaluations.
+The tasks include MATH-MC
 levels $1$--$5$ \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k},
-GPQA-Diamond \citep{rein2023gpqa}, and nine judging categories from JudgeBench
-\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}) and the
-$45$ models that answered every item of every task.
-We randomly sample $ 32 $ responses for each model for each task and treat the full benchmark score as the target.
+GPQA-Diamond \citep{rein2023gpqa}, and nine categories from JudgeBench
+\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}.
+We sample $ 32 $ responses for each model for each task and treat the full benchmark score as the target.
 
 Both suites were chosen because they include item-level responses -- most large
 benchmark leaderboards only include overall or subtask scores.
@@ -494,8 +489,7 @@ Appendices~\ref{app:details} and~\ref{app:eee}, respectively.
 \paragraph{Methods and baselines.} We evaluate \PKPS on both query-efficiency and
 (model, task) score prediction.
 Unless otherwise stated we embed all responses and queries into a $3072$-dimensional
-space via \texttt{gemini-embedding-001} \citep{lee2025gemini}, apply PCA on the
-collection of embedded queries and embedded responses, and use an RBF kernel on the
+space via \texttt{gemini-embedding-001} \citep{lee2025gemini}, apply PCA separately to the collection of embedded queries and embedded responses, and use an RBF kernel on the
 reduced query space and a linear kernel on the reduced response space.
 Given the \PKPS pairwise distance matrix, we embed the models in a $d = 8$ space and
 use $k$-nearest neighbor regression with $k = 5$.
@@ -516,16 +510,14 @@ Both the query kernel RBF bandwidth and the convex coefficient for the ensemble 
 selected via leave-one-out cross validation on the observed data.
 Following \citet{benchpress}, all methods operate on a pre-processed score matrix:
 observed scores are logit-transformed, standardized per task, and centered by a
-two-way (model $+$ task) additive bias, and the methods predict the residual.
+two-way (model, task) additive bias.
 \PKPS and LRMC share this pre-processing exactly, so differences between them are
 attributable to how the residual is modeled.
-Following \citet{dkps_qeff}, every fit is leave-one-family-out: all models from the
-target's developer are excluded, so predictions never lean on artificially similar models.
-
+Following \citet{dkps_qeff}, we use the leave-one-family-out protocol: all models from the
+target model's developer are excluded, so predictions never lean on artificially similar models. As such, the reported errors are conservative.
 We report average mean absolute error (MAE) of the predicted score versus the true
 score for every setting over $16$ seeds ($50$ on synthetic data).
-Additional experimental details, such as the sweep grids, PCA dimensions, and
-cross-validation protocols, are provided in Appendix~\ref{app:details}.
+Additional experimental are provided in Appendix~\ref{app:details}.
 
 \begin{figure}[t]
 \centering
@@ -554,7 +546,8 @@ Panel (f) studies score completion, where the targets are held-out cells and the
 score-only baseline is the task mean.
 
 \PKPS outperforms DKPS everywhere and the sample score at small query budgets (a).
-Panel (b) is the empirical counterpart of Theorem~\ref{thm:qeff}.
+Panel (b) is the empirical counterpart of the strict separation in
+Theorem~\ref{thm:qeff}.
 At $\rho=0$, DKPS is worse than the sample score, while a
 single shared query ($\rho=0.25$ at $m=4$) restores it to \PKPS's level.
 \PKPS itself is flat in $\rho$ as it is unaffected by the sampled overlap since it
@@ -562,33 +555,30 @@ only requires distributional overlap (Assumption~\ref{ass:overlap}).
 As $n$ grows for a fixed sparsity and pairedness, \PKPS can take advantage of
 additional reference models while DKPS cannot (c).
 Task coverage behaves similarly (e) and the number of tasks matters little for
-either method (d).
+either method (d) --- though this observation likely hinges on the ratio between task-level noise and query-level noise.
 In the completion panel (f), \PKPS outperforms DKPS when observed cells are scarce
 and they are matched for moderate to large coverage.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.96\textwidth]{fig_suite_completion.pdf}\\[2pt]
-\includegraphics[width=0.96\textwidth]{fig_completion_conditional.pdf}
-\caption{Score completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
-($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
-query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
-tasks, and cohort size (LRMC slate, \PKPS bright blue, Ensemble navy; solid $n{=}93$, dashed
-$n{=}10$). \textbf{(e--h)} Per-missing-cell difference $\Delta=$ LRMC $-$ Ensemble MAE
-(blue $=$ Ensemble better) by dataset, cohort, coverage, and query depth, with the other
-levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.}
-\label{fig:completion}
-\end{figure}
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=0.96\textwidth]{fig_suite_completion.pdf}\\[2pt]
+% \includegraphics[width=0.96\textwidth]{fig_completion_conditional.pdf}
+% \caption{Score completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
+% ($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
+% query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
+% tasks, and cohort size (LRMC slate, \PKPS bright blue, Ensemble navy; solid $n{=}93$, dashed
+% $n{=}10$). \textbf{(e--h)} Per-missing-cell difference $\Delta=$ LRMC $-$ Ensemble MAE
+% (blue $=$ Ensemble better) by dataset, cohort, coverage, and query depth, with the other
+% levers fixed at their sweep median; $\blacktriangledown$ marks the per-row mean.}
+% \label{fig:completion}
+% \end{figure}
 
 \paragraph{\PKPS-based methods dominate query-efficient evaluation.}
 Figure~\ref{fig:qe}a--c shows the MAE for \PKPS, DKPS, IRT, the sample score, and
 the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
-At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the
-sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences,
-better on all $18$ tasks), so \PKPS
-with one query matches the sample score at four (a).
+At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences, better on all $18$ tasks), so \PKPS with one query matches the sample score at four (a).
 As the budget grows, the sample score eventually overtakes the representations'
 residual bias.
 The ensemble follows the better of its two components
@@ -615,16 +605,15 @@ Figure~\ref{fig:completion}a--d shows the MAE for LRMC, \PKPS, and the ensemble 
 missing cells when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed
 at query depth $p_{\mathrm{query}}$, at cohort sizes $n{=}93$ (solid) and $n{=}10$
 (dashed).
-No responses from a missing cell exist, so the sample score is unavailable and the
-score-only baseline is LRMC.
+No responses from a missing cell exist, so the sample score is unavailable.
 The ensemble matches or outperforms LRMC at every operating point, and the margin is
 largest when observations are scarce: at the small cohort it is more accurate at
 every task coverage (a), query depth (b), and number of tasks (c)
-($0.120$ versus $0.139$ at the central operating point; Wilcoxon
+($0.120$ versus $0.139$; Wilcoxon
 $p{=}8\times10^{-4}$, better on $16$ of $18$ tasks).
 LRMC requires many models to estimate its factors: with $n{=}10$, additional tasks
-do not close the gap (c), and the cohort sweep (d) shows the ensemble is accurate
-from $n{=}20$ while LRMC approaches it only near the full cohort.
+do not close the gap (c), and the number of reference models sweep shows the ensemble is accurate
+from $n{=}20$ while LRMC approaches it only near the full cohort (d).
 At the full cohort the methods converge and the ensemble remains best on average
 ($0.099$ versus $0.105$), although the per-task difference is no longer significant
 ($10$ of $18$ tasks).
@@ -634,30 +623,35 @@ Figure~\ref{fig:completion}e--h shows the distribution of the per-missing-cell
 difference between LRMC's and the ensemble's absolute errors, by dataset (e),
 cohort (f), coverage (g), and query depth (h).
 The win is smaller than in the query-efficiency task -- the ensemble improves
-$54\%$ of missing cells -- but the mean gain is positive in every row: the responses
-add information wherever the score matrix alone is rank-deficient, and never
-subtract it.
+$54\%$ of missing cells -- but the mean gain is positive in every row.
 
 \paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
 The second suite shows the same behavior with larger margins (lever sweeps in
 Appendix~\ref{app:eee}).
 At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ versus
-$0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$): an
-$8\times$ smaller budget.
-On missing cells, the ensemble outperforms LRMC at every operating point, including
-the full cohort ($0.069$ versus $0.096$ at $n{=}45$).
-Both comparisons are significant at the smallest $p$ attainable with $16$ tasks
-(Wilcoxon $p{=}3\times10^{-5}$, better on every task), including full-cohort
-completion, which is not significant on HELM.
+$0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$).
+On missing cells, the ensemble outperforms LRMC everywhere, including
+the full cohort (Wilcoxon $p{=}3\times10^{-5}$, better on every task) which is not significant on HELM.
 Table~\ref{tab:suite} shows the performance of all methods on both tasks on both suites.
 The ensemble is the best or tied in every column.
 
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
 the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
-Ablations of the regressor, the response kernel, the ensemble weighting rule, and
+Ablations of the regression method, the response kernel, the ensemble weighting rule, and
 the incidental query overlap in the EEE pools are in Appendix~\ref{app:abl}.
 Our observations are generally robust across these choices.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{fig_suite_completion.pdf}\\[2pt]
+\includegraphics[width=0.96\textwidth]{fig_completion_conditional.pdf}
+\caption{Score completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
+($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
+query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
+tasks, and cohort size. \textbf{(e--h)} Per-cell difference in MAE between LRMC and Ensemble (positive difference favors Ensemble) by dataset, cohort, coverage, and query depth. $\blacktriangledown$ marks the per-row mean.}
+\label{fig:completion}
+\end{figure}
 
 \section{Discussion}
 \label{sec:discussion}
