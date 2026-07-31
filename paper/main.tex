@@ -191,7 +191,7 @@ A task is a pair $(Q^{(t)}, s^{(t)})$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a
 collection of queries with $M^{(t)}:=|Q^{(t)}|$ and $s^{(t)}$ is a scoring function
 mapping a model and a query collection to a nonnegative real number.
 Model $i$'s true score on task
-$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)}) \in \mathbb{R}$.
+$t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)}) \in \mathbb{R}_{\ge0}$.
 
 Evaluation data is indexed by (model, task, query) triples: for $n$ models
 $f_1,\dots,f_n$ and $T$ tasks $Q^{(1)},\dots,Q^{(T)}$, the response of model $i$ to
@@ -266,9 +266,10 @@ replacing the identity query kernel ($k_{Q}(u,u')=\mathbf{1}\{u=u'\}$) with a ge
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as an RBF over the query
 embeddings, $D_{ii'}$ includes information from unpaired responses and Eq.~\eqref{eq:A}
-is therefore always defined when $ |Q_{i}| > 1 $.
+is therefore always defined when $|Q_{i}| \ge 1$.
 We highlight the difference between the previous approaches and the \PKPS in Figure~\ref{fig:concept}.
-Finally, the solution to Eq. \eqref{eq:mds} is solved by classical multi-dimensional scaling [berg, torgenson] whenever $ D $ is a Euclidean distance matrix.
+Finally, Eq.~\eqref{eq:mds} is solved by classical multidimensional scaling
+\citep{borg2005modern, torgerson1952mds} whenever $D$ is a Euclidean distance matrix.
 Unless otherwise stated we analyze \PKPS under this assumption.
 
 \begin{figure}[t]
@@ -382,13 +383,14 @@ $m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^
 denotes the per-query score variance.
 We assume the query kernel is from a family
 of bounded kernels indexed by a bandwidth $\sigma$ whose
-$\sigma\to0$ limit is such that $ \kappa_{0}(u, u') > 0 $ if $ u = u' $ and $ 0 $ otherwise. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
+$\sigma\to0$ limit $k_{0}$ satisfies $k_{0}(u,u')>0$ if $u=u'$ and
+$k_{0}(u,u')=0$ otherwise. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
 such an example.
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
 Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$ reference models.
-The sequence of estimators $(h_{1}, h_{2}, ...)$ is \emph{query-efficient relative to} $(h'_{1}, h'_{2}, \hdots )$ if there exists $N$ such that
+The sequence of estimators $(h_{1}, h_{2}, \hdots)$ is \emph{query-efficient relative to} $(h'_{1}, h'_{2}, \hdots)$ if there exists $N$ such that
 $\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
 \end{definition}
 We write $h_{n,\sigma}^{(k)}$ for an estimator that uses a $k$-nearest-neighbor
@@ -400,7 +402,7 @@ regression on the paired DKPS.
 Fix a pairing fraction $\rho\in[0,1]$.
 Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every sequence
 $(h_{1,0}^{(k'_{1})}, h_{2,0}^{(k'_{2})}, \hdots)$ there exists a sequence
-$(h_{1,\sigma_{1}}^{(k_{1})}, (h_{2,\sigma_{2}}^{(k_{2})}, \hdots)$ that is query-efficient relative to
+$(h_{1,\sigma_{1}}^{(k_{1})}, h_{2,\sigma_{2}}^{(k_{2})}, \hdots)$ that is query-efficient relative to
 $(h_{1,0}^{(k'_{1})}, h_{2,0}^{(k'_{2})}, \hdots)$.
 \end{theorem}
 \begin{proof}[Proof sketch]
@@ -413,7 +415,7 @@ pairing fraction (Lemma~\ref{lem:exact}), while at $\rho=0$ every paired compari
 responses.
 The reference noises $\tilde{y}_{i}^{(t)}-y_{i}$ are mean zero, bounded, of
 variance at most $\sigma_q^2/m$, and independent across models under unpaired
-designs under Assumption \ref{ass:score}, so the $k_{n}$-neighbor average contributes at most $\sigma_q^2/(mk_{n})$,
+designs (Assumption~\ref{ass:noise}), so the $k_{n}$-neighbor average contributes at most $\sigma_q^2/(mk_{n})$,
 which vanishes when $k_{n}\to\infty$ with $k_{n}/n\to0$.
 The full proof is in Appendix~\ref{app:proof}.
 \end{proof}
@@ -456,11 +458,11 @@ designs ($\rho{=}0$) except where $\rho$ is swept.
 
 \paragraph{Benchmark suites.}
 We consider two large benchmark suites.
-The first consists of $18$ tasks from HELM-Lite \citep{helm}.
--- MATH (\citealp{hendrycks2021math}, $7$ math subjects),
-WMT-14 (\citealp{bojar2014wmt}, $5$ translation directions), MedQA
-(\citealp{jin2021medqa}, medical multiple-choice), and LegalBench
-(\citealp{guha2023legalbench}, $5$ legal classification subsets).
+The first consists of $18$ tasks from HELM-Lite \citep{helm}
+-- $7$ math subjects (MATH, \citealp{hendrycks2021math}), $5$ translation pairs
+(WMT-14, \citealp{bojar2014wmt}), medical multiple choice
+(MedQA, \citealp{jin2021medqa}), and $5$ legal subjects
+(LegalBench, \citealp{guha2023legalbench}).
 We consider $93$ models that have been evaluated on all $ 18 $ tasks: we induce sparsity and unpairedness by subsampling each model's observed queries.
 
 The second suite is built from the Every Eval Ever datastore \citep{eee2026}, a
@@ -517,7 +519,7 @@ Following \citet{dkps_qeff}, we use the leave-one-family-out protocol: all model
 target model's developer are excluded, so predictions never lean on artificially similar models. As such, the reported errors are conservative.
 We report average mean absolute error (MAE) of the predicted score versus the true
 score for every setting over $16$ seeds ($50$ on synthetic data).
-Additional experimental are provided in Appendix~\ref{app:details}.
+Additional experimental details are provided in Appendix~\ref{app:details}.
 
 \begin{figure}[t]
 \centering
@@ -546,8 +548,7 @@ Panel (f) studies score completion, where the targets are held-out cells and the
 score-only baseline is the task mean.
 
 \PKPS outperforms DKPS everywhere and the sample score at small query budgets (a).
-Panel (b) is the empirical counterpart of the strict separation in
-Theorem~\ref{thm:qeff}.
+Panel (b) is the empirical counterpart of Theorem~\ref{thm:qeff}.
 At $\rho=0$, DKPS is worse than the sample score, while a
 single shared query ($\rho=0.25$ at $m=4$) restores it to \PKPS's level.
 \PKPS itself is flat in $\rho$ as it is unaffected by the sampled overlap since it
@@ -631,7 +632,7 @@ Appendix~\ref{app:eee}).
 At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ versus
 $0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$).
 On missing cells, the ensemble outperforms LRMC everywhere, including
-the full cohort (Wilcoxon $p{=}3\times10^{-5}$, better on every task) which is not significant on HELM.
+the full cohort (Wilcoxon $p{=}3\times10^{-5}$, better on every task), which is not significant on HELM.
 Table~\ref{tab:suite} shows the performance of all methods on both tasks on both suites.
 The ensemble is the best or tied in every column.
 
@@ -1070,9 +1071,6 @@ population squared distances $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, the 
 matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
 population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
 which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:spec} (cf.\ Definition~\ref{def:pop}).
-Throughout, the analysis and the implementation use the classical (spectral) MDS
-solution: it coincides with the minimizer of Eq.~\eqref{eq:mds} when $D$ is exactly
-Euclidean and is its standard tractable surrogate otherwise.
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
