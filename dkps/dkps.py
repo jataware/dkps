@@ -22,13 +22,13 @@ class DataKernelPerspectiveSpace:
 
 
     def fit_transform(self, X):
+        self.model_list=None
         if isinstance(X, dict):
             self.model_list=list(X.keys())
             X = list(X.values())
 
-        
+
         if isinstance(X, (list, np.ndarray)):
-            self.model_list=None
             n_queries = len(X[0])
             for i,x in enumerate(X):
                 x=np.array(x)
@@ -64,12 +64,12 @@ class DataKernelFunctionalSpace:
         self.metric=metric
         
     def fit_transform(self, X):
+        self.keys=None
         if isinstance(X, dict):
             self.keys=list(X.keys())
             X = list(X.values())
-        
+
         if isinstance(X, (list, np.ndarray)):
-            self.keys=None
             N=len(X)
             n = len(X[0])
             for i,x in enumerate(X):

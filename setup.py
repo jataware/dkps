@@ -18,4 +18,7 @@ setup(
     install_requires=[
         "graspologic",
     ],
+    extras_require={
+        "traces": ["sentence-transformers"],
+    },
 )

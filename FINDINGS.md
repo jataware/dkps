@@ -1,0 +1,221 @@
+# Agentic-Traces DKPS: Experimental Findings Log
+
+Working log of the agentic-traces extension (2026-08-10/11). Self-contained:
+protocols, exact representation definitions, all headline numbers, and negative
+results. Everything reproduces from the embedding caches + seeds below without
+re-calling any API.
+
+## 1. Data
+
+**Small cohort** (`/home/ubuntu/20260729_traces.zip`, extract to `data/traces/`):
+swe-agent on SWE-bench Verified, Langfuse span JSONL. 14 models x 12 instances
+x 5 replicates = 839 traces (Nemotron-3-Nano missing replicate 5 of
+sympy__sympy-14248). No correctness labels; `exit_status` is termination reason
+only (7/14 models submit 100% -- saturated). Loader: `dkps.traces.langfuse`.
+
+**Leaderboard corpus** (`data/leaderboard/verified/`, synced from
+`s3://swe-bench-submissions/verified/<submission>/` with `--no-sign-request`;
+note key prefix has NO `evaluation/`): 134 Verified submissions; 119 have
+trajectories (mandatory since 2024-07); official per-instance resolved labels
+harvested from the github.com/swe-bench/experiments git repo into
+`data/leaderboard/verified_labels.json` (all 134). Loader:
+`dkps.traces.leaderboard` (format-agnostic text render; handles dir-style
+trajectories, `instance_` filename prefixes, .log/.yaml/.txt extensions).
+
+**Panels** (fixed seeds; reproduce exactly):
+- `q418` = sorted intersection of instance ids across the 107 gate-passing
+  systems (>= 480 traj files + labels).
+- `q150` = `np.random.default_rng(0).choice(q418, 150, replace=False)` sorted.
+- `q20`  = `np.random.default_rng(1).choice(q150, 20, replace=False)` sorted.
+- Head/tail embeddings exist for all 107 x q150 (+6 partial systems x q20/q150
+  coverage); chunk embeddings and judge descriptions for 107(+6) x q20.
+
+**Embedding caches** (gitignored, on this machine):
+- `.dkps_cache_lb/<system>/<instance>.<cfg>.npz` where cfg =
+  sha1(`openai/text-embedding-3-small|headtail8000`)[:8] holds `head`,`tail`
+  (8K-token tiktoken slices); cfg for `|chunks4000` holds `chunks` (4K-char
+  line-aligned chunks, full coverage). Embedder: OpenAI text-embedding-3-small
+  (1536-d), token-bucket-paced (measured account limit: 5M TPM / 10K RPM).
+- Judge descriptions: `data/judge/<judge-model>/<system>/<instance>.txt`
+  (+`_emb.npz` for gpt-5.4-mini); prompt in `scripts/judge_describe.py`
+  (describe behavior, not problem; report observed verification outcomes).
+- Query vectors: `data/leaderboard/query_vecs_64.npz` = PCA-64 of embedded
+  problem statements for q418.
+- Small-cohort cache `.dkps_cache/` via `scripts/embed_traces.py`
+  (nomic-embed-text-v1.5 local; NOTE this host's NVML is broken -- CUDA OOM
+  asserts instead of recovering; embedder has small-batch long-text tier +
+  halve-batch backoff for this).
+
+## 2. Evaluation protocols
+
+Target y = official resolve rate (|resolved|/500). Readouts:
+- **kNN**: k=3, inverse-distance-weighted, on the DKPS distance matrix
+  (`model_distance_matrix`: mean over replicates, flatten instances, pdist /
+  sqrt(n_queries)).
+- **ridge**: kernel-form ridge on flattened per-instance representations,
+  lambda in {1,10,100}, best reported.
+
+Reference protocols (who may serve as neighbors/training rows for a target):
+- LOO: everyone else. Inflated by family leakage -- do not headline.
+- **leave-one-LLM-out (STANDARD, user decision 2026-08-11)**: exclude systems
+  sharing the target's underlying LLM (`model_display` tag from metadata.yaml).
+  Same-scaffold references allowed (leave-family-out deemed too conservative;
+  scaffold siblings cost only ~0.007 vs ~0.018 for LLM siblings).
+- Ensemble alpha (blend with sample score) selected per target from its allowed
+  references only (honest); grid alpha in linspace(0,1,21).
+
+Context baselines (107 systems, LLM-out): predict-the-mean 0.136; date-3NN
+0.114/rho .51; same-LLM-nearest-date 0.084 (requires LLM identity + sibling --
+unavailable for genuinely new models). Oracle kNN floor (score-proximal
+neighbors): 0.004 -- ceiling is not the constraint.
+
+## 3. Best-known pipeline (as of 2026-08-11)
+
+For a new system evaluated on m instances (references pre-cached):
+1. Render trace to text (`load_leaderboard_trajectory`), take first & last 8K
+   tokens, embed (text-embedding-3-small).
+2. Judge-describe each trace (gpt-5.4-mini, behavior-only prompt), embed the
+   description.
+3. Per instance, subtract the reference pool's **median** vector (consensus
+   centering), L2-normalize the residual; fuse [head+tail | judge] blocks at
+   unit RMS each.
+4. Distances via **PKPS** (product kernel: RBF over PCA-64 problem-statement
+   embeddings x linear response kernel) so the target's m instances compare
+   against references' full coverage. Paired DKPS when target coverage is full.
+5. kNN(k=3) prediction over LLM-out references; blend with the target's sample
+   score, alpha chosen on references.
+6. Optional: evaluate on greedily selected informative tasks instead of random.
+
+Numbers (q20 panel, 107 targets, LLM-out, 200 subsets):
+
+| m | sample | pipeline (random tasks) | + selected tasks (held-out half) |
+|---|--------|------------------------|----------------------------------|
+| 1 | 0.438  | 0.095                  | 0.095                            |
+| 3 | 0.208  | 0.088                  | 0.076                            |
+| 5 | 0.157  | 0.082                  | 0.070                            |
+| 10| 0.103  | 0.070                  | 0.057                            |
+| 20| 0.061  | 0.050-0.053            | 0.057                            |
+
+Layer ablations at m=1: naive paired geometry 0.107 -> judge-fused 0.105 ->
+PKPS full-coverage refs 0.095. PKPS@m=1 ~= paired@m=20 for the geometry
+component (0.098 vs 0.096). Selection halves the budget mid-range (m=10
+selected ~= m=20 random); selection overfits its pool (in-pool 0.041-0.058 vs
+held-out 0.057-0.070) -- always report held-out.
+
+## 4. Findings (numbered for citation)
+
+**F1. One trace nearly places a system.** Single-query model-distance matrices
+correlate r~0.83 with full-panel distances; prediction error is nearly flat in
+n_queries (small cohort AND 107-system corpus). Replicates do early work: 1
+query x 1 rep 0.109 vs x5 reps 0.089 (small cohort, localization target).
+
+**F2. Reference pool, not query budget, is the binding resource.** Error vs
+n_models still declining at 13 (small cohort) and at ~100 (leaderboard).
+Supervised channel weighting fails honestly at 13 refs (capacity exists:
+in-sample 0.028 vs honest 0.083+) but ridge succeeds at ~97 refs.
+
+**F3. Identity vs competence dissociation.** Action n-grams = best model
+fingerprint (replicate-consistency 0.653); text/outcome surface = best
+competence signal (Mantel r vs localization: whole 0.62, outcome 0.58, action
+0.38). Small cohort.
+
+**F4. Naive representations sit at the unsupervised ceiling.** On the honest
+protocol, an equivalence class all lands ~0.078 ridge / ~0.095-0.10 kNN
+(q150/q20 panels): head+tail embedding, chunk-mean, rubric sections (hard/soft,
+any normalization), positional pyramid, MMD-RBF chunk distributions,
+trajectory-dynamics features, displacement (tail-head), relational profiles,
+per-instance PCs, global PCA (r>=16), hashed path footprint. Fusions of these
+with the naive rep move nothing. Tail >> head (head barely beats date-only).
+
+**F5. Consensus centering is the one geometry trick that matters.**
+Per-instance median-centering + L2 of the residual direction: 0.086 -> 0.077
+LOO (0.103 -> 0.095 LLM-out). Anchor must be global & robust: median > mean >
+trimmed; local (kNN) anchors and PC-removal destroy signal monotonically --
+the dominant modes of cross-system variation ARE the signal. Global PCA's top
+components encode instance identity, not system behavior (r=2 collapses).
+
+**F6. Symbolic footprint equivalence.** A 512-d hashed bag of file paths (no
+embedding model) matches the 3072-d text embedding under both readouts.
+Together with F4: what traces reveal is mostly where the system went and what
+it produced, not the prose.
+
+**F7. Gold-file localization is a label-free competence proxy.** Fraction of
+gold-patch files touched (gold patches are public): spread 0.39-0.82 across
+models, credible ranking, MAE 0.086 as a 1-dim/instance representation.
+`dkps.traces.metrics`.
+
+**F8. Ensemble with the sample score dominates at every budget.** Honest
+alpha; see section 3 table. Even at full panel the geometric prior improves
+the sample score (0.034-0.035 vs 0.039 on q150) -- shrinkage against sampling
+noise. alpha* slides 0.09 -> 0.85 with m.
+
+**F9. Judge-describe adds complementary signal, scaling with judge quality.**
+Describe-then-embed (behavior-only prompt): gpt-4o-mini descriptions are worse
+than naive standalone; gpt-5.4-mini's beat naive on kNN (0.097 vs 0.102), lose
+on ridge (0.087 vs 0.078), and fused improve both (ridge 0.075; +2-4% through
+the whole pipeline at every budget). Only source found whose value has a
+quality gradient rather than flat equivalence. Frontier-judge rung untested.
+
+**F10. PKPS earns its keep exactly in sparse coverage.** Target on m
+instances, refs on full coverage: 10% geometry gain at m=1; converges to
+paired as m grows; slight bias penalty at full coverage. On fully-paired data,
+unpaired/PKPS ~= paired (parity, as theory predicts). Class name in code:
+`UnpairedDKPS` (`dkps/unpaired_dkps.py`, from jataware/dkps@unpaired-20260401);
+paper name: Product Kernel Perspective Space (PKPS).
+
+**F11. Partial-coverage references are includable but not yet helpful.** +6
+systems (14-19/20 coverage) via masked PKPS: slightly hurts geometry (coverage
+mismatch biases their distances), ~wash for ensemble. Untried fix: the
+`use_coverage=True` KDE adjustment in UnpairedDKPS; mismatch also shrinks on
+larger panels.
+
+**F12. Task selection transfers.** Greedy forward selection (objective:
+ensemble MAE on half the systems) transfers to the held-out half: ~13-17%
+better than random subsets at m=3-10; m=10 selected ~= m=20 random. Selection
+order is django-heavy (densest instance population).
+
+**F13. Family leakage inflates naive evaluations.** LOO -> LLM-out costs
+~0.018 MAE (0.077 -> 0.095); scaffold siblings only ~0.007 more. Most of the
+"performance" of metadata baselines is sibling score-copying; the strongest
+(same-LLM nearest-date, 0.084) is unavailable for new models by construction.
+
+**F14. Small-cohort results (localization target, pre-labels).** DKPS beats
+direct eval below ~half the query budget; error-vs-queries flat (F1); channel
+ablations (F3); exit_status is not a score.
+
+## 5. Negative results (do not re-run without new ideas)
+
+- Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
+- Chunk-level product kernels (position/section side kernels, any content
+  centering): reproduce pooled special cases, never beat them.
+- Local/neighborhood centering, per-dim z-scoring, PC-removal: hurt (F5).
+- Dynamics/displacement/relational/conformity reps: redundant with naive (F4).
+- gpt-4o-mini as judge: below naive standalone (F9).
+- Rubric approaches: hard-assignment + centering TIES naive (LOO 0.083 both,
+  q20 full panel); soft pooling loses; 6-dim mass profile within 0.015 of the
+  3072-d baseline (remarkable per-dim, not a win). 150-instance confirmation
+  deliberately skipped (cost/benefit).
+
+## 6. Caveats
+
+- q20-panel differences under ~0.01 are within noise; q150 differences under
+  ~0.005 likewise. Selection/ensemble tables use paired subsets where possible.
+- Judge + chunk experiments live on q20 only; head/tail on q150.
+- The 20-instance selection table's held-out half is a different population
+  than the all-107 random baseline (worth ~0.004; see m=20 row).
+- Sample scores at m use official per-instance labels ("run the harness on m
+  instances"); DKPS-only numbers require no harness at all.
+
+## 7. Repo map (this branch)
+
+- `dkps/traces/`: schema, langfuse + leaderboard loaders, canonicalize,
+  channels (incl. rubric/whole), rubric.py, embedder (local + OpenAI, paced),
+  metrics (localization), assemble (build_dkps_input, distances).
+- `dkps/unpaired_dkps.py`: PKPS implementation (verbatim from jataware fork).
+- `scripts/`: embed_traces, analyze_traces, smoke_test (small cohort);
+  predict_localization, learn_channel_weights (small cohort experiments);
+  leaderboard_baselines, leaderboard_chunks, leaderboard_reprs, rubric_viability,
+  chunk_pkps, leaderboard_unpaired, judge_describe (leaderboard).
+- `figures/`: perspective spaces + error curves (small cohort, share-ready).
+- One-off experiment code (centering variants, ensemble sweeps, selection,
+  PKPS budget sweeps) ran inline; recipes fully specified above.
