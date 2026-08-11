@@ -183,6 +183,34 @@ order is django-heavy (densest instance population).
 direct eval below ~half the query budget; error-vs-queries flat (F1); channel
 ablations (F3); exit_status is not a score.
 
+**F15. Query-specific rubric extraction BEATS naive under both readouts (the
+representation win).** Construction: per instance, LLM writes a 6-section
+rubric from the problem statement (what understanding/localization/
+reproduction/editing/verification/final_state specifically mean for THIS
+issue; `data/judge/qspec_rubrics/`); a judge (gpt-5.4-mini) extracts 30-60
+words per section from each trace against that rubric (JSON;
+`data/judge/structured-qspec/`); sections embedded separately, per-
+(instance,section) median-centered, L2, concatenated (6x1536). q20 panel,
+LLM-out: knn 0.0768/0.804 vs naive 0.1022/0.613 (-25%); ridge 0.0758/0.821 vs
+0.0779/0.780. Fused with naive: ridge 0.0708/0.837. Ensemble (PKPS + honest
+alpha): new bests at every m>=3 (0.083/0.078/0.067/0.049 at m=3/5/10/20);
+at m=1 generic reps transfer better (instance-calibrated contrasts don't
+cross instances). Scale confirmation on q150 NOT yet run.
+
+**F16. qspec audit & mechanism.** (a) Construction ranking, monotone in
+information retained: descriptive qspec > verdict-style questions (0.083/
+0.086) > fixed rubric (0.093/0.081) > free-form blob (0.095/0.083) -- forcing
+YES/NO verdicts LOSES signal; the latent variable is graded behavioral
+completeness, not a checklist. (b) Verbosity mediation, not leakage: system
+mean extraction length correlates rho=.59 with score, but length-only is weak
+(0.119/0.103), naive+length ~= naive, and residualizing length out of qspec
+destroys it (over-control: length and semantics are surface forms of the same
+behavioral facts). Keep the 6 length counts as a free auxiliary channel;
+do not "correct" for them. (c) Sections individually redundant, collectively
+robust; verification strongest for knn (0.091/0.74), editing for ridge
+(0.082/0.80), understanding ~dead weight. (d) Rubric/extraction lengths well
+controlled by prompt (27-57 / mean 39 words); parse failures ~5/2140.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
