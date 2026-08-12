@@ -235,6 +235,10 @@ side embeddings are also PCA'd (64-d) before the PKPS RBF kernel; sensitivity
 check: kernel matrices stable for query dims 32 -> raw-1536 (r ~ .94-.96,
 median-bandwidth self-adapts), materially distorted at 8-16d. Rank not yet in
 the CV grid (chosen on-panel at 64; flag for the q150 confirmation).
+ADDENDUM: PCA does NOT compound with greedy probe selection (greedy+PCA64
+held-out: 0.083/0.064/0.057 at m=1/5/20 vs greedy full-d 0.078/0.057/0.053) --
+selection and PCA spend the same slack; use PCA for random probes, full-d for
+selected probes.
 
 ## 5. Negative results (do not re-run without new ideas)
 
