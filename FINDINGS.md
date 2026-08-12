@@ -211,6 +211,18 @@ robust; verification strongest for knn (0.091/0.74), editing for ridge
 (0.082/0.80), understanding ~dead weight. (d) Rubric/extraction lengths well
 controlled by prompt (27-57 / mean 39 words); parse failures ~5/2140.
 
+**F17. Probe selection: CV-then-freeze, not CV-inside-search.** Greedy probe
+selection (objective: ensemble MAE on half the systems; evaluated held-out)
+improves the ensemble at every budget when hyperparameters are frozen first
+(CV'd once, then fixed: sigma=med/16, k=5): m=5 0.074 -> 0.057 (-23%). Running
+CV(sigma, k) inside every candidate evaluation halves the gains (m=5 0.070)
+and destabilizes choices -- joint optimization over probe set x hyperparams
+overfits a 53-system selection pool. Same degrees-of-freedom lesson as the
+13-ref weight-learning failure. First frozen-greedy picks are interpretable:
+medium-difficulty, high item-total-r instances from four repos, plus one
+near-unsolvable instance (5% solve rate, item r=.03) picked for its trace
+geometry -- selection exploits information item-response statistics cannot see.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
