@@ -223,6 +223,19 @@ medium-difficulty, high item-total-r instances from four repos, plus one
 near-unsolvable instance (5% solve rate, item r=.03) picked for its trace
 geometry -- selection exploits information item-response statistics cannot see.
 
+**F18. Post-centering PCA is a real pipeline stage.** Global PCA on the
+centered qubric/fusion tensors (fit on the stacked (systems x instances)
+residuals) improves BOTH readouts at rank 64-128 (~5-6% flat-panel; budget
+sweep: monotone gains growing with m, geometry 0.0745 -> 0.0690 and ensemble
+0.0516 -> 0.0476 at m=20 -- pipeline under 0.05 for the first time). Works
+here though it failed on raw embeddings (F4-era) because centering first
+removes instance identity, so PCA extracts a shared cross-instance behavioral
+basis instead of "which problem is this". Order matters: center -> PCA. Query-
+side embeddings are also PCA'd (64-d) before the PKPS RBF kernel; sensitivity
+check: kernel matrices stable for query dims 32 -> raw-1536 (r ~ .94-.96,
+median-bandwidth self-adapts), materially distorted at 8-16d. Rank not yet in
+the CV grid (chosen on-panel at 64; flag for the q150 confirmation).
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
