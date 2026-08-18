@@ -279,7 +279,15 @@ chance (.113) while provenance stays elevated (.343) and scaffold 8x chance
 outcome-proxy feature (.026 -> .024); raw's LLM and scaffold NN hits only 28%
 joint (10% for qubric) -- separate style vs format channels. Residual known
 entanglement: trace-level provenance x task for instance-blocked reps; hence
-dual-level provenance reporting. Data: figures/radar_all_data_v2.json;
+dual-level provenance reporting. ADDENDUM (identity-beyond-type): among the 27 systems with a type-sibling
+(same harness AND declared model family), raw embeddings retrieve the EXACT
+submission at 0.82 vs 0.43 chance -- the Identity pillar is not reducible to
+the Model-family x Harness conjunction; embeddings fingerprint individuals
+(version/config/prompts). qubric reduces this to 0.62. Caveat: some sibling
+groups match on 'Undisclosed'/'Multiple' model tags; clean disclosed groups
+are small. Identity is also the only authorship pillar computable with zero
+metadata. Final pillar names: Task, Behavior | Identity, Model family,
+Harness. Data: figures/radar_all_data_v2.json;
 exhibits: figures/radar_all.png, figures/independence_heatmap.png.
 
 ## 5. Negative results (do not re-run without new ideas)
