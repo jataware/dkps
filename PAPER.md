@@ -63,17 +63,30 @@ QUENCH-style validation with true leaderboard labels, leave-one-LLM-out:
   at 5, 0.048-0.053 at 20, vs sample-score-alone 0.44/0.16/0.06. Every layer
   ablated (F17, F18); ensemble dominates the sample score at every budget.
 
-## Figure/table plan
+## Figure/table plan (ICML, revised 2026-08-18)
 
-- Table 1: similarity axes x representations (the quotient-ladder table, F19,
-  extended with behavior + replicate axes). THE conceptual exhibit.
-- Fig 1: schematic of the pipeline as successive quotients (task | who | noise).
-- Fig 2: probe-efficiency (CV kNN . CV PKPS . g) -- exists, final styling.
-- Fig 3: full-pipeline layers (geometry -> ensemble -> selection) -- exists.
-- Table 2: construction ranking + judge-quality gradient (F9/F15/F16 + nano).
-- Table 3: greedy-selection results + picked-instance interpretability.
-- Appendix: mediation controls, CV-then-freeze ablation, PKPS-vs-paired
-  equalized twins, protocol definitions.
+Central claim for exhibits: across many embedding models, qubric processing is
+(1) MORE sensitive to axes that matter (outcome/behavior) and (2) LESS
+sensitive to axes that don't (task, provenance, lineage, format).
+
+- Fig 1: methods schematic (trace -> render -> qubric -> section embeddings ->
+  centering -> perspective space; nuisance axes annotated where they die).
+- Fig 2: RADAR CHARTS, one panel per embedding model (~7: 6 local
+  [nomic-1.5, bge-large, gte-large, e5-large, mpnet, MiniLM] + cached
+  text-embedding-3-small). Spokes = chance-normalized axis sensitivities;
+  two polygons per panel (raw vs qubric). Same shape-change in every panel =
+  the embedder-general claim. Data: data/multiembed_*.npz (local GPU).
+- Fig 3: sensitivity to the processing model -- axis profiles + prediction
+  accuracy across judge models (4o-mini/5.4-nano/5.4-mini) and rubric
+  constructions (blob/generic/verdict/qubric). All cached.
+- Fig 4: QUENCH-style probe-efficiency validation (exists:
+  error_vs_probes_qspec_pkps.png).
+- Fig 5 (proposed): measurement error & aggregation -- identity-recovery and
+  prediction vs #instances aggregated; cross-judge (mini/nano) reliability.
+- Table 1: axis-ladder numbers behind Fig 2 (main or appendix).
+- Table 2: headline budget table (sample / geometry / ensemble / +selection).
+- Appendix: CV-then-freeze ablation, PKPS-vs-paired equalized twins,
+  mediation controls, greedy-picks interpretability, protocols.
 
 ## Gaps / risks (state of 2026-08-18)
 
