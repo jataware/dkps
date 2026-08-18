@@ -264,6 +264,24 @@ intrinsic scores are inflated by lineage leakage (sibling-NN 26%, 3x chance;
 sibling-excluded score-gap advantage 0.014 -> 0.002). Intrinsic metrics must
 be aggregation-aware and lineage-controlled.
 
+**F20. Pillar definitions and independence evidence.** The seven radar
+pillars: task fidelity (cross-instance instance retrieval), behavior fidelity
+(within-instance Mantel vs outcome-free patch features: size+files), outcome
+sensitivity (within-instance same-outcome AUC), provenance invariance at trace
+AND aggregated (10-instance split-half) levels, LLM-lineage and scaffold
+invariance (within-instance NN excl own system). Independence: (a) by
+conditioning design (cross- vs within-instance); (b) double dissociations
+across 6 OpenAI-embedded representations -- task/provenance occupy opposite
+corners (qubric .95/.09 vs centered .37/.83); free-form judge holds LLM at
+chance (.113) while provenance stays elevated (.343) and scaffold 8x chance
+(.136); outcome/behavior dissociate (tail-only .58/-.006 vs judge reps
+~.54/.025); (c) targeted checks: behavior spoke invariant to removing the
+outcome-proxy feature (.026 -> .024); raw's LLM and scaffold NN hits only 28%
+joint (10% for qubric) -- separate style vs format channels. Residual known
+entanglement: trace-level provenance x task for instance-blocked reps; hence
+dual-level provenance reporting. Data: figures/radar_all_data_v2.json;
+exhibits: figures/radar_all.png, figures/independence_heatmap.png.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
