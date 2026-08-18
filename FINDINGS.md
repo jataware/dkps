@@ -240,6 +240,30 @@ held-out: 0.083/0.064/0.057 at m=1/5/20 vs greedy full-d 0.078/0.057/0.053) --
 selection and PCA spend the same slack; use PCA for random probes, full-d for
 selected probes.
 
+**F19. Similarity axes and the quotient ladder (intrinsic evaluation).**
+Trace similarity decomposes into axes: task, provenance, lineage, format,
+behavior, outcome. Trace-level nearest-neighbor metrics on q20 (chance rates:
+task/provenance ~0.01, LLM 0.09, scaffold 0.06):
+
+| axis            | raw   | centered | qubric-raw | qubric-cent |
+|-----------------|-------|----------|------------|-------------|
+| task NN         | 0.831 | 0.367    | 0.994      | 0.953       |
+| provenance P@1  | 0.675 | 0.830    | 0.057      | 0.094       |
+| same-LLM NN     | 0.215 | 0.201    | 0.128      | 0.117       |
+| same-scaffold NN| 0.307 | 0.308    | 0.072      | 0.079       |
+| outcome AUC     | 0.569 | 0.519    | 0.575      | 0.547       |
+
+(a) The judge quotients the who-axes to ~chance; (b) it does NOT quotient the
+task axis (rubric injects instance vocabulary; residuals stay instance-
+conditioned, 0.95) -- the architecture handles task via within-instance
+comparison + PKPS query kernel (also explains qubric's weak m=1-2 cross-
+instance transfer); (c) centering alone AMPLIFIES provenance (0.68 -> 0.83);
+(d) qubric's trace-level identity collapse is largely judge sampling noise:
+10-instance aggregation recovers self-match 0.09 -> 0.52; (e) naive's
+intrinsic scores are inflated by lineage leakage (sibling-NN 26%, 3x chance;
+sibling-excluded score-gap advantage 0.014 -> 0.002). Intrinsic metrics must
+be aggregation-aware and lineage-controlled.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
