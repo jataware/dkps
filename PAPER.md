@@ -71,30 +71,25 @@ QUENCH-style validation with true leaderboard labels, leave-one-LLM-out:
   at 5, 0.048-0.053 at 20, vs sample-score-alone 0.44/0.16/0.06. Every layer
   ablated (F17, F18); ensemble dominates the sample score at every budget.
 
-## Figure/table plan (ICML, revised 2026-08-18)
+## Figure/table plan (FINAL, 2026-08-18)
 
-Central claim for exhibits: across many embedding models, qubric processing is
-(1) MORE sensitive to axes that matter (outcome/behavior) and (2) LESS
-sensitive to axes that don't (task, provenance, lineage, format).
-
-- Fig 1: methods schematic (trace -> render -> qubric -> section embeddings ->
-  centering -> perspective space; nuisance axes annotated where they die).
-- Fig 2: RADAR CHARTS, one panel per embedding model (~7: 6 local
-  [nomic-1.5, bge-large, gte-large, e5-large, mpnet, MiniLM] + cached
-  text-embedding-3-small). Spokes = chance-normalized axis sensitivities;
-  two polygons per panel (raw vs qubric). Same shape-change in every panel =
-  the embedder-general claim. Data: data/multiembed_*.npz (local GPU).
-- Fig 3: sensitivity to the processing model -- axis profiles + prediction
-  accuracy across judge models (4o-mini/5.4-nano/5.4-mini) and rubric
-  constructions (blob/generic/verdict/qubric). All cached.
-- Fig 4: QUENCH-style probe-efficiency validation (exists:
-  error_vs_probes_qspec_pkps.png).
-- Fig 5 (proposed): measurement error & aggregation -- identity-recovery and
-  prediction vs #instances aggregated; cross-judge (mini/nano) reliability.
-- Table 1: axis-ladder numbers behind Fig 2 (main or appendix).
+- Fig 1: methods description/schematic (pipeline as quotients; pillar taxonomy
+  = generative model of a trace: task/agent/seed -> content/authorship ladder/
+  reliability; outcome = derived, inferred).
+- Fig 2: sensitivity radars, 7 embedders, staggered 4+3, Helivan palette.
+  Spokes: Task, Behavior | Identity, Model Family (vendor-level), Harness.
+  Data: radar_all_data_v2.json + family_metric.json.
+- Fig 3: independence heatmap (6 representations x pillars, incl. Identity
+  trace/agg + version-level Model in appendix data) + judge/rubric sensitivity
+  panel (4o-mini/5.4-nano/5.4-mini x blob/generic/verdict/qubric).
+- Fig 4: QUENCH pair -- error vs m probes (exists: error_vs_probes_qspec_pkps)
+  + error vs n reference agents (quench_n.json, computing).
+- Fig 5: reliability -- three noise sources (agent seed, judge, embedder) +
+  aggregation redemption curve (exists: fig5_reliability.png).
+- Table 1: pillar definitions + axis-ladder numbers.
 - Table 2: headline budget table (sample / geometry / ensemble / +selection).
-- Appendix: CV-then-freeze ablation, PKPS-vs-paired equalized twins,
-  mediation controls, greedy-picks interpretability, protocols.
+- Appendix: CV-then-freeze, PKPS-vs-paired twins, mediation controls,
+  identity-beyond-type tests, independence checks, protocols.
 
 ## Gaps / risks (state of 2026-08-18)
 
