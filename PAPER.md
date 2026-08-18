@@ -3,6 +3,14 @@
 Five-act narrative (HH, 2026-08-18), with the evidence map and outstanding
 gaps. Numbers reference FINDINGS.md (F1-F19).
 
+**Thesis line**: "A trace representation should be faithful to content and
+invariant to authorship." Content = (task, behavior, outcome); authorship =
+(system, LLM, scaffold, style). Radar orientation follows: task/behavior/
+outcome/reliability spokes desirable-HIGH; provenance/LLM/scaffold spokes
+desirable-at-CHANCE. Off-the-shelf embeddings represent who wrote the trace;
+qubric represents what happened in it. (Centered-naive is the worst of both:
+task fidelity destroyed, authorship amplified.)
+
 ## The narrative
 
 **1. Agentic traces are a new evaluation modality.** Modern evaluation
