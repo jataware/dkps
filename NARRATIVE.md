@@ -1,8 +1,9 @@
 # Embedding Agentic Traces: Project Narrative
 
 *Helivan Research — August 2026. Companion documents: `FINDINGS.md` (technical
-log, F1–F20), `PAPER.md` (exhibit plan). This document is the story: what we
-are doing, what we have done, and why it might matter.*
+log, F1–F20), `PAPER.md` (exhibit plan), `RELATED.md` (literature context and
+annotated bibliography). This document is the story: what we are doing, what
+we have done, and why it might matter.*
 
 ## What we are doing
 
