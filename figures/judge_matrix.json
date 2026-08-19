@@ -60,6 +60,13 @@
       "ridge_mae": 0.09158898567333279,
       "ridge_rho": 0.7674035855138284,
       "parse_failures": 0
+    },
+    "qubric|deepseek-v3.1": {
+      "knn_mae": 0.08256646726430532,
+      "knn_rho": 0.7929156141710606,
+      "ridge_mae": 0.07941141864435003,
+      "ridge_rho": 0.7916272763183624,
+      "parse_failures": 1
     }
   }
 }

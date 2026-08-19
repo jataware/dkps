@@ -41,6 +41,7 @@ CELLS = {  # (construction, judge) -> (dir, kind)
     ('qubric', 'gpt-5.4-nano'): ('data/judge/structured-qspec-gpt-5.4-nano', 'json'),
     ('qubric', 'gpt-oss-20b'): ('data/judge/structured-qspec-openai_gpt-oss-20b', 'json'),
     ('qubric', 'gpt-oss-120b'): ('data/judge/structured-qspec-openai_gpt-oss-120b', 'json'),
+    ('qubric', 'deepseek-v3.1'): ('data/judge/structured-qspec-deepseek_deepseek-chat-v3.1', 'json'),
 }
 
 

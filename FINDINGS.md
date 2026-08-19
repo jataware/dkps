@@ -321,7 +321,16 @@ impossible yet 20b still failed on content. Operational: OpenRouter
 price-routing + strict schema + trace-text cache; measured cost ~$1/judge/
 q20 run; ~89 empty-content responses per run on ~60K-char traces at
 effort=low, all recovered by escalation (8K tokens, effort=medium).
-Scripts: judge_openrouter.py, judge_escalate.py. Next rung: deepseek-v3.1.
+Scripts: judge_openrouter.py, judge_escalate.py.
+ADDENDUM (deepseek-v3.1, 2026-08-19): kNN .0826/.793, ridge .0794/.792 --
+CLEARS the bar (within .004/.001 of mini, inside panel resolution ~.01);
+best open judge tested; ties nano kNN, beats nano rho. Full open ladder
+monotone in capability: oss-20b .113 > oss-120b .086 > deepseek .083 ~= nano
+.083 > mini .078. Costs/q20-run: oss ~$1, deepseek ~$11.5 (verbose
+completions + higher pricing; input dominates -> q150 with deepseek ~$85).
+DECISION: deepseek-v3.1 is the open judge for scale-up unless a cheaper
+frontier-open (qwen3-235b, ~$4 test) matches it. Judge quality is NOT
+price-monotone in the open tier (oss-120b cheapest AND worst-but-one).
 
 **F23. Rubric-section ablation (2026-08-19, cache-only).** Drop-one from the
 6-section qubric (mini judge, nomic embedder, F21 protocol): worst delta
