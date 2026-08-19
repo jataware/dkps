@@ -46,6 +46,20 @@
       "ridge_mae": 0.08137715334669808,
       "ridge_rho": 0.8066807448405733,
       "parse_failures": 25
+    },
+    "qubric|gpt-oss-20b": {
+      "knn_mae": 0.11341001638990235,
+      "knn_rho": 0.527199606019324,
+      "ridge_mae": 0.09994078206016771,
+      "ridge_rho": 0.6995919471301754,
+      "parse_failures": 0
+    },
+    "qubric|gpt-oss-120b": {
+      "knn_mae": 0.08635002879373611,
+      "knn_rho": 0.7611480439248719,
+      "ridge_mae": 0.09158898567333279,
+      "ridge_rho": 0.7674035855138284,
+      "parse_failures": 0
     }
   }
 }

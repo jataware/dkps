@@ -307,6 +307,22 @@ blob cells queued with q150 (API-blocked). Data: figures/judge_matrix.json;
 exhibit: figures/judge_matrix.png (Fig 3 right panel);
 scripts: judge_matrix.py, fig_judge_matrix.py.
 
+**F22. Open-weight judge migration, first rungs (2026-08-19).** q20 extraction
+re-run with open judges on IDENTICAL cached mini-written rubrics (only the
+extractor varies), scored in the F21 protocol (nomic embedder,
+leave-one-LLM-out). kNN/ridge MAE: gpt-oss-20b .1134/.0999 (FAILS -- worse
+than 4o-mini blob despite 0 parse failures); gpt-oss-120b .0864/.0916
+(capability gradient confirmed, pipeline exonerated; still fails the
+within-noise-of-mini bar); reference mini .0784/.0780, nano .0833/.0814.
+Notable: closed NANO (tiny) beats open 120B on both readouts. Judge quality
+manifests as description SPECIFICITY (file names, what was left unchanged),
+not fluency or format compliance -- strict json_schema made malformed output
+impossible yet 20b still failed on content. Operational: OpenRouter
+price-routing + strict schema + trace-text cache; measured cost ~$1/judge/
+q20 run; ~89 empty-content responses per run on ~60K-char traces at
+effort=low, all recovered by escalation (8K tokens, effort=medium).
+Scripts: judge_openrouter.py, judge_escalate.py. Next rung: deepseek-v3.1.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
