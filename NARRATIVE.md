@@ -136,8 +136,11 @@ overfitting — we hit this four separate times.
 ## Where things stand, honestly
 
 All qubric results rest on a 20-instance panel of SWE-bench Verified with one
-judge family; the scale confirmation (150 instances, ~14K judge calls) is
-specified and blocked only on API access. One benchmark, one task domain.
+judge family; the scale confirmation (150 instances, ~16K judge calls) is
+specified and will run on an open-weight judge (local vLLM or OpenRouter) —
+we no longer assume access to closed APIs, which also makes the final
+pipeline fully reproducible with open models. One benchmark, one task domain
+(Terminal-Bench trajectories are public and queued as the second).
 Differences below ~0.01 MAE on the panel are near its resolution, and the
 identity-beyond-type estimate rests on seven clean systems. The figure set
 (sensitivity radars, independence heatmap, QUENCH pair, reliability) is built,

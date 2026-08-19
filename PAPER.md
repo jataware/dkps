@@ -105,19 +105,33 @@ QUENCH-style validation with true leaderboard labels, leave-one-LLM-out:
 - Appendix: CV-then-freeze, PKPS-vs-paired twins, mediation controls,
   identity-beyond-type tests, independence checks, protocols.
 
-## Gaps / risks (state of 2026-08-18)
+## Gaps / risks (state of 2026-08-19)
 
-- **Scale**: all qubric results are on the 20-instance panel; q150
-  confirmation requires ~14K judge calls -- BLOCKED (no OpenAI API access).
-  Either scope claims to the panel with explicit error bars, or wait.
-  Head/tail results are at q150 already.
-- **Single benchmark / single embedder**: SWE-bench only;
-  text-embedding-3-small only. Cached-data mitigations available:
-  re-embed cached judge texts with local nomic (embedder robustness);
-  small-cohort replicate axis via local nomic (gold-standard similarity +
-  second corpus for the transfer claim).
-- **Reliability number**: test-retest (same judge, resampled) blocked;
-  cross-judge agreement (mini vs nano caches) computable now as a proxy.
+**STANDING CONSTRAINT: no OpenAI API, permanently. All new LLM calls use
+open-source models -- local vLLM on the A100-40GB (candidates: gpt-oss-20b,
+Qwen3-14B, Qwen3-32B-AWQ) or OpenRouter (drop-in: scripts read
+OPENAI_BASE_URL; needs an OpenRouter key). Cached gpt-5.4-mini/nano/4o-mini
+judge outputs stay as comparison rows. This is a reproducibility UPGRADE for
+the paper: the pipeline becomes fully open-weight.**
+
+Migration plan (order matters):
+1. Judge migration validation: re-run q20 extraction (2140 calls, existing
+   mini-written rubrics, so only the extractor changes) with 1-2 open judges;
+   score in the F21 matrix protocol (nomic embedder). Bar: beats naive both
+   readouts, within noise of gpt-5.4-mini. Adds open rows to the judge matrix.
+2. Open rubric writer (150 calls at q150 scale -- use a frontier open model
+   via OpenRouter, e.g. DeepSeek/Kimi/Qwen3-235B; pennies): fills the
+   rubric-writer axis of the matrix (mini-written vs open-written rubrics).
+3. q150 scale-up with the validated open judge: ~16K calls x ~12K tokens.
+   Local gpt-oss-20b overnight, or OpenRouter ($20-60 depending on model).
+4. Judge test-retest (same open judge, temperature>0, resampled): unblocked.
+5. Terminal-Bench rubrics + extraction with the same open stack: unblocked
+   after corpus census.
+
+Remaining risks:
+- q20-panel resolution (~0.01 MAE) until step 3 lands.
+- Judge switch mid-project: mitigated by step 1's paired comparison on
+  identical rubrics + F21's finding that construction > extractor capability.
 - Rank-64 PCA chosen on-panel; fold into CV at scale-up.
 - Naming: "qubric" (query-specific rubric) -- decide before writing.
 
