@@ -71,31 +71,35 @@ QUENCH-style validation with true leaderboard labels, leave-one-LLM-out:
   at 5, 0.048-0.053 at 20, vs sample-score-alone 0.44/0.16/0.06. Every layer
   ablated (F17, F18); ensemble dominates the sample score at every budget.
 
-## Figure/table plan (REVISED 2026-08-19: QUENCH moved last as payoff;
-## reliability promoted to Fig 4; cross-model rubric/extraction matrix added)
+## Figure/table plan (REVISED 2026-08-19 v2, per HH)
 
-- Fig 1: methods description/schematic (pipeline as quotients; pillar taxonomy
-  = generative model of a trace: task/agent/seed -> content/authorship ladder/
-  reliability; outcome = derived, inferred).
-- Fig 2: sensitivity radars, 7 embedders, staggered 4+3, Helivan palette.
-  Spokes: Task, Behavior | Identity, Model Family (vendor-level), Harness.
-  Data: radar_all_data_v2.json + family_metric.json.
-- Fig 3: independence heatmap (6 representations x pillars, incl. Identity
-  trace/agg + version-level Model in appendix data) + cross-model matrix of
-  rubric-generator x extraction-judge (cells = qubric performance under each
-  LLM pairing). Cached today: rubric axis = gpt-5.4-mini only; extraction axis
-  = {5.4-mini, 5.4-nano} structured + {4o-mini, 5.4-mini} free-form; filling
-  the full grid (rubric by 4o-mini/nano; structured extraction by 4o-mini)
-  needs API access -- queue with q150. Construction ranking
-  (blob/generic/verdict/qubric, all cached at judge=mini) stays as the
-  companion column or moves to appendix.
-- Fig 4: reliability -- three noise sources (agent seed, judge, embedder) +
-  aggregation redemption curve (exists: fig5_reliability.png -> renumber).
-- Fig 5 (payoff): QUENCH pair -- error vs m probes + error vs n reference
-  agents (exists: fig4_quench.png -> renumber). Aspirational second panel row:
-  Terminal-Bench replication -- requires acquiring a trajectory corpus with
-  labels AND judge calls (API-blocked); treat as scale-up item with q150, not
-  a submission blocker.
+- Fig 1 (schematic, 3 panels): (a) anatomy of an agentic trace -- what is in
+  it, which parts are authorship (harness boilerplate, tool syntax, model
+  style) vs content (actions, findings, edits), annotated real excerpt;
+  (b) qubric as the mod-out mechanism (problem -> rubric -> judge extraction
+  -> per-section embed -> consensus center -> concat); (c) pillar taxonomy +
+  independence evidence (heatmap moves here or to appendix with a pointer).
+- Fig 2: sensitivity radars across embedding functions, qubric vs baselines
+  (exists: radar_all.png; add bootstrap CIs; q150 scale-up API-blocked).
+- Fig 3 (payoff): QUENCH-style analysis on SWE-bench AND Terminal-Bench.
+  SWE-bench arm exists (fig4_quench.png). Terminal-Bench arm: trajectories
+  ARE public -- HF dataset harborframework/terminal-bench-2-leaderboard
+  (40GB, submissions/<agent>__<model>/ job dirs, >=5 trials/task, per-trial
+  result.json) + abacusai/abacusai-terminal-bench-leaderboard (TB 1.0 logs).
+  Data sync + loader + labels + local embedding: doable now. Rubric + judge
+  calls: API-blocked. Bonus: >=5 trials/task = replicate axis for Fig 4 on a
+  second benchmark.
+- Fig 4: reliability (exists: fig5_reliability.png; judge test-retest
+  API-blocked; TB trials add a second agent-stochasticity corpus).
+- Fig 5 / Table 1: robustness to pipeline choices -- embedder (7, done),
+  judge x construction matrix (judge_matrix.png moves here), centering (F5),
+  PCA rank (F18), protocol LOO vs LLM-out (F13), CV-then-freeze (F17), plus
+  computable-now sweeps: kNN k, PKPS sigma, alpha-blend, rubric-section
+  ablation (sections separately embedded -- drop-one is cache-only), fusion
+  weight.
+- Baselines owed to related work (cache-only, from RELATED.md): LEACE-style
+  authorship erasure on raw embeddings (Fig 2/appendix); CAPA
+  correctness-only kernel (Fig 3 competitor).
 - Table 1: pillar definitions + axis-ladder numbers.
 - Table 2: headline budget table (sample / geometry / ensemble / +selection).
 - Appendix: CV-then-freeze, PKPS-vs-paired twins, mediation controls,
