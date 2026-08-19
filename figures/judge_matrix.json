@@ -1,0 +1,51 @@
+{
+  "embedder": "nomic-ai/nomic-embed-text-v1.5",
+  "systems": 107,
+  "instances": 20,
+  "rubric_writer": "gpt-5.4-mini",
+  "protocol": "leave-one-LLM-out, per-(instance,section) median centering, L2, concat",
+  "cells": {
+    "blob|gpt-4o-mini": {
+      "knn_mae": 0.10981133764715074,
+      "knn_rho": 0.5712382269157367,
+      "ridge_mae": 0.0893575233337446,
+      "ridge_rho": 0.7332258927447216,
+      "parse_failures": 0
+    },
+    "blob|gpt-5.4-mini": {
+      "knn_mae": 0.09412455306031602,
+      "knn_rho": 0.7093989904043264,
+      "ridge_mae": 0.08314362266830727,
+      "ridge_rho": 0.757327117973904,
+      "parse_failures": 0
+    },
+    "generic|gpt-5.4-mini": {
+      "knn_mae": 0.0875227070074436,
+      "knn_rho": 0.7024527429703874,
+      "ridge_mae": 0.08155815622663506,
+      "ridge_rho": 0.7755646914552549,
+      "parse_failures": 1
+    },
+    "verdict|gpt-5.4-mini": {
+      "knn_mae": 0.08633936631618537,
+      "knn_rho": 0.6589039843753807,
+      "ridge_mae": 0.08992996671125472,
+      "ridge_rho": 0.7485046979255792,
+      "parse_failures": 4
+    },
+    "qubric|gpt-5.4-mini": {
+      "knn_mae": 0.07842192570994758,
+      "knn_rho": 0.7884725630973068,
+      "ridge_mae": 0.07799874350322045,
+      "ridge_rho": 0.8110552151921302,
+      "parse_failures": 5
+    },
+    "qubric|gpt-5.4-nano": {
+      "knn_mae": 0.08329275629817048,
+      "knn_rho": 0.7371251966639143,
+      "ridge_mae": 0.08137715334669808,
+      "ridge_rho": 0.8066807448405733,
+      "parse_failures": 25
+    }
+  }
+}

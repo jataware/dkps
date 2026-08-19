@@ -290,6 +290,23 @@ metadata. Final pillar names: Task, Behavior | Identity, Model family,
 Harness. Data: figures/radar_all_data_v2.json;
 exhibits: figures/radar_all.png, figures/independence_heatmap.png.
 
+**F21. Cross-model judge matrix under a common local embedder (2026-08-19).**
+All cached (construction x extraction-judge) cells re-embedded with
+nomic-embed-text-v1.5 (the only apples-to-apples choice: nano judge texts were
+never embedded with the OpenAI model) and scored with the standard protocol
+(per-(instance,section) median centering, L2, concat; leave-one-LLM-out kNN
+k=3 and ridge; 107 systems x q20). kNN MAE: 4o-mini blob .110; mini blob
+.094 > generic .088 > verdict .086 > qubric .078 (construction ranking
+reproduces under a local embedder -- F15/F16 are not an OpenAI-embedder
+artifact); qubric nano .083 vs mini .078. Key reading: NANO x QUBRIC BEATS
+MINI x BLOB AND MINI x GENERIC -- the construction contributes more than
+extractor capability; judge degradation is graceful. Parse failures track
+judge quality (mini 5, nano 25 of 2140). Rubric-writer axis has one cached
+value (gpt-5.4-mini); filling it + structured extraction for 4o-mini/nano
+blob cells queued with q150 (API-blocked). Data: figures/judge_matrix.json;
+exhibit: figures/judge_matrix.png (Fig 3 right panel);
+scripts: judge_matrix.py, fig_judge_matrix.py.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
