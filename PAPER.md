@@ -81,14 +81,14 @@ QUENCH-style validation with true leaderboard labels, leave-one-LLM-out:
   independence evidence (heatmap moves here or to appendix with a pointer).
 - Fig 2: sensitivity radars across embedding functions, qubric vs baselines
   (exists: radar_all.png; add bootstrap CIs; q150 scale-up API-blocked).
-- Fig 3 (payoff): QUENCH-style analysis on SWE-bench AND Terminal-Bench.
-  SWE-bench arm exists (fig4_quench.png). Terminal-Bench arm: trajectories
-  ARE public -- HF dataset harborframework/terminal-bench-2-leaderboard
-  (40GB, submissions/<agent>__<model>/ job dirs, >=5 trials/task, per-trial
-  result.json) + abacusai/abacusai-terminal-bench-leaderboard (TB 1.0 logs).
-  Data sync + loader + labels + local embedding: doable now. Rubric + judge
-  calls: API-blocked. Bonus: >=5 trials/task = replicate axis for Fig 4 on a
-  second benchmark.
+- Fig 3 (payoff): QUENCH-style analysis on SWE-bench (exists:
+  fig4_quench.png; finalize with CIs + CAPA correctness-only competitor).
+  Terminal-Bench arm DEFERRED (HH, 2026-08-19: SWE-bench finalization first).
+  TB facts when resumed: trajectories public -- HF dataset
+  harborframework/terminal-bench-2-leaderboard (40GB, 142 entries, 89 tasks,
+  >=5 trials/task, per-trial result.json); download is slow (millions of tiny
+  files -- partial xet cache retained in ~/.cache/huggingface); judge cost
+  ~$10-15 via OpenRouter.
 - Fig 4: reliability (exists: fig5_reliability.png; judge test-retest
   API-blocked; TB trials add a second agent-stochasticity corpus).
 - Fig 5 / Table 1: robustness to pipeline choices -- embedder (7, done),

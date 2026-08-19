@@ -1,0 +1,15 @@
+{
+  "full": 0.07842192570994758,
+  "drop_understanding": 0.08032590219682721,
+  "drop_localization": 0.07813931300130429,
+  "drop_reproduction": 0.08609364296342624,
+  "drop_editing": 0.08037195393078846,
+  "drop_verification": 0.07604982655500904,
+  "drop_final_state": 0.079013685069645,
+  "only_understanding": 0.1217543925004757,
+  "only_localization": 0.10233309973295802,
+  "only_reproduction": 0.10827597011093808,
+  "only_editing": 0.10414758826117766,
+  "only_verification": 0.09131494012908771,
+  "only_final_state": 0.10023619738317249
+}

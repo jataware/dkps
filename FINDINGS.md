@@ -323,6 +323,25 @@ q20 run; ~89 empty-content responses per run on ~60K-char traces at
 effort=low, all recovered by escalation (8K tokens, effort=medium).
 Scripts: judge_openrouter.py, judge_escalate.py. Next rung: deepseek-v3.1.
 
+**F23. Rubric-section ablation (2026-08-19, cache-only).** Drop-one from the
+6-section qubric (mini judge, nomic embedder, F21 protocol): worst delta
++0.0077 kNN MAE (reproduction); verification drop -0.0024 (noise). Only-one:
+every single section much worse than the union (best single: verification
+.0913; worst: understanding .1218; all-6 .0784). Signal is distributed across
+complementary behavioral facets -- the construction is not a one-section
+trick. Data: figures/section_ablation.json.
+
+**F24. CAPA-style correctness-only competitor (2026-08-19, cache-only).**
+Chance-adjusted error-overlap (kappa) kNN over q20 correctness vectors,
+leave-one-LLM-out, 40 draws: m=1 .369+-.049, m=5 .198+-.033, m=10 .126,
+m=20 .072 (sample score alone: .437/.144/.105/.061). Trace-content geometry
+reaches .095 at m=1 -- correctness-only methods need ~15-20 scored probes to
+match what one TRACE provides; at m=20 the qubric ensemble (.048-.053) still
+dominates. The resolution-floor argument (Yauney et al.) reproduced on our
+corpus with the strongest correctness-only similarity. Data:
+figures/capa_baseline.json. Caveat: quick-protocol numbers; recompute under
+the exact Fig 3 pipeline before print.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.
