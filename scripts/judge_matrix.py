@@ -90,6 +90,10 @@ def main():
                 for j, q in enumerate(q20):
                     try:
                         dd = json.loads(open(os.path.join(d, s, f'{q}.json')).read())
+                        if isinstance(dd, list) and dd:
+                            dd = dd[0]
+                        if not isinstance(dd, dict):
+                            dd, n_bad = {}, n_bad + 1
                     except (json.JSONDecodeError, FileNotFoundError):
                         dd, n_bad = {}, n_bad + 1
                     for k, sec in enumerate(SECTIONS):
