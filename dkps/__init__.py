@@ -1,6 +1,7 @@
+from .pkps import PKPS, DKPS
 from .dkps import DataKernelPerspectiveSpace
 from .synthetic import generate_benchmark_data
-from .unpaired_dkps import ProductKernelPerspectiveSpace, PKPS, DoubleKernelDKPS
+from .unpaired_dkps import ProductKernelPerspectiveSpace, DoubleKernelDKPS
 from .baselines import (
     matrix_completion_predict,
     irt_fit_difficulties,
@@ -9,9 +10,10 @@ from .baselines import (
 )
 
 __all__ = [
+    'PKPS',
+    'DKPS',
     'DataKernelPerspectiveSpace',
     'ProductKernelPerspectiveSpace',
-    'PKPS',
     'DoubleKernelDKPS',
     'generate_benchmark_data',
     'matrix_completion_predict',

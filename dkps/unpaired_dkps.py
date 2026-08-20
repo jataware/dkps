@@ -299,6 +299,6 @@ class ProductKernelPerspectiveSpace:
         return names, {s: np.sqrt(D2[s]) for s in sigmas}
 
 
-# Canonical short name and back-compat alias.
-PKPS = ProductKernelPerspectiveSpace
+# Back-compat alias. (The name PKPS now refers to the high-level estimator in
+# dkps.pkps; the low-level distance machinery lives here.)
 DoubleKernelDKPS = ProductKernelPerspectiveSpace
