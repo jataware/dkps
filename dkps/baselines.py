@@ -200,6 +200,8 @@ class _ScoreEstimator:
     REQUIRED = ('model_id', 'query_id', 'score')
 
     def fit(self, records):
+        """Fit from response-level records (model_id, task_id, query_id, score[, sample_score]);
+        embedding columns are ignored."""
         df = parse_records(records, required=self.REQUIRED)
         if 'task_id' not in df.columns:
             df['task_id'] = '_task'
@@ -211,6 +213,8 @@ class _ScoreEstimator:
         return self
 
     def update(self, records):
+        """Merge new rows (re-sent (model, task, query) keys replace the old row) and refit;
+        these estimators are cheap enough that a full refit is the incremental update."""
         assert hasattr(self, '_raw'), 'call fit() before update()'
         df = parse_records(records, required=self.REQUIRED)
         if 'task_id' not in df.columns:

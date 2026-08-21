@@ -26,6 +26,33 @@ from .records import parse_records, ScoreTable, parse_pairs, pairs_to_records
 
 
 class Ensemble:
+    """Blend of two fitted (or to-be-fitted) score estimators.
+
+    Parameters
+    ----------
+    members : [a, b]
+        Two estimators with the fit / predict / update API. y_hat = alpha*a + (1-alpha)*b.
+        By convention member[1] is the prior / model-based estimate (it wins the fallback
+        when only one member has a value).
+    mode : 'cv' | 'precision' | 'fixed'
+        'cv'        alpha on a grid of `grid` points in [0, 1], minimizing the blend's MAE on the
+                    observed cells against `target` ('auto' = reference score where given, else
+                    sample score). With holdout='family' a separate alpha is learned for each
+                    family from the OTHER families' cells (leave-one-family-out).
+        'precision' per-cell shrinkage weight on member[0] (the own sample):
+                    e_i / (e_i + p(1-p)/m), e_i = the model's depth-weighted prior error.
+        'fixed'     the given `alpha`.
+    holdout : 'family' or None (per-family vs. one global alpha; 'cv' mode only)
+    family_fn : model_id -> family label (default: developer prefix)
+    predict_kwargs : [kwargs_a, kwargs_b] forwarded to each member's predict(), both when
+        learning alpha and when predicting (e.g. {'holdout': 'family'} or {'whiten': True}).
+    clip : output range, or None
+    fallback : if one member has no estimate for a cell, use the other's (else NaN)
+
+    Attributes (after fit): alpha_global_, alpha_ (per family, when holdout='family'),
+    prior_err_ (precision mode), model_names_, task_names_.
+    """
+
     def __init__(self, members, mode='cv', alpha=None, holdout='family', family_fn=None,
                  predict_kwargs=None, grid=21, target='auto', clip=(0.0, 1.0), fallback=True):
         assert len(members) == 2, 'Ensemble blends exactly two members'
@@ -42,6 +69,7 @@ class Ensemble:
 
     # ------------------------------------------------------------------
     def fit(self, records):
+        """Fit any unfitted member on `records`, then learn the blend weight(s)."""
         df = parse_records(records, required=('model_id', 'query_id'))
         if 'task_id' not in df.columns:
             df['task_id'] = '_task'
@@ -53,6 +81,7 @@ class Ensemble:
         return self
 
     def update(self, records):
+        """Forward the new records to both members and re-learn the blend weight(s)."""
         for m in self.members:
             m.update(records)
         df = parse_records(records, required=('model_id', 'query_id'))
@@ -60,6 +89,8 @@ class Ensemble:
         return self
 
     def predict(self, records=None):
+        """Blend the members' predictions for the requested (model, task) pairs (None = the
+        union of the members' natural targets). Returns a list of dicts with 'score_hat'."""
         pairs = parse_pairs(records, self.model_names_, self.task_names_, self._default_pairs())
         P = self._member_preds(pairs)
         alpha = self._alpha_for(pairs, P)
@@ -99,6 +130,9 @@ class Ensemble:
         return out
 
     def _learn(self, df, incremental=False):
+        """Learn alpha from the members' predictions on the observed cells. Both members are
+        asked for every observed cell with their predict_kwargs, so a member that is
+        leave-one-out / cross-fit there (PKPS, LRMC) contributes clean estimates."""
         # score tables (sample + counts, and reference scores) from the members' own records
         raw = getattr(self.members[1], '_raw', None)
         raw = raw if raw is not None else df
@@ -154,6 +188,7 @@ class Ensemble:
             raise ValueError(f'unknown mode: {self.mode}')
 
     def _alpha_for(self, pairs, P):
+        """Per-pair blend weight on member[0]."""
         if self.mode == 'precision':
             out = np.empty(len(pairs))
             for n, (m, t) in enumerate(pairs):

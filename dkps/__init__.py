@@ -1,3 +1,21 @@
+"""dkps -- perspective spaces for comparing black-box models from their cached responses.
+
+Estimators (all share fit(records) / predict(records) / update(records); see dkps.records
+for the record format):
+
+    PKPS, DKPS          response-based: product-kernel perspective space -> MDS -> k-NN
+    SampleScore         the mean of a cell's observed per-response scores
+    IRT                 1PL item-response baseline (binary tasks)
+    LRMC                low-rank matrix completion of the sample-score matrix
+    Ensemble            two-member blend with a learned weight
+
+Pre-processing: Whitener (logit / standardize / two-way bias), FrozenPCA,
+BlockDiagonalEmbedding. Lower-level pieces used by the experiment scripts remain
+available: ProductKernelPerspectiveSpace (distance matrices over a bandwidth grid),
+DataKernelPerspectiveSpace (the original paired DKPS), matrix_completion_predict and
+the irt_* functions, generate_benchmark_data (synthetic benchmark).
+"""
+
 from .pkps import PKPS, DKPS
 from .dkps import DataKernelPerspectiveSpace
 from .synthetic import generate_benchmark_data

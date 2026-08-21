@@ -47,6 +47,14 @@ bash install.sh            # pixi environment + dependencies
 bash run_experiments.sh    # all sweeps + per-cell dumps + figures (16 seeds)
 ```
 
+Two scripts use the `dkps` package classes instead of the pipeline internals:
+
+```bash
+pixi run python example_table1.py --m 1 --seed 0        # one Table 1 cell, ~60 readable lines
+pixi run python validate_package.py --suite helm --protocol qe          # every Table 1 cell vs the CSVs
+pixi run python validate_package.py --suite eee --protocol completion   # (all rows agree to 0)
+```
+
 `run_experiments.sh` writes result CSVs to `results-pkps-rd1/` (query efficiency)
 and `results-pkps-unified/` (completion), then regenerates the figures. Individual
 steps can be run directly, e.g.

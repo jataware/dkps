@@ -11,41 +11,136 @@ two papers:
    routing from cached, unpaired, unlabeled evaluation history — selecting a
    behavioral surrogate for an unavailable model.
 
-## Orientation for DKPS veterans
+## The package
 
-If you know the original DKPS code, the map from old to new:
+`dkps` exposes every method in the PKPS paper as an estimator with the same
+three-call API:
 
-- `DataKernelPerspectiveSpace` (paired DKPS) still lives in `dkps/dkps.py`,
-  unchanged.
-- The new method is `dkps.unpaired_dkps.ProductKernelPerspectiveSpace`
-  (aliases: `PKPS`, and `DoubleKernelDKPS` for back-compat with early
-  notebooks). It replaces DKPS's identity query-matching with a **product
-  kernel**: the comparison between models `i, i'` is
+| class | estimates a (model, task) score from | paper role |
+|---|---|---|
+| `PKPS` | the model's cached responses (any queries) + other models' scores | the method |
+| `DKPS` | same, but only responses to *identical* queries | paired baseline |
+| `SampleScore` | the mean of the cell's own scored responses | score-only baseline |
+| `IRT` | 1PL item-response model on binary per-response scores | query-efficiency baseline |
+| `LRMC` | low-rank completion of the sample-score matrix | completion baseline |
+| `Ensemble` | a learned blend of any two of the above | the reported ensemble |
 
-  ```
-  A_{ii'} = sum_{j,l} k_Q(q_j, q_l) k_R(x_ij, x_i'l) / sum_{j,l} k_Q(q_j, q_l)
-  ```
+```python
+est = PKPS(...).fit(records)        # embed (if needed), reduce, build the perspective space
+est.predict(records)                # -> [{'model_id', 'task_id', 'score_hat'}, ...]
+est.update(records)                 # add models / responses; only affected pairs recomputed
+```
 
-  self-normalized per pair, so models that answered different (numbers of)
-  queries remain comparable. `k_Q = δ` (or an RBF with σ→0) recovers paired
-  DKPS exactly; distances `D² = A_ii + A_i'i' − 2A_ii'` feed classical MDS as
-  always. The paper's instantiation is an RBF query kernel (bandwidth chosen
-  per run by leak-free CV) with a linear response kernel.
-- Baselines used by the paper are exposed from the package:
-  `matrix_completion_predict` (logit-space rank-2 ALS, BenchPress-style) and
-  the 1PL IRT trio (`irt_fit_difficulties`, `irt_estimate_ability`,
-  `irt_predict`).
-- `dkps/embed.py` is the Gemini embedding client (disk-cached, 429-retry);
-  `dkps/synthetic.py` generates the synthetic benchmark.
+**Records** are JSON-friendly tables -- a DataFrame, a list of dicts, a dict of
+lists, or a JSON string of either -- with one row per cached response:
+
+| column | required | meaning |
+|---|---|---|
+| `model_id`, `task_id`, `query_id` | yes | which model answered which query of which task |
+| `response_embedding` *or* `response` | yes | precomputed vector, or raw text to embed |
+| `query_embedding` *or* `query` | PKPS only | precomputed vector, or raw text (DKPS needs neither) |
+| `score` | for prediction | the per-response score |
+| `reference_score` | optional | a known full-benchmark score for the cell, used as the regression target for *other* models |
+| `sample_score` | optional | overrides the per-cell mean of `score` (cells scored on more responses than were embedded) |
+
+Raw text is embedded through `dkps.embed` (`embedding_kwargs=dict(provider=
+'google', model=None, api_key=None)`; the key falls back to the provider's
+environment variable, `GEMINI_API_KEY` for Google).
+
+### PKPS in one paragraph
+
+For models `i, i'` with response embeddings `x` to queries `u`,
+
+```
+A_{ii'} = sum_{j,l} k_Q(u_j, u_l) k_R(x_ij, x_i'l) / sum_{j,l} k_Q(u_j, u_l)
+D^2_{ii'} = A_ii + A_i'i' - 2 A_ii'
+```
+
+The query kernel `k_Q` decides which response pairs are comparable and how
+much; the self-normalization keeps models with different numbers of queries
+comparable. `k_Q = delta` (identical queries only) recovers paired DKPS, which is
+what `DKPS` is. Classical MDS of `D` gives each model a coordinate; a per-task
+k-NN regressor from those coordinates onto the other models' scores predicts the
+target cell. Every knob is a constructor argument:
+
+```python
+PKPS(
+    query_kwargs=dict(kernel='rbf',            # 'rbf' | 'delta' | 'linear' | 'cosine' | callable
+                      bandwidth='cv',          # 'median' | 'cv' (leave-one-model-out grid search) | float
+                      bandwidth_ref=None,      # reference scale (None = median query distance)
+                      pca_dim='elbow'),        # 'elbow' (Zhu-Ghodsi) | int | None
+    response_kwargs=dict(kernel='linear', pca_dim='elbow'),
+    mds_kwargs=dict(dim=8),                    # int, or None for Zhu-Ghodsi selection
+)
+est.predict(cells, k=5,
+            holdout='model',                   # or 'family': leave-one-family-out (query-efficiency protocol)
+            whiten=False)                      # True: logit/standardize/bias residual regression (completion protocol)
+```
+
+### Quick start (synthetic data, runs anywhere)
+
+```python
+import numpy as np
+from dkps import PKPS, LRMC, Ensemble, generate_benchmark_data
+
+data, scores, observed, _, _ = generate_benchmark_data(
+    d_latent=5, d_obs=20, n_models=40, n_tasks=8, n_queries_per_task=16,
+    obs_prob=0.6, random_state=0)                       # rows only for observed cells
+mi = data.model_id.str[6:].astype(int); ti = data.task_id.str[5:].astype(int)
+data['score'] = 1 / (1 + np.exp(-scores[mi, ti]))       # per-response scores in (0, 1)
+
+pkps = PKPS().fit(data)
+lrmc = LRMC().fit(data)
+ens = Ensemble([pkps, lrmc], mode='cv', holdout=None,
+               predict_kwargs=[{'whiten': True}, {}]).fit(data)
+missing = ens.predict()                                  # every cell without an observed score
+```
+
+### Reproducing a paper result
+
+`examples/helm/example_table1.py` reproduces one cell of Table 1 end to end with
+the classes above -- HELM suite, query-efficient evaluation at `m = 1` query per
+cell, seed 0:
+
+```bash
+cd examples/helm
+pixi run python example_table1.py --m 1 --seed 0
+#  sample score  0.302
+#  IRT           0.360   (binary tasks only)
+#  DKPS          0.161
+#  PKPS          0.137
+#  Ensemble      0.128
+```
+
+(Table 1 reports the 16-seed means: 0.292 / 0.348 / 0.168 / 0.136 / 0.125.)
+The script is ~60 lines: load the suite, sample `m` responses per cell, build
+records, fit the five estimators, score against the full-benchmark scores. The
+two protocol choices it makes -- `bandwidth='cv'` around the within-domain
+median query distance, and `holdout='family'` -- are the paper's.
+
+`examples/helm/validate_package.py` does this for **every** Table 1 operating
+point on both suites (query efficiency at `m ∈ {1, 8}`; completion at the three
+cohort/coverage settings), 16 seeds each, replaying the experiment scripts'
+sampling and comparing per-(seed, task, method) MAEs to the result CSVs those
+scripts produced. All rows agree to 0.
+
+### Tests
+
+```bash
+pixi run pytest tests            # 14 tests: API, incremental update == fresh fit,
+                                 # equality with the pipeline functions, leakage
+```
 
 ## Repository layout
 
 ```
-dkps/                    method package (see above)
+dkps/                    the package (see above)
+tests/                   package tests (pixi run pytest tests)
 paper/                   PKPS paper LaTeX + final figure PDFs (pdflatex main.tex)
 examples/helm/           PKPS paper: real-data pipeline for BOTH suites
                          (HELM 18 tasks x 93 models; EEE 16 tasks x 45 models)
-                         -> has its own README with layout + reproduce steps
+                         -> has its own README with layout + reproduce steps;
+                         example_table1.py and validate_package.py live here
 experiments/unpaired/    PKPS paper: synthetic study (paper Fig. 2)
 experiments/routing/     Routing paper: all experiments -> has its own README
 ```

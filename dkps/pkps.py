@@ -314,6 +314,8 @@ class PKPS:
     # reduction + kernels
     # ------------------------------------------------------------------
     def _fit_reducers(self, df):
+        """Learn the per-channel PCA bases and resolve the kernel bandwidths. Both are frozen
+        afterwards so that update() can project new rows into the same space."""
         R = np.stack([np.asarray(e, dtype=np.float64) for e in df['response_embedding']])
         self._response_pca = FrozenPCA(self.response_kwargs['pca_dim'],
                                        self.response_kwargs['pca_n_elbows']).fit(R)
@@ -383,6 +385,9 @@ class PKPS:
         return {None: float((K_Q * K_R).sum() / Zm) if Zm > 0 else np.nan}
 
     def _recompute_pairs(self, touched):
+        """Refresh the cached affinities A[sigma][(m1, m2)] for every pair that involves a
+        touched model (or is missing); untouched pairs keep their cached values, which is
+        what makes update() incremental."""
         names = sorted(self._model_data)
         A0 = self._A[self._sigmas[0]]
         for i, m1 in enumerate(names):
@@ -396,6 +401,9 @@ class PKPS:
                 del self._A[s][p]
 
     def _dist_matrix(self, s, names):
+        """D_ab = sqrt(max(A_aa + A_bb - 2 A_ab, 0)) at query bandwidth s. A pair whose query
+        kernel mass is zero (no comparable queries at all) has no defined distance; it is
+        set to the largest observed distance so the MDS still runs."""
         n = len(names)
         A = self._A[s]
         D2 = np.zeros((n, n))
@@ -415,6 +423,8 @@ class PKPS:
         return D
 
     def _mds(self, D):
+        """Classical MDS of the distance matrix; dim is capped at n-1 (fewer than 3 models:
+        the first distance column is returned as a 1-d coordinate)."""
         n = len(D)
         if n < 3:
             return D[:, :1]
@@ -424,6 +434,7 @@ class PKPS:
                             dissimilarity='precomputed').fit_transform(D)
 
     def _finalize(self):
+        """Distances + MDS at every candidate bandwidth, bandwidth selection, score tables."""
         names = sorted(self._model_data)
         self.model_names_ = names
         table = ScoreTable(self._raw, models=names)
@@ -460,6 +471,8 @@ class PKPS:
                                          for s, Z in Zs.items()}
 
     def _target_matrix(self, target):
+        """(n_models x n_tasks) regression targets: sample scores, reference scores, or
+        reference-where-available ('auto')."""
         S = self.sample_scores_.to_numpy(dtype=float)
         R = self.reference_scores_.to_numpy(dtype=float)
         if target == 'sample':
