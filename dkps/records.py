@@ -43,7 +43,9 @@ def merge_records(old, new, keys=('model_id', 'task_id', 'query_id')):
 class ScoreTable:
     """Sample-score matrix from response-level records.
 
-    sample_ : (n_models x n_tasks) DataFrame of per-cell mean scores (NaN = unobserved)
+    sample_ : (n_models x n_tasks) DataFrame of per-cell mean scores (NaN = unobserved).
+              A cell-level 'sample_score' column, when present and non-null, overrides the
+              mean (for cells scored on more responses than were embedded).
     counts_ : matching DataFrame of queries per cell
     """
 
@@ -53,6 +55,10 @@ class ScoreTable:
         models = sorted(df['model_id'].unique()) if models is None else list(models)
         tasks = sorted(df['task_id'].unique()) if tasks is None else list(tasks)
         self.sample_ = g.mean().unstack().reindex(index=models, columns=tasks)
+        if 'sample_score' in df.columns:
+            ov = df.dropna(subset=['sample_score']).groupby(['model_id', 'task_id'])[
+                'sample_score'].first().unstack().reindex(index=models, columns=tasks)
+            self.sample_ = self.sample_.where(ov.isna(), ov)
         self.counts_ = g.size().unstack().reindex(index=models, columns=tasks).fillna(0).astype(int)
         self.models = models
         self.tasks = tasks

@@ -271,9 +271,12 @@ class LRMC(_ScoreEstimator):
     """
 
     def __init__(self, rank=2, lam=0.1, n_init=2, max_iter=50, crossfit_k=3, logit=True,
-                 random_state=0):
+                 random_state=0, crossfit_random_state=None):
         self.rank, self.lam, self.n_init, self.max_iter = rank, lam, n_init, max_iter
         self.crossfit_k, self.logit, self.random_state = crossfit_k, logit, random_state
+        # fold assignment RNG (an int seed or a np.random.Generator to share); ALS inits
+        # always use random_state
+        self.crossfit_random_state = crossfit_random_state
 
     def _complete(self, M, O):
         return matrix_completion_predict(M, O, rank=self.rank, lam=self.lam, n_init=self.n_init,
@@ -284,7 +287,8 @@ class LRMC(_ScoreEstimator):
         M, O = self.table_.values, self.table_.observed
         pred = self._complete(M, O)
         if self.crossfit_k:
-            rng = np.random.default_rng(self.random_state)
+            rng = np.random.default_rng(self.random_state if self.crossfit_random_state is None
+                                        else self.crossfit_random_state)
             oi = np.argwhere(O)
             if len(oi) >= self.crossfit_k:
                 for fold in np.array_split(rng.permutation(len(oi)), self.crossfit_k):

@@ -268,7 +268,7 @@ class PKPS:
                            aliases=[('embedding', 'response_embedding')])
         if 'task_id' not in df.columns:
             df['task_id'] = '_task'
-        for col in ('score', 'reference_score'):
+        for col in ('score', 'reference_score', 'sample_score'):
             if col not in df.columns:
                 df[col] = np.nan
             df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -283,7 +283,8 @@ class PKPS:
                                  "(query kernel is not 'delta')")
             df['query_embedding'] = list(self._embed_texts(df['query'].tolist()))
 
-        keep = ['model_id', 'task_id', 'query_id', 'response_embedding', 'score', 'reference_score']
+        keep = ['model_id', 'task_id', 'query_id', 'response_embedding', 'score',
+                'reference_score', 'sample_score']
         if 'query_embedding' in df.columns:
             keep.append('query_embedding')
         df = df[keep].copy()

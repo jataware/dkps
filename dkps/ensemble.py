@@ -27,7 +27,7 @@ from .records import parse_records, ScoreTable, parse_pairs, pairs_to_records
 
 class Ensemble:
     def __init__(self, members, mode='cv', alpha=None, holdout='family', family_fn=None,
-                 predict_kwargs=None, grid=21, target='auto', clip=(0.0, 1.0)):
+                 predict_kwargs=None, grid=21, target='auto', clip=(0.0, 1.0), fallback=True):
         assert len(members) == 2, 'Ensemble blends exactly two members'
         self.members = list(members)
         self.mode = mode
@@ -38,6 +38,7 @@ class Ensemble:
         self.grid = np.linspace(0, 1, grid)
         self.target = target
         self.clip = clip
+        self.fallback = fallback   # one member missing: use the other (prefer member[1]); else NaN
 
     # ------------------------------------------------------------------
     def fit(self, records):
@@ -67,9 +68,11 @@ class Ensemble:
             a, b = P[0][n], P[1][n]
             if np.isfinite(a) and np.isfinite(b):
                 v = alpha[n] * a + (1 - alpha[n]) * b
-            else:
+            elif self.fallback:
                 v = b if np.isfinite(b) else a
-            preds[(m, t)] = self._clip(v)
+            else:
+                v = np.nan
+            preds[(m, t)] = self._clip(v) if np.isfinite(v) else np.nan
         return pairs_to_records(pairs, preds)
 
     # ------------------------------------------------------------------
