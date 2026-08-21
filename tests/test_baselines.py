@@ -147,3 +147,33 @@ def test_ensemble_fixed_and_cv():
                   predict_kwargs=[{}, {'holdout': 'family'}]).fit(recs2)
     assert set(qe.alpha_) == {f'dev{i}' for i in range(5)}
     assert all(np.isfinite(r['score_hat']) for r in qe.predict())
+
+
+def test_leakage_own_reference_score_never_used():
+    """Corrupt one model's reference scores: its own predictions (family holdout, and the
+    QE ensemble built on them) must not change, while another model's do."""
+    recs, p, observed = _records()
+    mi = recs['model_id'].str.slice(-2).astype(int); ti = recs['task_id'].str.slice(5).astype(int)
+    recs['reference_score'] = p[mi, ti]
+    kw = dict(query_kwargs=dict(bandwidth=1.0, pca_dim=None), response_kwargs=dict(pca_dim=None),
+              mds_kwargs=dict(dim=8))
+    victim = sorted(recs['model_id'].unique())[0]
+    bad = recs.copy()
+    bad.loc[bad['model_id'] == victim, 'reference_score'] = 1 - bad.loc[bad['model_id'] == victim, 'reference_score']
+
+    def run(r):
+        ens = Ensemble([SampleScore(), PKPS(**kw)], mode='cv', holdout='family',
+                       predict_kwargs=[{}, {'holdout': 'family'}]).fit(r)
+        models = ens.model_names_
+        q = [{'model_id': m, 'task_id': t} for m in models for t in ens.task_names_]
+        pk = {(x['model_id'], x['task_id']): x['score_hat'] for x in ens.members[1].predict(q, holdout='family')}
+        en = {(x['model_id'], x['task_id']): x['score_hat'] for x in ens.predict(q)}
+        return pk, en, models
+
+    pk0, en0, models = run(recs); pk1, en1, _ = run(bad)
+    other = [m for m in models if fam_fn(m) != fam_fn(victim)][0]
+    for t in {k[1] for k in pk0}:
+        for d0, d1 in ((pk0, pk1), (en0, en1)):
+            np.testing.assert_allclose(d0[(victim, t)], d1[(victim, t)], equal_nan=True)
+    assert any(not np.isclose(pk0[(other, t)], pk1[(other, t)], equal_nan=True) or
+               not np.isclose(en0[(other, t)], en1[(other, t)], equal_nan=True) for t in {k[1] for k in pk0})
