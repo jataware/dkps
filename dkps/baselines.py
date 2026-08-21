@@ -165,3 +165,176 @@ def irt_estimate_ability(scores_m, beta_m):
 def irt_predict(theta_hat, beta_all):
     """Mean predicted probability across all M queries."""
     return float(np.clip(expit(theta_hat - beta_all).mean(), 0.0, 1.0))
+
+
+# ==========================================================================
+# Estimator classes (fit / predict / update over records)
+# ==========================================================================
+
+import warnings
+import pandas as pd
+from .records import parse_records, merge_records, ScoreTable, parse_pairs, pairs_to_records
+
+
+def max_dense_block(amask):
+    """Largest fully-observed |F| x |Q| rectangle of a boolean (model x item) mask
+    (greedy over item coverage). Returns (row_idx, col_idx)."""
+    amask = np.asarray(amask, dtype=bool)
+    order = np.argsort(-amask.sum(0))
+    best_area, best = 0, (np.array([], int), np.array([], int))
+    for c in range(1, len(order) + 1):
+        Q = order[:c]
+        F = np.where(amask[:, Q].all(1))[0]
+        if len(F) == 0:
+            break
+        if len(F) * c > best_area:
+            best_area, best = len(F) * c, (F, Q)
+    return best
+
+
+class _ScoreEstimator:
+    """Shared fit / update / predict plumbing for score-only estimators. Subclasses
+    implement _fit_matrix() -> (n_models x n_tasks) prediction array (NaN = no estimate)
+    and _default_pairs()."""
+
+    REQUIRED = ('model_id', 'query_id', 'score')
+
+    def fit(self, records):
+        df = parse_records(records, required=self.REQUIRED)
+        if 'task_id' not in df.columns:
+            df['task_id'] = '_task'
+        df['score'] = pd.to_numeric(df['score'], errors='coerce')
+        assert not df.duplicated(['model_id', 'task_id', 'query_id']).any(), \
+            'duplicate (model_id, task_id, query_id) rows'
+        self._raw = df.reset_index(drop=True)
+        self._refit()
+        return self
+
+    def update(self, records):
+        assert hasattr(self, '_raw'), 'call fit() before update()'
+        df = parse_records(records, required=self.REQUIRED)
+        if 'task_id' not in df.columns:
+            df['task_id'] = '_task'
+        df['score'] = pd.to_numeric(df['score'], errors='coerce')
+        self._raw, n_rep = merge_records(self._raw, df)
+        if n_rep:
+            warnings.warn(f'update: {n_rep} rows replaced by their newer version', stacklevel=2)
+        self._refit()
+        return self
+
+    def _refit(self):
+        self.table_ = ScoreTable(self._raw)
+        self.model_names_ = self.table_.models
+        self.task_names_ = self.table_.tasks
+        self.sample_scores_ = self.table_.sample_
+        self.pred_matrix_ = np.asarray(self._fit_matrix(), dtype=float)
+
+    def predict(self, records=None):
+        """Return a list of {'model_id', 'task_id', 'score_hat'} for the requested
+        (model, task) pairs (None -> this estimator's natural target cells)."""
+        pairs = parse_pairs(records, self.model_names_, self.task_names_, self._default_pairs())
+        mi = {m: i for i, m in enumerate(self.model_names_)}
+        ti = {t: j for j, t in enumerate(self.task_names_)}
+        preds = {(m, t): (self.pred_matrix_[mi[m], ti[t]] if t in ti else np.nan)
+                 for m, t in pairs}
+        return pairs_to_records(pairs, preds)
+
+    def _observed_pairs(self):
+        O = self.table_.observed
+        return [(m, t) for i, m in enumerate(self.model_names_)
+                for j, t in enumerate(self.task_names_) if O[i, j]]
+
+    def _missing_pairs(self):
+        O = self.table_.observed
+        return [(m, t) for i, m in enumerate(self.model_names_)
+                for j, t in enumerate(self.task_names_) if not O[i, j]]
+
+
+class SampleScore(_ScoreEstimator):
+    """The sample score: the mean of a cell's observed per-response scores. Predicts
+    observed cells only (NaN elsewhere)."""
+
+    def _fit_matrix(self):
+        return self.table_.values
+
+    def _default_pairs(self):
+        return self._observed_pairs()
+
+
+class LRMC(_ScoreEstimator):
+    """Low-rank matrix completion on the sample-score matrix (BenchPress-style logit /
+    standardize / two-way-bias pre-processing + rank-r ALS; see matrix_completion_predict).
+
+    Missing cells are completed by a full fit. Observed cells are estimated by
+    crossfit_k-fold cross-fitting (each cell predicted by a fit that excludes it), so
+    the estimate never echoes a cell's own sample; set crossfit_k=0 to skip.
+    """
+
+    def __init__(self, rank=2, lam=0.1, n_init=2, max_iter=50, crossfit_k=3, logit=True,
+                 random_state=0):
+        self.rank, self.lam, self.n_init, self.max_iter = rank, lam, n_init, max_iter
+        self.crossfit_k, self.logit, self.random_state = crossfit_k, logit, random_state
+
+    def _complete(self, M, O):
+        return matrix_completion_predict(M, O, rank=self.rank, lam=self.lam, n_init=self.n_init,
+                                         max_iter=self.max_iter, logit=self.logit,
+                                         random_state=self.random_state)
+
+    def _fit_matrix(self):
+        M, O = self.table_.values, self.table_.observed
+        pred = self._complete(M, O)
+        if self.crossfit_k:
+            rng = np.random.default_rng(self.random_state)
+            oi = np.argwhere(O)
+            if len(oi) >= self.crossfit_k:
+                for fold in np.array_split(rng.permutation(len(oi)), self.crossfit_k):
+                    cells = oi[fold]
+                    cvo = O.copy(); cvo[cells[:, 0], cells[:, 1]] = False
+                    p = self._complete(M, cvo)
+                    pred[cells[:, 0], cells[:, 1]] = p[cells[:, 0], cells[:, 1]]
+        return pred
+
+    def _default_pairs(self):
+        return self._missing_pairs()
+
+
+class IRT(_ScoreEstimator):
+    """1PL (Rasch) item-response baseline for query-efficient prediction (Polo et al.,
+    2024), fit per task on binary per-response scores.
+
+    For each task: item difficulties are fit on the largest fully-observed (model x item)
+    block of the task's response table; each model's ability is the MLE on its observed
+    block items, and its predicted task score is the mean predicted probability over the
+    block's items. Tasks with non-binary scores get NaN (with a warning).
+    """
+
+    def _fit_matrix(self):
+        df = self._raw.dropna(subset=['score'])
+        out = np.full((len(self.model_names_), len(self.task_names_)), np.nan)
+        mi = {m: i for i, m in enumerate(self.model_names_)}
+        for j, t in enumerate(self.task_names_):
+            sub = df[df['task_id'] == t]
+            if not len(sub):
+                continue
+            if not np.all(np.isin(np.unique(sub['score']), [0.0, 1.0])):
+                warnings.warn(f'IRT: task {t!r} has non-binary scores; skipped', stacklevel=2)
+                continue
+            mods = sorted(sub['model_id'].unique()); items = sorted(sub['query_id'].unique())
+            mloc = {m: a for a, m in enumerate(mods)}; iloc = {q: b for b, q in enumerate(items)}
+            S = np.full((len(mods), len(items)), np.nan)
+            S[sub['model_id'].map(mloc).to_numpy(), sub['query_id'].map(iloc).to_numpy()] = \
+                sub['score'].to_numpy(dtype=float)
+            amask = np.isfinite(S)
+            F, Q = max_dense_block(amask)
+            if len(F) < 2 or len(Q) < 1:
+                continue
+            beta_Q, _ = irt_fit_difficulties(np.nan_to_num(S[np.ix_(F, Q)], nan=0.0))
+            for m in mods:
+                a = amask[mloc[m], Q]
+                if a.any():
+                    theta = irt_estimate_ability(S[mloc[m], Q[a]], beta_Q[a])
+                    out[mi[m], j] = irt_predict(theta, beta_Q)
+        return out
+
+    def _default_pairs(self):
+        return self._observed_pairs()
