@@ -211,8 +211,10 @@ class PKPS:
             paper's completion protocol).
         target : 'auto' (reference score where given, else sample score), 'sample', or
             'reference'.
-        min_train : minimum number of training models per task (default 3 when
-            holdout='family' or whiten, else 1); fewer -> NaN.
+        min_train : minimum support per task (default 3 when holdout='family' or whiten,
+            else 1); fewer -> NaN. Under holdout='model' this counts the task's observed
+            models (the target included, if observed); under 'family' it counts the
+            training models outside the target's family.
         Returns a list of dicts with 'score_hat' added.
         """
         assert self._fitted, 'call fit() before predict()'
@@ -246,7 +248,8 @@ class PKPS:
             elif holdout != 'model':
                 raise ValueError(f'unknown holdout: {holdout}')
             rows = np.where(tr)[0]
-            if len(rows) < max(min_train, 1):
+            support = len(rows) if holdout == 'family' else int(obs[:, j].sum())
+            if len(rows) < 1 or support < min_train:
                 preds[(m, t)] = np.nan
                 continue
             mdl = KNeighborsRegressor(n_neighbors=min(k, len(rows)), weights='distance')

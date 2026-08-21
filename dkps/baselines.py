@@ -310,7 +310,15 @@ class IRT(_ScoreEstimator):
     block of the task's response table; each model's ability is the MLE on its observed
     block items, and its predicted task score is the mean predicted probability over the
     block's items. Tasks with non-binary scores get NaN (with a warning).
+
+    binary_tasks : optional explicit collection of task ids to treat as binary. By default
+        binariness is inferred from the fitted records, which can mislabel a task whose
+        rare fractional scores happen to be absent from a small sample; pass the task set
+        decided on the full benchmark when it is known.
     """
+
+    def __init__(self, binary_tasks=None):
+        self.binary_tasks = None if binary_tasks is None else set(binary_tasks)
 
     def _fit_matrix(self):
         df = self._raw.dropna(subset=['score'])
@@ -320,7 +328,10 @@ class IRT(_ScoreEstimator):
             sub = df[df['task_id'] == t]
             if not len(sub):
                 continue
-            if not np.all(np.isin(np.unique(sub['score']), [0.0, 1.0])):
+            if self.binary_tasks is not None:
+                if t not in self.binary_tasks:
+                    continue
+            elif not np.all(np.isin(np.unique(sub['score']), [0.0, 1.0])):
                 warnings.warn(f'IRT: task {t!r} has non-binary scores; skipped', stacklevel=2)
                 continue
             mods = sorted(sub['model_id'].unique()); items = sorted(sub['query_id'].unique())

@@ -42,8 +42,10 @@ def _records(data, keep, score_mat=None, samp=None, models=None, tasks=None):
     return df
 
 
-def _pkps(qmed, bandwidth='cv'):
-    return PKPS(query_kwargs=dict(kernel='rbf', bandwidth=bandwidth, bandwidth_ref=qmed, pca_dim=None),
+def _pkps(qmed, bandwidth='cv', cv_k=8):
+    # the QE script selects the bandwidth with k=8 LOMO neighbours, the completion script with k=5
+    return PKPS(query_kwargs=dict(kernel='rbf', bandwidth=bandwidth, bandwidth_ref=qmed, pca_dim=None,
+                                  cv_k=cv_k),
                 response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=MDS_DIM))
 
 
@@ -70,7 +72,8 @@ def qe_seed(data, m, seed):
     dk = DKPS(response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=MDS_DIM),
               sigma_ratio=1e-2, bandwidth_ref=qmed).fit(recs)
     ss = SampleScore().fit(recs)
-    irt = IRT().fit(recs)
+    binary = [tt for tt in tasks if np.all(np.isin(np.unique(row_score[task_id == tt]), [0.0, 1.0]))]
+    irt = IRT(binary_tasks=binary).fit(recs)          # decided on the full task pool, as in run_seed
     ens = Ensemble([ss, pk], mode='cv', holdout='family', predict_kwargs=[{}, {'holdout': 'family'}]).fit(recs)
 
     pairs = [{'model_id': mm, 'task_id': tt} for mm in models for tt in tasks]
@@ -120,7 +123,7 @@ def completion_seed(data, qmed, n_models, p_task, seed, p_query=0.5):
     keep = np.concatenate(keep)
     recs = _records(data, keep, samp=samp, models=mods_s, tasks=tasks)
 
-    pk = _pkps(qmed).fit(recs)
+    pk = _pkps(qmed, cv_k=5).fit(recs)
     mc = LRMC(n_init=2, crossfit_k=3, crossfit_random_state=rng).fit(recs)   # rng state continues, as in trial()
     ens = Ensemble([pk, mc], mode='cv', holdout=None, predict_kwargs=[{'whiten': True}, {}],
                    fallback=False).fit(recs)
