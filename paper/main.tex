@@ -12,6 +12,8 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
 \newtheorem{assumption}{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
 \theoremstyle{plain}
 \usepackage{enumitem}
 \usepackage{graphicx}
@@ -290,7 +292,7 @@ The main result of this section establishes that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the query distributions.
 For the analysis, we model the evaluation data of Section~\ref{sec:setting} as
-sampled (model, task, response) triples: conditional on model $i$, each triple
+sampled (task, query, response) triples: conditional on model $i$, each triple
 independently draws a task, then a query from the task, and finally the model's
 response.
 We formally define the population \PKPS in Definition~\ref{def:pop} of
@@ -334,7 +336,7 @@ models (Eq.~\eqref{eq:mds}), then train a decision function that uses the
 representations as proxies for the models.
 
 Fix a task $t$ and let $f_{0},f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
-distribution, observed through the sampled (model, task, response) triples of
+distribution, observed through the sampled (task, query, response) triples of
 Section~\ref{sec:theory}.
 Our goal is to predict the true score of $f_{0}$ on task $t$,
 $y_{0}:=s^{(t)}(f_{0},Q^{(t)})$.
@@ -994,12 +996,17 @@ effective depth, so comparisons there reflect the constraint rather than the met
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $i$'s (task, query, response) triples be drawn i.i.d.\ from a design
-distribution $P_i$. The \emph{population comparison} is
-$A^*_{ii'}=\mathbb{E}[k_Q(u,u')\,k_R(x_i,x_{i'})]\,/\,\mathbb{E}[k_Q(u,u')]$ with draws from
-$P_i$ and $P_{i'}$ independent, the population squared distances are
-$D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and the \emph{population perspectives}
-$\psi_1,\dots,\psi_n\in\mathbb{R}^d$ are the rank-$d$ spectral embedding of the centered
-Gram matrix $B^*$ of $D^{*2}$.
+distribution $P_i$: each triple independently draws a task, then a query conditioned on
+the task, then the model's response. Write $z=(u,x_i(u))$ for an embedded
+query--response pair (response noise included). The \emph{population affinity} is
+\[
+A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
+\qquad z\sim P_i,\; z'\sim P_{i'} \text{ independent},
+\]
+the population squared distances are $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, and
+the \emph{population perspectives} $\psi_1,\dots,\psi_n\in\mathbb{R}^d$ (the rows of
+$\Psi^*\in\mathbb{R}^{n\times d}$) are the rank-$d$ spectral embedding of the centered
+Gram matrix $B^*=-\tfrac12 J D^{*2} J$, where $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$.
 \end{definition}
 \begin{assumption}[Boundedness]\label{ass:bound}
 Kernels and embedded responses are bounded.
@@ -1023,24 +1030,17 @@ Each scoring function is the mean of bounded per-query scores, and each observed
 $Q_{i}^{(t)}$ is a uniform subsample of $Q^{(t)}$ at the budget $m$.
 \end{assumption}
 
-\paragraph{Population quantities.} Each of model $i$'s triples independently draws a
-task, then a query conditioned on the task, then the model's response; write
-$z=(u,x_i(u))$ for an embedded query--response
-pair (response noise included) and $P_i$ for its law. By Assumption~\ref{ass:bound} the kernels are bounded:
-$k_Q\in[0,1]$ after normalization (e.g., RBF) and $|k_R|\le B_R$. Define the population comparison
-\[
-A^*_{ii'}\;=\;\frac{\mathbb{E}\,[k_Q(u,u')\,k_R(x_i(u),x_{i'}(u'))]}{\mathbb{E}\,[k_Q(u,u')]},
-\qquad z\sim P_i,\; z'\sim P_{i'} \text{ independent},
-\]
-population squared distances $D^{*2}(i,i')=A^*_{ii}+A^*_{i'i'}-2A^*_{ii'}$, the centered Gram
-matrix $B^*=-\tfrac12 J D^{*2} J$ with $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$, and
-population perspectives $\Psi^*\in\mathbb{R}^{n\times d}$ its rank-$d$ spectral embedding,
-which exists with $\lambda_d(B^*)>0$ by Assumption~\ref{ass:spec} (cf.\ Definition~\ref{def:pop}).
+\paragraph{Population quantities.} Throughout, the quantities of
+Definition~\ref{def:pop} are used as stated there. By Assumption~\ref{ass:bound} the
+kernels are bounded, $k_Q\in[0,1]$ after normalization (e.g., RBF) and $|k_R|\le B_R$,
+and by Assumption~\ref{ass:spec} the rank-$d$ spectral embedding exists with
+$\lambda_d(B^*)>0$.
 
 \begin{lemma}[Affinity concentration]
 \label{lem:conc}
-Under Assumptions~\ref{ass:bound} and \ref{ass:overlap}, for models $i,i'$ with $\min(|Q_i|,|Q_{i'}|)\ge m$ and any
-$\delta\in(0,1)$: with probability at least $1-\delta$,
+Under Assumptions~\ref{ass:bound} and \ref{ass:overlap}, for models $i,i'$ with
+$\min(|Q_i|,|Q_{i'}|)\ge m$ and any $\delta\in(0,1)$ we have, with probability at
+least $1-\delta$,
 \[
 |A_{ii'}-A^*_{ii'}|\;\le\;\frac{2(1+B_R)}{\kappa^2}\,t_m(\delta),
 \qquad t_m(\delta)=\bar B\sqrt{\frac{\log(4/\delta)}{2m}},\quad \bar B=\max(2B_R,1),
@@ -1052,9 +1052,9 @@ provided $t_m(\delta)\le\kappa/2$.
 The numerator $N=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)\,k_R(x_{ij},x_{i'l})$ and
 denominator $Z=\frac{1}{|Q_i||Q_{i'}|}\sum_{j,l}k_Q(u_j,u'_l)$ of Eq.~\eqref{eq:A} are
 two-sample $U$-statistics of order $(1,1)$ in the i.i.d.\ pairs $z_j\sim P_i$,
-$z'_l\sim P_{i'}$, with kernels of range at most $2B_R$ and $1$ respectively (response noise
-enters only through the bounded kernel argument, so the number of responses per query may
-stay fixed). By Hoeffding's inequality for two-sample $U$-statistics
+$z'_l\sim P_{i'}$, with kernels of range at most $2B_R$ and $1$ respectively (the
+response draw is part of $z$, so no per-query response replication is needed). By
+Hoeffding's inequality for two-sample $U$-statistics
 \citep[Section~5]{hoeffding1963}, each deviates from its mean by more than its range times
 $\sqrt{\log(4/\delta)/2m}$ with probability at most $\delta/2$; since $\bar B$ dominates
 both ranges, a union bound gives $|N-N^*|\le t_m(\delta)$ and $|Z-Z^*|\le t_m(\delta)$
@@ -1081,7 +1081,9 @@ $W\in\mathbb{R}^{d\times d}$ such that
 \end{lemma}
 \begin{proof}
 Entrywise, $|D^2-D^{*2}|\le4\varepsilon_\infty$, and double centering inflates an
-entrywise bound by at most a factor of $4$, so $E=B-B^*$ satisfies
+entrywise bound by at most a factor of $4$ (each entry of $JMJ$ is a signed combination
+of an entry, a row mean, a column mean, and the grand mean of $M$), so $E=B-B^*$
+satisfies
 $\|E\|_{\mathrm{op}}\le\|E\|_F\le8\,n\,\varepsilon_\infty$. Let $B_d$ be the top-$d$
 truncation of $B$ that classical MDS embeds ($B_d=\hat\Psi\hat\Psi^\top$, positive
 semidefinite). By Weyl's inequality every eigenvalue of $B$ beyond the $d$-th, and every
@@ -1103,11 +1105,11 @@ rank at most $d$, so by the Procrustes alignment lemma of
 \]
 Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
 \frac{2\sqrt{2d}}{\sqrt{2(\sqrt2-1)}}\cdot\frac{8n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}
-\le\frac{25\sqrt d\,n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}$. Nearest-neighbor
-distances are invariant to $W$.
+\le\frac{25\sqrt d\,n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}$.
 \end{proof}
 
-\paragraph{Proof of Theorem~\ref{prop:conc}.} Apply Lemma~\ref{lem:conc} at
+\begin{proof}[Proof of Theorem~\ref{prop:conc}]
+Apply Lemma~\ref{lem:conc} at
 confidence $\delta/n^2$ to each of the at most $n^2$ model pairs; a union bound gives,
 with probability at least $1-\delta$,
 \[
@@ -1124,18 +1126,22 @@ $\|\psi_i\|^2\le\lambda_1(B)\le 8B_Rn$ and likewise for $\hat\psi_i$, so
 $\max_i\|\hat\psi_i-W\psi_i\|\le6\sqrt{B_Rn}$, while the right-hand side is at least
 $C\kappa^{-1}\sqrt{dn}/(2\bar B\sqrt{8B_R})\ge6\sqrt{B_Rn}$ once $C$ also dominates
 $96B_R\bar B$---so the theorem holds for every $m$ after enlarging $C$ by a constant
-factor. \hfill$\qed$
+factor.
+\end{proof}
 
-\paragraph{Proof of Theorem~\ref{thm:qeff}.} Taking $\sigma_{n}=0$ and
+\begin{proof}[Proof of Theorem~\ref{thm:qeff}]
+Taking $\sigma_{n}=0$ and
 $K_{n}=K'_{n}$ makes $h_{n,\sigma_{n}}^{(K_{n})}=h_{n,0}^{(K'_{n})}$ for every $n$:
 the two sequences have equal MSE at every $n$, and Definition~\ref{def:qeff} is
-satisfied with $N=1$. \hfill$\qed$
+satisfied with $N=1$.
+\end{proof}
 
 The remainder of this appendix quantifies when the improvement is strict.
-Lemma~\ref{lem:exact} and its noisy-score extension show that positive bandwidths
-attain any $\epsilon$ with polynomially many queries; the contrast paragraph shows
-that the $\sigma=0$ members degrade as $\rho\to0$; and the final paragraph shows
-that cross-validation selects such a bandwidth from data.
+Lemmas~\ref{lem:exact} and \ref{lem:noisy} show that positive bandwidths attain any
+$\epsilon$ with polynomially many queries; the contrast paragraph shows that the
+$\sigma=0$ members degrade as $\rho\to0$; and the closing paragraphs show that
+cross-validation selects such a bandwidth from data, with a strict margin at
+$\rho=0$.
 
 \begin{lemma}[Achievability with exact reference scores]
 \label{lem:exact}
@@ -1145,7 +1151,8 @@ exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
 $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
 $\mathrm{MSE}(h_{n,\sigma}^{(1)})\le\epsilon$ with high probability.
 \end{lemma}
-\paragraph{Proof of Lemma~\ref{lem:exact}.} Take scores in $[0,1]$ without loss of
+\begin{proof}[Proof of Lemma~\ref{lem:exact}]
+Take scores in $[0,1]$ without loss of
 generality (Assumption~\ref{ass:score}). Fix $\epsilon>0$ and set targets $c\le\sqrt{\epsilon/2}/(8\gamma)$ for
 the estimation error and $\epsilon'\le\sqrt{\epsilon/2}/(2\gamma)$ for the population
 nearest-neighbor distance. By Assumption~\ref{ass:support} there is $n_0(\epsilon')$ such that for $n\ge n_0$, a
@@ -1173,9 +1180,19 @@ $\hat\delta$ is at most the estimated distance to the $\epsilon'$-close referenc
 at most $\epsilon'+2c$ by the same alignment argument, so
 $|\hat y-y|\le\gamma(4c+\epsilon')\le\sqrt{\epsilon/2}$. Squaring, and adding the two
 failure events (squared errors are bounded by $1$),
-$\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$. \hfill$\qed$
+$\mathrm{MSE}(\hat y)\le\epsilon/2+\epsilon/4\le\epsilon$.
+\end{proof}
 
-\paragraph{Achievability with noisy reference scores.} Write the scoring function as
+\begin{lemma}[Achievability with noisy reference scores]
+\label{lem:noisy}
+Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for any $\epsilon>0$ there exist
+a bandwidth $\sigma$ and $(n,m,K_{n})$, with $m$ polynomial in
+$(1/\epsilon,1/\kappa,n)$, $K_{n}\to\infty$, and $K_{n}/n\to0$, at which
+$\mathrm{MSE}(h_{n,\sigma}^{(K_{n})})\le\epsilon+\sigma_q^2/(mK_{n})$ with high
+probability.
+\end{lemma}
+\begin{proof}
+Write the scoring function as
 $s^{(t)}(f,A)=\tfrac{1}{|A|}\sum_{q\in A}r(f,q)$ with per-query scores
 $r\in[0,1]$, and let each reference cell $Q_{i}^{(t)}$ be a uniform subsample of
 $Q^{(t)}$ of size $m$ (Assumption~\ref{ass:noise}). Then
@@ -1192,11 +1209,14 @@ Lipschitz constant. The second term is a mean of $K$ independent, bounded,
 mean-zero variables, so its conditional variance is at most $\sigma_q^2/(mK)$ and
 it concentrates by Hoeffding. Choosing $K_{n}\to\infty$ with $K_{n}/n\to0$ (e.g.,
 $K_{n}=\lceil\log n\rceil$) gives
-$\mathrm{MSE}(h_{n,\sigma}^{(K_{n})})\le\epsilon+\sigma_q^2/(mK_{n})\to\epsilon$. Under a common
-(paired) subsample the $\varepsilon_{i}$ share the draw of the query set and
-$\mathrm{Cov}(\varepsilon_{i},\varepsilon_{j})$ equals the variance of the
-common query-difficulty component, which the neighbor average does not reduce.
-\qed
+$\mathrm{MSE}(h_{n,\sigma}^{(K_{n})})\le\epsilon+\sigma_q^2/(mK_{n})\to\epsilon$.
+\end{proof}
+\begin{remark}
+Under a common (paired) subsample the $\varepsilon_{i}$ share the draw of the query
+set, and $\mathrm{Cov}(\varepsilon_{i},\varepsilon_{j})$ equals the variance of the
+common query-difficulty component, which the neighbor average does not reduce. The
+independence of the reference noises is where unpairedness \emph{helps}.
+\end{remark}
 
 \paragraph{Contrast with paired DKPS.} Under the limit kernel $k_{0}$
 ($k_{0}(u,u')>0$ iff $u=u'$), only identical query pairs enter the double sum, so the
@@ -1205,7 +1225,7 @@ and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKP
 guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
 where its distance is undefined (Section~\ref{sec:method}).
 
-\paragraph{Strict improvement and bandwidth selection.} Cross-validation attains
+\paragraph{Bandwidth selection by cross-validation.} Cross-validation attains
 the best grid member up to $\epsilon$. Split the reference models into a training
 set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma$ in a finite grid
 $\Sigma$ containing $0$, build the
@@ -1227,10 +1247,12 @@ L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(0)+\tau
 and $L(0)$ is the paired-DKPS MSE since the $\sigma=0$ member coincides with paired
 DKPS on the shared queries with the same regressor (Section~\ref{sec:qeff}). Taking
 $n_v$ large enough that $2\tau\le\epsilon$ transfers the guarantee to the
-cross-validated estimator at every $(m,\rho)$. If some
-$\sigma^\star\in\Sigma$ has $\Delta=L(0)-L(\sigma^\star)>0$, the same event gives
-$L(\hat\sigma)\le L(\sigma^\star)+2\tau=L(0)-\Delta+2\tau$,
-strict for $2\tau<\Delta$. Finally, at $\rho=0$ with nonatomic designs,
+cross-validated estimator at every $(m,\rho)$.
+
+\paragraph{Strict improvement at $\rho=0$.} If some
+$\sigma^\star\in\Sigma$ has $\Delta=L(0)-L(\sigma^\star)>0$, the deviation event
+above gives $L(\hat\sigma)\le L(\sigma^\star)+2\tau=L(0)-\Delta+2\tau$,
+strict for $2\tau<\Delta$. At $\rho=0$ with nonatomic designs,
 $\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surely every
 identity-matched sum is empty: any measurable completion of the $\sigma=0$ member
 predicts as a function of the reference data alone, independent of the target, whence
@@ -1241,5 +1263,5 @@ supplies a bandwidth
 attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
 least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
 validation and a joint embedding (Section~\ref{sec:experiments}); the split protocol is
-analyzed for independence of the validation losses. \hfill$\qed$
+analyzed for independence of the validation losses.
 \end{document}
