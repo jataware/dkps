@@ -203,7 +203,7 @@ $y_{i}^{(t)}$.
 Evaluation data is \emph{sparse} when few models have
 $m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections 
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
-$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/\min(m_{i}^{(t)},m_{i'}^{(t)})$ be the ratio of shared queries for a
+$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 given model pair and note that $\rho_{ii'}^{(t)}\approx1$ for all pairs in highly curated
 leaderboards and $\rho_{ii'}^{(t)}\approx0$ in deployed evaluation settings.
 The goal of benchmark prediction is to estimate a model's score from the available
