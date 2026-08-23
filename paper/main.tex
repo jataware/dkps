@@ -44,7 +44,7 @@
 Evaluating a generative model on all queries from all available benchmark tasks is
 prohibitively expensive. As such, models are often evaluated on different subsets of tasks
 and/or different subsets of queries from a given task. The resulting collection of
-responses and the corresponding (model, task) score matrix is unpaired and sparse. In
+responses and the corresponding (model, task) score matrix are sparse and unpaired. In
 this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collection of
 low-dimensional representations of models based on their embedded responses. \PKPS
 generalizes existing methods for representing black-box generative models by comparing responses to similar -- rather than just
@@ -73,7 +73,7 @@ Further, benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refr
 \citep{perlitz2024efficient} -- and two models evaluated on the same benchmark may have responded to different sets of queries.
 
 Benchmark prediction
-attempts to alleviate the resource burden of evaluation, often to the tune of tens of thousands of USD \citep{ghosh2026evalbottleneck}, by leveraging
+attempts to alleviate the resource burden of evaluation by leveraging
 already-available information rather than computing scores solely from newly generated
 responses.
 There are two main benchmark prediction tasks: query-efficient evaluation and
@@ -106,7 +106,7 @@ query-efficient as methods that only use information from paired responses
 \item \emph{Empirical:} we show
 that \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
 query budget and, when ensembled with low-rank matrix completion, reduces score
-matrix completion error by up to 28\%. Our empirical evaluation spans 2 large benchmark suites. 
+matrix completion error by up to 28\%. Our empirical evaluation spans two large benchmark suites. 
 \end{enumerate}
 
 \begin{table}[t!]
@@ -157,7 +157,7 @@ learned acquisition policies \citep{li2024active}, regression on item-level scor
 \citep{bowyer2026efficient}, or regression on model representations
 \citep{dkps_qeff}.
 All previous methods proposed for query-efficient benchmarking implicitly require
-paired responses from reference models.
+item-level scores or responses on a common set of queries across reference models.
 
 Methods for (model, task) score completion predict entries of the score matrix that
 were never evaluated via cross-task predictability \citep{ye2023predictable},
@@ -203,9 +203,9 @@ $y_{i}^{(t)}$.
 Evaluation data is \emph{sparse} when few models have
 $m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections 
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
-$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
-given model pair and note that $\rho_{ii'}\approx1$ for all pairs in highly curated
-leaderboards and $\rho_{ii'}\approx0$ in deployed evaluation settings.
+$\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/\min(m_{i}^{(t)},m_{i'}^{(t)})$ be the ratio of shared queries for a
+given model pair and note that $\rho_{ii'}^{(t)}\approx1$ for all pairs in highly curated
+leaderboards and $\rho_{ii'}^{(t)}\approx0$ in deployed evaluation settings.
 The goal of benchmark prediction is to estimate a model's score from the available
 evaluation data.
 The two tasks introduced in \S\ref{sec:introduction} are the two regimes of the
@@ -233,14 +233,14 @@ matrix.
 We assume access to the responses for each observed (model, task, query) triple and
 to two embedding functions $g_{Q}$ and $g_{R}$ that map
 queries and responses to $\mathbb{R}^{p_{Q}}$ and $\mathbb{R}^{p_{R}}$, respectively.
-Let $q_{1},\hdots,q_{M}$ be an enumeration of all queries and let
+Let $q_{1},q_{2},\hdots$ enumerate the observed queries and let
 $x_{ij}$ denote the embedded response $f_{i}(q_{j})$ and $u_{j}$ denote the embedded
 query $q_{j}$.
 
 Given a query kernel
 $k_Q:\mathbb{R}^{p_{Q}}\times\mathbb{R}^{p_{Q}}\to\mathbb{R}_{\ge0}$ and a response
 kernel $k_R:\mathbb{R}^{p_{R}}\times\mathbb{R}^{p_{R}}\to\mathbb{R}_{\ge0}$, we
-compare models $i$ and $i'$ via calculating the pairwise affinity matrix $ A $:
+compare models $i$ and $i'$ by computing the pairwise affinity matrix $ A $:
 \begin{equation}
 A_{ii'} = \frac{\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(u_j,u_l)\, k_R(x_{ij},x_{i'l})}
               {\sum_{j\in Q_i}\sum_{l\in Q_{i'}} k_Q(u_j,u_l)}.
@@ -263,9 +263,9 @@ We note that the definition of the \PKPS strictly generalizes previous work by
 replacing the identity query kernel ($k_{Q}(u,u')=\mathbf{1}\{u=u'\}$) with a generic
 query kernel.
 Importantly, for any strictly positive $k_Q$, such as RBF, $D_{ii'}$ includes information from unpaired responses and Eq.~\eqref{eq:A}
-is therefore always defined when $ |Q_{i}| \ge 1 $.
+is therefore always defined when $ |Q_{i}|, |Q_{i'}| \ge 1 $.
 We highlight the difference between the previous approaches and the \PKPS in Figure~\ref{fig:concept}.
-Finally, Eq. \eqref{eq:mds} is solved by classical multi-dimensional scaling \citep{torgerson1952mds, borg2005modern} whenever $ D $ is a Euclidean distance matrix \citep{Dokmanic_2015}.
+Finally, Eq.~\eqref{eq:mds} is solved by classical multi-dimensional scaling \citep{torgerson1952mds, borg2005modern} whenever $ D $ is a Euclidean distance matrix \citep{Dokmanic_2015}.
 Unless otherwise stated we analyze and apply \PKPS under this assumption.
 
 \begin{figure}[t]
@@ -273,8 +273,8 @@ Unless otherwise stated we analyze and apply \PKPS under this assumption.
 \includegraphics[width=0.9\textwidth]{fig_concept.pdf}
 \caption{An illustration of the difference between the Product Kernel Perspective
 Space (\PKPS) and the previously proposed Data Kernel Perspective Space (DKPS).
-\textbf{(a)} Top: two models respond to different sets of queries; bottom: queries
-represented as vectors, colored by which model has responded to it. \textbf{(b)} The query kernel used by DKPS: only
+\textbf{(a)} Top: two models respond to different sets of queries. Bottom: queries
+represented as vectors, colored by which model has responded to them. \textbf{(b)} The query kernel used by DKPS: only
 information from queries both models have responded to is included in $ D $. \textbf{(c)} The query kernel used by \PKPS: information is weighted by
 query similarity in the embedding space. \textbf{(d--e$'$)} A toy unpaired benchmark prediction
 example. Top: restricted to the rare shared queries, DKPS is noisy and correlates poorly
@@ -283,7 +283,7 @@ correlated with score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
-\subsection{Concentration of PKPS representations}
+\subsection{Concentration of \PKPS representations}
 \label{sec:theory}
 
 We next establish theoretical properties of the \PKPS necessary for demonstrating
@@ -309,7 +309,7 @@ The atypical requirement in our setting is the positive cross-model query kernel
 mass, though this holds trivially under a strictly positive $k_Q$ and importantly
 does not assume that any individual query is shared.
 
-Let $(\psi_1,\dots,\psi_n)$ denote the population PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
+Let $(\psi_1,\dots,\psi_n)$ denote the population \PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
 query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the population Gram matrix.
 \begin{theorem}[Concentration of \PKPS representations]
 \label{prop:conc}
@@ -322,7 +322,7 @@ C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^2/\delta)/2m}$,
 where $C$ depends only on the kernel bounds.
 \end{theorem}
 
-Theorem~\ref{prop:conc} states that the PKPS representations concentrate at the rate in $ m $ enjoyed by fully paired DKPS \citep{acharyya2025concentration} without requiring any shared queries.
+Theorem~\ref{prop:conc} states that the \PKPS representations concentrate at the rate in $ m $ enjoyed by fully paired DKPS \citep{acharyya2025concentration} without requiring any shared queries.
 The price of unpairedness is a factor of $\kappa^{-2}$, governed by
 the overlap of the query distributions.
 The full proof is in Appendix~\ref{app:proof}.
@@ -378,8 +378,8 @@ Since $k_{0}$ matches only identical queries, $h_{n,0}^{(K)}$ is $K$-nearest-nei
 regression on the paired DKPS.
 \begin{theorem}[\PKPS is query efficient relative to paired DKPS]
 \label{thm:qeff}
-Fix a pairing fraction $\rho\in[0,1]$.
-Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every sequence
+Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every pairing fraction
+$\rho\in[0,1]$ and every sequence
 $(h_{1,0}^{(K'_{1})}, h_{2,0}^{(K'_{2})}, \hdots)$ there exists a sequence
 $(h_{1,\sigma_{1}}^{(K_{1})}, h_{2,\sigma_{2}}^{(K_{2})}, \hdots)$ that is query-efficient relative to
 $(h_{1,0}^{(K'_{1})}, h_{2,0}^{(K'_{2})}, \hdots)$.
@@ -409,7 +409,7 @@ We evaluate \PKPS on synthetic data and on two large benchmark suites.
 
 \paragraph{Synthetic data.} We generate $n$ models with latent ability vectors
 $v_i \in \mathbb{R}^{5}$ and $T$ tasks with latent vectors $t_k \in \mathbb{R}^{5}$,
-scores $v_i\cdot t_k+\epsilon$ with isotropic noise $ \epsilon $, and queries drawn near each task center ($u_j = t_k +
+scores $v_i\cdot t_k+\epsilon$ with additive noise $ \epsilon $, and queries drawn near each task center ($u_j = t_k +
 \eta_j$ with isotropic noise $\eta_j$).
 Each model answers $m$ queries per task. 
 We control unpairedness via
@@ -465,11 +465,11 @@ $y_{i}^{(t)}$:
     of \PKPS and sample score (i.e.,
     $\alpha\,\tilde{y}_{i}^{(t)}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
     \item \emph{Score completion.} We compare \PKPS to Low-Rank Matrix Completion
-    (``LRMC'', \citealp{benchpress}) and a convex combination of \PKPS and LRMC
+    (``LRMC'', \citealp{benchpress}) and a convex combination of LRMC and \PKPS
     (i.e., $\alpha\,\hat{y}^{(t)}_{i,\mathrm{LRMC}}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
 \end{enumerate}
 Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
-selected via leave-one-out cross validation on the observed data.
+selected via leak-free cross-validation on the observed data (Appendix~\ref{app:details}).
 Following \citet{benchpress}, all methods operate on a pre-processed score matrix:
 observed scores are logit-transformed, standardized per task, and centered by a
 two-way (model, task) additive bias.
@@ -497,8 +497,8 @@ score-only baseline is the task mean.
 Panel (b) is the empirical counterpart of Theorem~\ref{thm:qeff}.
 At $\rho=0$, DKPS is worse than the sample score, while a
 single shared query ($\rho=0.25$ at $m=4$) restores it to \PKPS's level.
-\PKPS itself is flat in $\rho$ as it is unaffected by the sampled overlap since it
-only requires distributional overlap (Assumption~\ref{ass:overlap}).
+\PKPS itself is flat in $\rho$: it requires only distributional overlap
+(Assumption~\ref{ass:overlap}), not sampled overlap.
 As $n$ grows for a fixed sparsity and pairedness, \PKPS can take advantage of
 additional reference models while DKPS cannot (c).
 Task coverage behaves similarly (e) and the number of tasks matters little for
@@ -539,8 +539,8 @@ the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
 At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences, better on all $18$ tasks), so \PKPS with one query matches the sample score at four (a).
-As the budget grows, the sample score eventually overtakes the representations'
-residual bias.
+As the budget grows, the sample score's noise falls below the representations'
+residual bias and it eventually overtakes them.
 The ensemble follows the better of its two components
 throughout (a).
 \PKPS improves with the number of reference models
@@ -572,7 +572,7 @@ every task coverage (a), query depth (b), and number of tasks (c)
 ($0.120$ versus $0.139$; Wilcoxon
 $p{=}8\times10^{-4}$, better on $16$ of $18$ tasks).
 LRMC requires many models to estimate its factors: with $n{=}10$, additional tasks
-do not close the gap (c), and the number of reference models sweep shows the ensemble is accurate
+do not close the gap (c), and sweeping the number of reference models shows the ensemble is accurate
 from $n{=}20$ while LRMC approaches it only near the full cohort (d).
 At the full cohort the methods converge and the ensemble remains best on average
 ($0.099$ versus $0.105$), although the per-task difference is no longer significant
@@ -606,7 +606,7 @@ At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ versus
 $0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$).
 On missing cells, the ensemble outperforms LRMC everywhere, including
 the full cohort (Wilcoxon $p{=}3\times10^{-5}$, better on every task), which is not significant on HELM.
-Table~\ref{tab:suite} shows the performance of all methods on both tasks on both suites.
+Table~\ref{tab:suite} shows the performance of all methods on both tasks and both suites.
 The ensemble is the best or tied in every column.
 
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
