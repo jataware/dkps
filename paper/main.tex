@@ -446,7 +446,7 @@ Unless otherwise stated we embed all responses and queries into a $3072$-dimensi
 space via \texttt{gemini-embedding-001} \citep{lee2025gemini}, apply PCA separately to the collection of embedded queries and embedded responses, and use an RBF kernel on the
 reduced query space and a linear kernel on the reduced response space.
 Given the \PKPS pairwise distance matrix, we embed the models in a $d = 8$ space and
-use $k$-nearest neighbor regression with $k = 5$.
+use $K$-nearest neighbor regression with $K = 5$.
 
 Depending on the task we include different baselines. Each produces an estimate of
 $y_{i}^{(t)}$:
@@ -669,16 +669,6 @@ The \PKPS removes this requirement: agents can be monitored through the
 heterogeneous interactions they naturally produce, as on open agent platforms such
 as Moltbook, where no two agents respond to the same stimuli.
 
-\subsubsection*{Reproducibility statement}
-All methods are released as a documented Python package (the \PKPS estimator, matrix
-completion, and IRT baselines), with the data-preparation, experiment, and figure scripts
-for the synthetic study and both benchmark suites; every experiment is seeded, all real-data
-numbers are means over $16$ seeds (synthetic: $50$), and hyperparameters are selected by the
-leak-free cross-validation described in Section~\ref{sec:experiments} (leakage is checked by an
-automated test that corrupts one model's held-out scores and verifies its predictions are
-unchanged). Appendix~\ref{app:details} lists the suite composition, embedding models, and
-all hyperparameter settings.
-
 \bibliographystyle{plainnat}
 \bibliography{references}
 
@@ -758,7 +748,7 @@ tiiuae\_falcon-7b, upstage\_solar-pro-241126, writer\_palmyra-x-004, writer\_pal
 writer\_palmyra-x-v3.\par}
 
 \paragraph{\PKPS.} RBF query kernel with bandwidth selected per run by leave-one-model-out
-$k$-NN ($k{=}8$) on the observed scores over the grid
+$K$-NN ($K{=}8$) on the observed scores over the grid
 $\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, plus the
 near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Response
 blocks are capped at $48$ PCA components per dataset and the shared query space at $64$;
@@ -770,12 +760,12 @@ fixed choice.
 
 \paragraph{Regressor.} All embedding methods share one regressor pipeline: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
-bias, and a distance-weighted $k$-NN ($k{=}5$) regression of the residual on the model
+bias, and a distance-weighted $K$-NN ($K{=}5$) regression of the residual on the model
 embedding, fit \emph{leave-one-family-out}: all models from the target's developer are
 excluded from its training set, so predictions never lean on near-duplicate siblings
 \citep{dkps_qeff}. Held-out cells are predicted directly; observed cells leave their own
 target out. The pipeline is identical to the LRMC baseline's, so the two methods differ
-only in how the residual is modeled ($k$-NN on the perspective versus a low-rank
+only in how the residual is modeled ($K$-NN on the perspective versus a low-rank
 factorization) and performance differences are attributable to the representation.
 Matching the per-task standardization is important: without it, the model offset is
 dominated by the tasks with the largest logit variance.
@@ -822,10 +812,10 @@ from the same per-cell records, pooled over the conditional-figure sweeps.
 embedding dimension $20$, response noise $0.5$; both kernels RBF.
 Query-efficiency panels (Figure~\ref{fig:synthetic}a--e): every observed cell carries
 $m$ queries and a sample score with measurement noise $4/\sqrt{m}$; the true
-score is predicted by a distance-weighted average of the $k{=}8$ nearest models'
+score is predicted by a distance-weighted average of the $K{=}8$ nearest models'
 sample scores, restricted to cells they observe.
-Completion panel (f): score noise $0.1$, held-out cells predicted by $k$-NN regression
-with $k{=}5$.
+Completion panel (f): score noise $0.1$, held-out cells predicted by $K$-NN regression
+with $K{=}5$.
 Unswept levers default to $n{=}60$, $T{=}12$, $m{=}4$, $\rho{=}0$,
 $p_{\mathrm{task}}{=}1$; panel-specific settings are given in each figure title.
 
@@ -979,10 +969,10 @@ $m{=}8$; on EEE from $0.084$ to $0.073$ and from $0.052$ to $0.049$. The $m/M$ s
 trails both on HELM ($0.096$ at $m{=}8$) and is close to the cross-validated weight on
 EEE, where the small pools ($M{=}32$) let $m/M$ reach $1$.
 
-\paragraph{Regressor.} Replacing the distance-weighted $k$-NN regressor with ordinary
+\paragraph{Regressor.} Replacing the distance-weighted $K$-NN regressor with ordinary
 least squares helps slightly on HELM ($0.132$ vs.\ $0.136$ at $m{=}1$; $0.080$ vs.\
 $0.085$ at $m{=}32$), consistent with \citet{dkps_qeff}, but hurts on EEE, increasingly
-so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $k$-NN as the robust
+so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $K$-NN as the robust
 default across suites.
 
 \paragraph{Response kernel.} An RBF response kernel in place of the linear one changes
@@ -1116,6 +1106,25 @@ Combining, $\max_i\|\hat\psi_i-W\psi_i\|\le\|\hat\Psi-\Psi^*W\|_F\le
 \le\frac{25\sqrt d\,n\varepsilon_\infty}{\sqrt{\lambda_d(B^*)}}$. Nearest-neighbor
 distances are invariant to $W$.
 \end{proof}
+
+\paragraph{Proof of Theorem~\ref{prop:conc}.} Apply Lemma~\ref{lem:conc} at
+confidence $\delta/n^2$ to each of the at most $n^2$ model pairs; a union bound gives,
+with probability at least $1-\delta$,
+\[
+\varepsilon_\infty\;=\;\max_{i,i'}|A_{ii'}-A^*_{ii'}|
+\;\le\;\frac{2(1+B_R)\bar B}{\kappa^{2}}\sqrt{\frac{\log(4n^{2}/\delta)}{2m}}.
+\]
+Plugging this into Lemma~\ref{lem:pert} yields
+$\max_i\|\hat\psi_i-W\psi_i\|\le
+C\kappa^{-2}\lambda_d^{-1/2}\sqrt{d}\,n\sqrt{\log(4n^{2}/\delta)/2m}$ with
+$C=50(1+B_R)\bar B$, which depends only on the kernel bounds. Lemma~\ref{lem:conc}
+requires $t_m(\delta/n^2)\le\kappa/2$; in the complementary case the claimed bound
+already exceeds the trivial one---every perspective satisfies
+$\|\psi_i\|^2\le\lambda_1(B)\le 8B_Rn$ and likewise for $\hat\psi_i$, so
+$\max_i\|\hat\psi_i-W\psi_i\|\le6\sqrt{B_Rn}$, while the right-hand side is at least
+$C\kappa^{-1}\sqrt{dn}/(2\bar B\sqrt{8B_R})\ge6\sqrt{B_Rn}$ once $C$ also dominates
+$96B_R\bar B$---so the theorem holds for every $m$ after enlarging $C$ by a constant
+factor. \hfill$\qed$
 
 \paragraph{Proof of Theorem~\ref{thm:qeff}.} Taking $\sigma_{n}=0$ and
 $K_{n}=K'_{n}$ makes $h_{n,\sigma_{n}}^{(K_{n})}=h_{n,0}^{(K'_{n})}$ for every $n$:
