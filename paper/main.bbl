@@ -1,4 +1,4 @@
-\begin{thebibliography}{50}
+\begin{thebibliography}{52}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -106,6 +106,14 @@ Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz
 \newblock Training verifiers to solve math word problems.
 \newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
 
+\bibitem[Dokmani{\'c} et~al.(2015)Dokmani{\'c}, Parhizkar, Ranieri, and
+  Vetterli]{Dokmanic_2015}
+Ivan Dokmani{\'c}, Reza Parhizkar, Juri Ranieri, and Martin Vetterli.
+\newblock Euclidean distance matrices: Essential theory, algorithms, and
+  applications.
+\newblock \emph{IEEE Signal Processing Magazine}, 32\penalty0 (6):\penalty0
+  12--30, 2015.
+
 \bibitem[Duderstadt et~al.(2023)Duderstadt, Helm, and
   Priebe]{duderstadt2023comparing}
 Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
@@ -119,6 +127,12 @@ Brandon Duderstadt, Hayden~S. Helm, and Carey~E. Priebe.
 \newblock \url{https://evalevalai.com/projects/every-eval-ever/}, 2026.
 \newblock Dataset:
   \url{https://huggingface.co/datasets/evaleval/EEE_datastore}.
+
+\bibitem[Ghosh(2026)]{ghosh2026evalbottleneck}
+TODO Ghosh.
+\newblock The evaluation bottleneck: On the rising cost of benchmarking
+  frontier models, 2026.
+\newblock TODO(verify).
 
 \bibitem[Gretton et~al.(2012)Gretton, Borgwardt, Rasch, Sch{\"o}lkopf, and
   Smola]{gretton2012kernel}
