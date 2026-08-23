@@ -385,11 +385,17 @@ $(h_{1,\sigma_{1}}^{(K_{1})}, h_{2,\sigma_{2}}^{(K_{2})}, \hdots)$ that is query
 $(h_{1,0}^{(K'_{1})}, h_{2,0}^{(K'_{2})}, \hdots)$.
 \end{theorem}
 
-Theorem \ref{thm:qeff} states that with enough reference models that have responded to at least $ m $ queries, prediction with PKPS is at least as good as prediction with DKPS.
+Theorem \ref{thm:qeff} states that with enough reference models that have responded to at least $ m $ queries, prediction with \PKPS is at least as good as prediction with DKPS.
+The proof is by inclusion -- paired DKPS is the $\sigma=0$ member of the family -- and
+the statistical content is that the inclusion is strict when pairing is scarce: at
+$\rho=0$, a $\sigma=0$ estimator predicts independently of the target model and its MSE
+is floored at $\mathrm{Var}(y_{0})$, while a positive bandwidth attains any $\epsilon$
+(Lemma~\ref{lem:noisy} and Appendix~\ref{app:proof}).
+In practice, the bandwidth is selected by cross-validation over a finite grid containing
+the paired limit, which attains the best grid member up to a vanishing validation error
+(Appendix~\ref{app:proof}).
 We note that query-efficiency is transitive and that Theorem~\ref{thm:qeff}, together with
 \citet{dkps_qeff}, implies that $ h_{n,\sigma}^{(K)} $ is query-efficient relative to the sample score.
-In practice, the bandwidth is selected by cross-validation over a finite grid.
-The full proof is in Appendix~\ref{app:proof}.
 
 The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
