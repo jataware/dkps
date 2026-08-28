@@ -84,12 +84,6 @@ agentic trace embedding, organized into three groups:
   instances.
 \end{itemize}
 
-\smallskip
-No off-the-shelf representation satisfies these: a dozen unsupervised
-variants of the naive representation are performance-identical (an
-information ceiling), and geometric fixes backfire---per-instance centering
-alone \emph{amplifies} provenance dominance ($0.68\!\to\!0.83$).
-
 \section*{qubric: query-specific rubrics}
 For each task instance, an LLM reads the \emph{public problem statement} (no
 labels) and writes a query-specific rubric: what understanding, localization,
