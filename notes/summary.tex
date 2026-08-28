@@ -84,17 +84,18 @@ agentic trace embedding, organized into three groups:
   instances.
 \end{itemize}
 
-\section*{qubric: query-specific rubrics}
-For each task instance, an LLM reads the \emph{public problem statement} (no
-labels) and writes a query-specific rubric: what understanding, localization,
-reproduction, editing, verification, and final state concretely mean for
-\emph{this} problem. A judge LLM reads each trace through the rubric and
-extracts a short factual description per section; sections are embedded
-separately, centered against the cross-system median per instance
-(consensus centering), and concatenated. The rubric is a natural-language
-definition of the equivalence relation the space should respect; invariance
-comes from \emph{re-observation through a fingerprint-poor channel}, not
-surgery on a fingerprint-rich one.
+\section*{qubric}
+Our method for embedding agentic traces is based on a query-specific rubric.
+In particular, for each task instance an LLM (Model 1) reads the public
+problem statement and writes a query-specific rubric comprised of
+1)~understanding, 2)~localization, 3)~reproduction, 4)~editing,
+5)~verification, and 6)~final state. Given a trace corresponding to the
+task, a judge LLM (Model 2) extracts a short factual description per
+section. The short descriptions are then embedded with an off-the-shelf
+embedding model, centered against the cross-system median per instance, and
+concatenated. This approach enforces the equivalence relations the space
+should expect by respecting the rubric and using a fixed judge LLM as the
+extractor.
 
 \begin{figure*}[t]
   \vspace{-6pt}\centering
