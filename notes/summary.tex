@@ -173,7 +173,7 @@ what evaluation uses.
 \end{figure*}
 
 
-\section*{Payoff: query-efficient benchmarking}
+\section*{Query-efficient benchmarking}
 Qubric representations enter the DKPS/PKPS perspective space; a new agent's
 full-benchmark resolve rate is predicted from a few probe traces against
 references' cached coverage, blended with the sample score. Evaluation is
@@ -202,9 +202,6 @@ every budget. The reference pool, not probe count, is the binding resource:
 error falls $0.145\!\to\!0.078$ as the pool grows 5$\to$96, still declining
 (Fig.~\ref{fig:quench}). Every layer is ablated; CV-inside-selection and
 PCA-composed-with-selection are documented overfitting traps.
-
-\smallskip\noindent\emph{Caveats}: panel differences ${<}0.01$ are near
-resolution; one benchmark so far.
 
 \section*{Remaining tasks}
 \begin{enumerate}[leftmargin=1.4em,itemsep=1pt,topsep=1pt]
