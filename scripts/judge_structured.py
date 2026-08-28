@@ -174,7 +174,8 @@ def main():
             rubrics[q] = json.loads(open(p).read())
         print('instance rubrics ready')
 
-    jdir = f'data/judge/structured-{args.variant}'
+    jdir = (f'data/judge/structured-{args.variant}' if args.judge_model == 'gpt-5.4-mini'
+            else f'data/judge/structured-{args.variant}-{args.judge_model}')
 
     def jpath(s, q):
         return os.path.join(jdir, s, f'{q}.json')
