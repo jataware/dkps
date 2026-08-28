@@ -127,11 +127,15 @@ def main():
         D_task = D.copy()
         D_task[sysid[:, None] == sysid[None, :]] = np.inf
         task = float((inst[D_task.argmin(1)] == inst).mean())
-        # authorship axes: NN restricted to same instance (within-task)
+        # identity (trace): NN across OTHER instances; hit = same system
+        D_id = D.copy()
+        D_id[inst[:, None] == inst[None, :]] = np.inf
+        nn_id = D_id.argmin(1)
+        ident = float((sysid[nn_id] == sysid).mean())
+        # family/harness: NN restricted to same instance (within-task)
         D_who = D.copy()
         D_who[inst[:, None] != inst[None, :]] = np.inf
         nn = D_who.argmin(1)
-        ident = float((sysid[nn] == sysid).mean())
         v = np.asarray(vend); h = np.asarray(harn)
         vok = v != None  # noqa: E711
         hok = h != None  # noqa: E711

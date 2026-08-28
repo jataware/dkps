@@ -1,0 +1,39 @@
+{
+  "embed_model": "nomic-ai/nomic-embed-text-v1.5",
+  "judge_dir": "data/judge/structured-qspec",
+  "chance": {
+    "task": 0.05,
+    "identity": 0.009345794392523364,
+    "family": 0.319790704832256,
+    "harness": 0.07727664464234417
+  },
+  "reps": {
+    "raw": {
+      "task": 0.805607476635514,
+      "behavior": 0.043714924910088215,
+      "identity_trace": 0.6271028037383177,
+      "identity_agg": 0.8845794392523365,
+      "family": 0.3192982456140351,
+      "harness": 0.461864406779661
+    },
+    "qubric": {
+      "task": 0.935981308411215,
+      "behavior": 0.04114749528018702,
+      "identity_trace": 0.0705607476635514,
+      "identity_agg": 0.4093457943925233,
+      "family": 0.21578947368421053,
+      "harness": 0.1228813559322034
+    }
+  },
+  "stability": {
+    "chance": 0.058041112454655375,
+    "rows": {
+      "raw": 0.32419547079856975,
+      "head-only": 0.3468414779499404,
+      "tail-only": 0.2908224076281287,
+      "centered": 0.34088200238379024,
+      "free-form judge": 0.33730631704410013,
+      "qubric": 0.21096543504171633
+    }
+  }
+}
