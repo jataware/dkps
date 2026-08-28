@@ -148,9 +148,8 @@ $0.20\!\to\!0.12$, \emph{identity} $0.83\!\to\!0.09$. The properties are
 separately measurable (double dissociations across six representations), so
 these are genuinely different axes being moved, not one metric relabeled.
 
-The instance-conditioning is the active ingredient
-(Fig.~\ref{fig:matrix}): the construction ranking is strict under both
-readouts (qubric $>$ verdict questions $>$ generic rubric $>$ free-form
+The instance-conditioning is the active ingredient: the
+construction ranking is strict under both readouts (qubric $>$ verdict questions $>$ generic rubric $>$ free-form
 summary $>$ raw), reproduces under a local embedder, and
 no single rubric section carries the effect (best single section 0.091 vs.\
 0.078 for the union). Judge choice degrades gracefully: an open frontier
@@ -173,15 +172,6 @@ what evaluation uses.
   \label{fig:quench}
 \end{figure*}
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=0.46\textwidth]{../figures/judge_matrix.png}
-  \caption{Judge robustness: leave-one-LLM-out kNN MAE by construction and
-  extraction judge (Model~2); navy = lower error. Query-specificity beats
-  every alternative under the same judge, and a weaker judge with a qubric
-  beats a stronger judge without one.}
-  \label{fig:matrix}
-\end{figure*}
 
 \section*{Payoff: query-efficient benchmarking}
 Qubric representations enter the DKPS/PKPS perspective space; a new agent's
