@@ -28,9 +28,10 @@ from dkps.traces import make_sentence_transformer_embed_fn  # noqa: E402
 
 SECTIONS = ('understanding', 'localization', 'reproduction',
             'editing', 'verification', 'final_state')
-TXT = 'data/judge/smallcohort_texts'
+TXT = 'data/judge/smallcohort_texts'       # compact render: judge inputs, key list
+RICH = 'data/judge/smallcohort_texts_rich'  # with tool outputs: raw-embedding rows
 JUDGE = 'deepseek-chat-v3.1'
-CACHE = 'data/judge/smallcohort_emb_nomic.npz'
+CACHE = 'data/judge/smallcohort_emb_nomic_v2.npz'
 
 
 def main():
@@ -50,7 +51,7 @@ def main():
 
     heads, tails, frees, secs = [], [], [], []
     for m, r, q in keys:
-        t = open(os.path.join(TXT, m, r, f'{q}.txt')).read()
+        t = open(os.path.join(RICH, m, r, f'{q}.txt')).read()
         heads.append(t[:32_000])
         tails.append(t[-32_000:])
         frees.append(open(os.path.join(fdir, m, r, f'{q}.txt')).read())

@@ -351,6 +351,25 @@ corpus with the strongest correctness-only similarity. Data:
 figures/capa_baseline.json. Caveat: quick-protocol numbers; recompute under
 the exact Fig 3 pipeline before print.
 
+**F25. Stability column + Identity collapsed to aggregated (2026-08-28).**
+Heatmap now 6 properties x 6 representations. (c) Identity reported at the
+aggregated (10-trace split-half) level only -- the harder test (qubric 0.52).
+(a) Stability = agent-seed replicate retrieval P@1 on the small cohort
+(14 x 12 x 5; chance 4/69=.058), all rows nomic-embedded; judge rows use
+deepseek-v3.1 extractions of the compact render (12 deepseek-written
+rubrics; ~$10, 1690 calls). Results: head-only .347 > centered .341 ~
+free-form .337 > raw .324 > tail-only .291 > qubric .211. All 3.6-6x chance.
+INTERPRETATION: replicate retrieval conflates behavioral consistency with
+the identity fingerprint; fingerprint-rich rows are inflated (their Identity
+column is .83-.93), qubric's .211 is behavior-only. Tail-only < head-only
+gap = late-trace stochasticity (divergent endings across replicates).
+PITFALL LOGGED: first computation rendered small-cohort traces WITHOUT tool
+outputs (canonicalize_step defaults) -> every trace <=32K chars -> head ==
+tail == whole, three rows identical (.350) and fingerprint understated;
+re-rendered with include_tool_output_chars=1500 (median 43K chars).
+Data: figures/stability_column.json; emb cache smallcohort_emb_nomic_v2.npz;
+scripts: smallcohort_judge.py, stability_column.py, fig_heatmap.py.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.

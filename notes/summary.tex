@@ -134,11 +134,14 @@ baselines are shown in Fig.~\ref{fig:heatmap}.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{../figures/independence_heatmap.png}
-  \caption{Baselines by pillar: each cell is the raw metric for that axis
+  \caption{Baselines by property: each cell is the raw metric for that axis
   (columns) under that representation (rows); color is desirability (blue =
-  ideal). Raw-trace variants (head/tail/centered) read authorship; qubric is
-  the only row that is simultaneously task-faithful and
-  authorship-invariant.}
+  ideal). Identity uses the aggregated (10-trace) retrieval test. Stability
+  is replicate-retrieval P@1 on a 14-system $\times$ 12-instance $\times$
+  5-replicate corpus (chance 0.06); for fingerprint-rich rows it is partly
+  inflated by identity signal (compare the Identity column), while qubric's
+  0.21 reflects behavioral consistency alone. Qubric is the only row that is
+  simultaneously task-faithful and authorship-invariant.}
   \label{fig:heatmap}
 \end{figure}
 
