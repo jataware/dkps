@@ -224,9 +224,9 @@ PCA-composed-with-selection are documented overfitting traps.
 \section*{Appendix: a worked example (\texttt{django\_\_django-11099})}
 
 \subsection*{A. Example trace (excerpt)}
-The opening of a sweagent + GPT-4 trace on this instance. Note how much of
-the text is harness syntax, state dumps, and format echoes rather than
-content.
+The opening and closing of a sweagent + GPT-4 trace on this instance. Note
+how much of the text is harness syntax, state dumps, and format echoes
+rather than content.
 
 \begin{lstlisting}
 swe_main
@@ -251,10 +251,44 @@ Found 3 matches for "validators.py" in /django__django:
 /django__django/django/core/validators.py
 /django__django/django/contrib/auth/validators.py
 /django__django/django/contrib/postgres/validators.py
-[... continues for ~40K tokens ...]
+
+[... ~40K tokens omitted ...]
+
+(Open file: /django__django/regex_test.py)
+(Current directory: /django__django)
+bash-$
+primary
+role: assistant
+The output indicates that both the `ASCIIUsernameValidator` and `UnicodeUsernameValidator` regex patterns correctly rejected the username with a trailing newline. This confirms that the changes made to the regex patterns are effective.
+
+Since the issue has been addressed and the fix has been verified with a test script, we can now submit our changes to the code base.
+
+The output indicates that both the `ASCIIUsernameValidator` and `UnicodeUsernameValidator` regex patterns correctly rejected the username with a trailing newline. [...]
+
+```
+submit
+```
+action: submit
 \end{lstlisting}
 
-\subsection*{B. The rubric-generation prompt (Model 1)}
+\subsection*{B. Query-specific rubric generation (Model 1)}
+The problem statement for this instance:
+
+\begin{lstlisting}
+UsernameValidator allows trailing newline in usernames
+Description
+
+ASCIIUsernameValidator and UnicodeUsernameValidator use the regex
+r'^[\w.@+-]+$'
+The intent is to only allow alphanumeric characters as well as ., @, +, and -. However, a little known quirk of Python regexes is that $ will also match a trailing newline. Therefore, the user name validators will accept usernames which end with a newline. You can avoid this behavior by instead using \A and \Z to terminate regexes. For example, the validator regex could be changed to
+r'\A[\w.@+-]+\Z'
+in order to reject usernames that end with a newline.
+I am not sure how to officially post a patch, but the required change is trivial - using the regex above in the two validators in contrib.auth.validators.
+\end{lstlisting}
+
+\noindent The rubric-generation prompt, with the problem statement above
+substituted for \texttt{\{problem\}}:
+
 \begin{lstlisting}
 Here is a repository issue that a software-engineering agent will be asked to fix:
 
@@ -268,7 +302,8 @@ Sections: understanding, localization, reproduction, editing, verification, fina
 Respond with ONLY a JSON object with those keys, each a one-sentence string.
 \end{lstlisting}
 
-\subsection*{C. The resulting query-specific rubric}
+\noindent The resulting query-specific rubric:
+
 \begin{lstlisting}
 {
  "understanding": "Look for the agent correctly identifying that the bug is in Django's auth username validators accepting usernames with a trailing newline because the regex uses `$`, and that the fix should tighten the anchors rather than change the allowed character class.",
@@ -277,6 +312,21 @@ Respond with ONLY a JSON object with those keys, each a one-sentence string.
  "editing": "Look for the agent changing the validator regexes from `r'^[\w.@+-]+$'` to `r'\A[\w.@+-]+\Z'` in both validators, without altering the intended character whitelist or unrelated auth logic.",
  "verification": "Look for the agent adding or updating tests that assert usernames ending in newline are rejected by both ASCII and Unicode validators, and running the relevant auth test module or focused test subset to confirm the fix.",
  "final_state": "Look for the final state to include only the targeted regex anchor fix and passing/updated tests, with no regressions or broader API changes in auth username validation."
+}
+\end{lstlisting}
+
+\subsection*{C. The extracted text for the example trace (Model 2)}
+The judge reads the full trace through the rubric and emits one short
+factual description per section; these six texts are what gets embedded.
+
+\begin{lstlisting}
+{
+ "understanding": "The agent correctly identified that Django's username validators accept trailing newlines due to regex anchors ^ and $, and decided to fix it by tightening the anchors to \A and \Z without changing the character class.",
+ "localization": "The agent localized the problem to django/contrib/auth/validators.py, specifically the ASCIIUsernameValidator and UnicodeUsernameValidator classes, by searching for and opening the file. It did not inspect any auth validator tests.",
+ "reproduction": "The agent created test scripts to reproduce the issue, including one with a username like 'testuser\n'. However, Django-based tests failed due to settings configuration; it successfully used a regex-only script to demonstrate the problem.",
+ "editing": "The agent edited both ASCIIUsernameValidator and UnicodeUsernameValidator in validators.py, changing the regex patterns from r'^[\w.@+-]+$' to r'\A[\w.@+-]+\Z', keeping the character class intact.",
+ "verification": "The agent created custom test scripts, including regex_test.py, which showed that usernames with trailing newlines were rejected. It did not add or update existing Django tests or run the auth test module.",
+ "final_state": "The final state includes only the regex anchor fix in validators.py and the addition of test script files. No regressions or broader API changes were made, and the fix was verified via custom tests."
 }
 \end{lstlisting}
 

@@ -55,7 +55,10 @@ def chat(key, model, content, max_tokens=2500, schema=True):
         r = requests.post('https://openrouter.ai/api/v1/chat/completions', json=body,
                           headers={'Authorization': f'Bearer {key}'}, timeout=300)
         if r.status_code == 200:
-            j = r.json()
+            try:
+                j = r.json()
+            except ValueError:
+                time.sleep(delay); delay = min(delay * 2, 60); continue
             if 'choices' not in j:
                 time.sleep(delay); delay = min(delay * 2, 60); continue
             if j['choices'][0].get('finish_reason') == 'length':
