@@ -81,10 +81,13 @@ agentic trace embedding, organized into three groups:
 
 \noindent\emph{Reliable --- similarity should be a measurement, not noise.}
 \begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=1pt]
-  \item \textbf{Stability}: the embedding should be stable under agent
-  stochasticity, judge resampling, and embedder choice. \emph{Measured by}
-  replicate-run and judge-resample agreement, per trace and aggregated over
-  instances.
+  \item \textbf{Stability}: the \emph{same} trace, processed twice, should
+  map to approximately the same place --- the stochastic stages are rubric
+  creation and extraction. (Different runs of the same agent may legitimately
+  differ; that is variance in the world, not in the measurement.)
+  \emph{Measured by} test--retest self-retrieval: resample the rubric and/or
+  the extraction for a fixed trace and check that its re-embedding retrieves
+  its first-pass twin.
 \end{itemize}
 
 \section*{qubric}
