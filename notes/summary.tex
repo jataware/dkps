@@ -125,16 +125,18 @@ above against four baselines:
   questions with short answers---tests descriptions vs.\ verdicts;
 \end{itemize}
 across \textbf{seven off-the-shelf embedding functions} spanning three
-families and two orders of magnitude of size.
+families and two orders of magnitude of size. Per-pillar results for the
+baselines are shown in Fig.~\ref{fig:heatmap}.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../figures/judge_matrix.png}
-  \caption{Qubric vs.\ the judge-mediated baselines, per extraction judge
-  (Model~2): leave-one-LLM-out kNN MAE predicting resolve rate; navy = lower
-  error. Query-specificity beats every alternative under the same judge, and
-  a weaker judge with a qubric beats a stronger judge without one.}
-  \label{fig:matrix}
+  \includegraphics[width=\columnwidth]{../figures/independence_heatmap.png}
+  \caption{Baselines by pillar: each cell is the raw metric for that axis
+  (columns) under that representation (rows); color is desirability (blue =
+  ideal). Raw-trace variants (head/tail/centered) read authorship; qubric is
+  the only row that is simultaneously task-faithful and
+  authorship-invariant.}
+  \label{fig:heatmap}
 \end{figure}
 
 Qubric produces the same profile shift under all seven embedders
@@ -169,6 +171,16 @@ what evaluation uses.
   (left) and vs.\ reference-pool size $n$ (right); leave-one-LLM-out, 107
   systems.}
   \label{fig:quench}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.46\textwidth]{../figures/judge_matrix.png}
+  \caption{Judge robustness: leave-one-LLM-out kNN MAE by construction and
+  extraction judge (Model~2); navy = lower error. Query-specificity beats
+  every alternative under the same judge, and a weaker judge with a qubric
+  beats a stronger judge without one.}
+  \label{fig:matrix}
 \end{figure*}
 
 \section*{Payoff: query-efficient benchmarking}
