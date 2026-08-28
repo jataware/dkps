@@ -9,6 +9,7 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{stfloats}
+\usepackage{enumitem}
 
 \definecolor{ink}{HTML}{0A1638}
 \definecolor{navy}{HTML}{2E5CA6}
@@ -31,31 +32,75 @@
 \maketitle
 
 \section*{The problem}
-Modern evaluation produces \emph{trajectories}: an agent works on a software
-issue for tens of minutes and leaves a log of $10^4$--$10^5$ tokens. Public
-archives already hold them at scale (SWE-bench Verified: $\sim$119 systems
-$\times$ 500 instances, in dozens of incompatible formats), yet each run is
-reduced to one pass/fail bit. The obvious move---feed traces to an
-off-the-shelf embedder---measures the wrong thing: raw trace embeddings are
-\emph{fingerprint readers}. Nearest neighbors are same-system 68--83\%,
-same-scaffold at $5\times$ chance, and the exact agent configuration is
-retrievable at $0.82$ vs.\ $0.43$ chance even among same-model, same-harness
-siblings---while outcome coherence sits at chance (AUC $0.52$). Geometric
-fixes fail: per-instance centering alone \emph{amplifies} provenance
-dominance ($0.68\!\to\!0.83$), and a dozen unsupervised variants of the naive
-representation are performance-identical---an information ceiling.
+Modern generative systems produce logs of their actions and decisions---
+referred to as an \emph{agentic trace}---while processing information. Traces
+often implicitly or explicitly encode information such as the particular type
+of tool that was used, the harness, etc.\ that may or may not be useful for
+determining if the trace produced a useful output. Further, the signal from
+using an off-the-shelf embedding function to encode trace similarity is often
+dominated by information that is potentially irrelevant for correctness, such
+as the harness or model used: in our corpus, nearest neighbors of raw trace
+embeddings are same-system 68--83\% of the time, same-scaffold at $5\times$
+chance, and the exact agent configuration is retrievable at $0.82$ vs.\
+$0.43$ chance even among same-model, same-harness siblings---while agreement
+with outcome sits at chance (AUC $0.52$).
 
-\section*{qubric: similarity as an input}
-For each instance, an LLM reads the \emph{public problem statement} (no
+The goal of this work is simple: \textbf{develop a method for embedding
+agentic traces that better captures similarity of the work performed.} In
+developing such a method, we have identified six desirable properties of an
+agentic trace embedding, organized into three groups:
+
+\smallskip
+\noindent\emph{Faithful to content --- what happened should drive similarity.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=1pt]
+  \item \textbf{Task fidelity}: traces of different systems working the same
+  problem should be similar. \emph{Measured by} cross-system same-task
+  nearest-neighbor retrieval.
+  \item \textbf{Behavioral fidelity}: among traces of the same problem,
+  similar approaches and results should be similar. \emph{Measured by}
+  within-task coherence of same-outcome traces (AUC of same- vs.\
+  different-outcome distances).
+\end{itemize}
+
+\noindent\emph{Invariant to authorship --- who produced it should not.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=1pt]
+  \item \textbf{Harness invariance}: scaffold formatting and tool idiom
+  should not drive similarity. \emph{Measured by} within-task same-scaffold
+  retrieval vs.\ chance.
+  \item \textbf{Model-family invariance}: the vendor/lineage of the
+  underlying LLM should not drive similarity. \emph{Measured by} within-task
+  same-family retrieval vs.\ chance.
+  \item \textbf{Identity invariance}: the exact system configuration
+  (version, prompts, settings) should not be recoverable. \emph{Measured by}
+  exact-submission retrieval among same-model, same-harness siblings vs.\
+  chance.
+\end{itemize}
+
+\noindent\emph{Reliable --- similarity should be a measurement, not noise.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=1pt]
+  \item \textbf{Stability}: the embedding should be stable under agent
+  stochasticity, judge resampling, and embedder choice. \emph{Measured by}
+  replicate-run and judge-resample agreement, per trace and aggregated over
+  instances.
+\end{itemize}
+
+\smallskip
+No off-the-shelf representation satisfies these: a dozen unsupervised
+variants of the naive representation are performance-identical (an
+information ceiling), and geometric fixes backfire---per-instance centering
+alone \emph{amplifies} provenance dominance ($0.68\!\to\!0.83$).
+
+\section*{qubric: query-specific rubrics}
+For each task instance, an LLM reads the \emph{public problem statement} (no
 labels) and writes a query-specific rubric: what understanding, localization,
 reproduction, editing, verification, and final state concretely mean for
-\emph{this} issue. A judge LLM reads each trace through the rubric and
+\emph{this} problem. A judge LLM reads each trace through the rubric and
 extracts a short factual description per section; sections are embedded
 separately, centered against the cross-system median per instance
-(consensus centering), and concatenated. The
-rubric is a natural-language definition of the equivalence relation the space
-should respect; invariance comes from \emph{re-observation through a
-fingerprint-poor channel}, not surgery on a fingerprint-rich one.
+(consensus centering), and concatenated. The rubric is a natural-language
+definition of the equivalence relation the space should respect; invariance
+comes from \emph{re-observation through a fingerprint-poor channel}, not
+surgery on a fingerprint-rich one.
 
 \begin{figure*}[t]
   \vspace{-6pt}\centering
@@ -66,28 +111,31 @@ fingerprint-poor channel}, not surgery on a fingerprint-rich one.
   Behavior.}
   \label{fig:radar}
 \end{figure*}
-\section*{Evidence: the right sensitivity profile}
-Across \textbf{seven embedders} (three families, two orders of magnitude of
-size) qubric produces the same profile shift: task fidelity retained
-($\sim$0.95), behavior retained or improved, and every authorship axis
-collapses to $\approx$chance: provenance $0.83\!\to\!0.09$, scaffold
-$0.31\!\to\!0.08$, model lineage $0.20\!\to\!0.12$
-(Fig.~\ref{fig:radar}). Pillar independence is verified by double
-dissociation across six representations. The instance-conditioning is the
-active ingredient---the construction ranking is strict under both readouts
-(qubric $>$ verdict questions $>$ generic rubric $>$ free-form summary $>$
-raw) and reproduces under a local embedder. No single rubric section carries
-the effect (best single section 0.091 vs.\ 0.078 for the union).
 
-\textbf{Judge robustness}: quality degrades
-gracefully with judge capability; an open frontier judge
-(DeepSeek-v3.1: $0.083/0.079$) matches the closed reference
-(gpt-5.4-mini: $0.078/0.078$) within panel resolution, and construction
-beats capability---a weak judge \emph{with} a qubric outperforms a strong
-judge without one. \textbf{Reliability is measured}: two judges agree on a
-single trace only 12--28\% of the time, but aggregating $\sim$20 instances
-drives system-level agreement to 0.82--0.95. Per-trace noisy, per-agent
-reliable---and per-agent is what evaluation uses.
+\section*{Evidence, by property}
+Across \textbf{seven embedders} (three families, two orders of magnitude of
+size) qubric produces the same profile shift (Fig.~\ref{fig:radar}):
+\emph{task fidelity} is retained ($\sim$0.95) and \emph{behavioral fidelity}
+retained or improved, while every authorship axis collapses to
+$\approx$chance---\emph{harness} $0.31\!\to\!0.08$, \emph{model family}
+$0.20\!\to\!0.12$, \emph{identity} $0.83\!\to\!0.09$. The properties are
+separately measurable (double dissociations across six representations), so
+these are genuinely different axes being moved, not one metric relabeled.
+
+The instance-conditioning is the active ingredient: the construction ranking
+is strict under both readouts (qubric $>$ verdict questions $>$ generic
+rubric $>$ free-form summary $>$ raw), reproduces under a local embedder, and
+no single rubric section carries the effect (best single section 0.091 vs.\
+0.078 for the union). Judge choice degrades gracefully: an open frontier
+judge (DeepSeek-v3.1, $0.083/0.079$) matches the closed reference
+(gpt-5.4-mini, $0.078/0.078$) within panel resolution, and a weak judge
+\emph{with} a qubric outperforms a strong judge without one.
+
+\emph{Stability}: two judges agree on a single trace only 12--28\% of the
+time, but aggregating $\sim$20 instances drives system-level agreement to
+0.82--0.95; replicate runs of the same agent retrieve each other at
+$6\times$ chance. Per-trace noisy, per-agent reliable---and per-agent is
+what evaluation uses.
 
 \begin{figure*}[b]
   \centering
@@ -97,6 +145,7 @@ reliable---and per-agent is what evaluation uses.
   systems.}
   \label{fig:quench}
 \end{figure*}
+
 \section*{Payoff: query-efficient benchmarking}
 Qubric representations enter the DKPS/PKPS perspective space; a new agent's
 full-benchmark resolve rate is predicted from a few probe traces against
@@ -128,14 +177,11 @@ error falls $0.145\!\to\!0.078$ as the pool grows 5$\to$96, still declining
 PCA-composed-with-selection are documented overfitting traps.
 
 \subsection*{Status \& caveats}
-All qubric numbers: 20-instance panel, one benchmark; differences
-${<}0.01$ near panel resolution. The 150-instance scale-up is specified and
-unblocked (open-judge stack validated via OpenRouter; $\sim$\$40--85).
-Terminal-Bench (142 systems, 89 tasks, $\geq$5 trials/task, public
-trajectories) is scoped and deferred. Full log: \texttt{FINDINGS.md}
+All qubric numbers: 20-instance panel of SWE-bench Verified, one benchmark;
+differences ${<}0.01$ near panel resolution. The 150-instance scale-up is
+specified and unblocked (open-judge stack validated via OpenRouter;
+$\sim$\$40--85). Terminal-Bench (142 systems, 89 tasks, $\geq$5 trials/task,
+public trajectories) is scoped and deferred. Full log: \texttt{FINDINGS.md}
 (F1--F24) on the \texttt{agentic-traces} branch.
-
-
-
 
 \end{document}
