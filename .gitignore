@@ -166,3 +166,7 @@ data/
 .dkps_cache/
 .dkps_cache_lb/
 .dkps_cache/
+notes/*.aux
+notes/*.log
+notes/*.out
+notes/pg-*.png
