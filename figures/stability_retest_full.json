@@ -1,0 +1,12 @@
+{
+  "extraction": {
+    "centered": 0.31537019681349576,
+    "uncentered": 0.22164948453608246
+  },
+  "pipeline_partial": {
+    "centered": 0.29130434782608694,
+    "uncentered": 0.1318840579710145,
+    "coverage": 690
+  },
+  "chance": 0.009345794392523364
+}

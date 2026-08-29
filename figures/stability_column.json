@@ -1,11 +1,31 @@
 {
-  "chance": 0.058041112454655375,
+  "definition": "test-retest self-retrieval P@1 (same trace, pipeline rerun); chance 1/107=0.009",
+  "chance": 0.009345794392523364,
   "rows": {
-    "raw": 0.32419547079856975,
-    "head-only": 0.3468414779499404,
-    "tail-only": 0.2908224076281287,
-    "centered": 0.34088200238379024,
-    "free-form judge": 0.33730631704410013,
-    "qubric": 0.21096543504171633
+    "raw": 1.0,
+    "head-only": 1.0,
+    "tail-only": 1.0,
+    "centered": 1.0,
+    "free-form judge": null,
+    "qubric": 0.316
+  },
+  "detail": {
+    "extraction": {
+      "centered": 0.31537019681349576,
+      "uncentered": 0.22164948453608246
+    },
+    "pipeline_partial": {
+      "centered": 0.29130434782608694,
+      "uncentered": 0.1318840579710145,
+      "coverage": 690
+    },
+    "chance": 0.009345794392523364
+  },
+  "system_level": {
+    "p1": 0.31630740393626994,
+    "ratio_median": 0.872581958770752,
+    "system_p1": 0.8037383177570093,
+    "chance": 0.009345794392523364,
+    "coverage": 2134
   }
 }

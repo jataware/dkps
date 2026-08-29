@@ -140,10 +140,12 @@ baselines are shown in Fig.~\ref{fig:heatmap}.
   \caption{Baselines by property: each cell is the raw metric for that axis
   (columns) under that representation (rows); color is desirability (blue =
   ideal). Identity uses the aggregated (10-trace) retrieval test. Stability
-  is replicate-retrieval P@1 on a 14-system $\times$ 12-instance $\times$
-  5-replicate corpus (chance 0.06); for fingerprint-rich rows it is partly
-  inflated by identity signal (compare the Identity column), while qubric's
-  0.21 reflects behavioral consistency alone. Qubric is the only row that is
+  is test--retest self-retrieval: the same trace re-processed (resampled
+  extraction; chance 0.009) should retrieve its first-pass twin.
+  Deterministic rows are exactly stable; qubric's per-trace 0.32 is the
+  measurement cost of the LLM stages --- aggregating 20 instances recovers
+  0.80 at system level, and a full rubric-rewrite retest costs only
+  marginally more (0.29, partial coverage). Qubric is the only row that is
   simultaneously task-faithful and authorship-invariant.}
   \label{fig:heatmap}
 \end{figure}

@@ -5,9 +5,9 @@ figures/family_metric.json) after the original inline script was lost.
 Changes vs the first committed figure (per HH 2026-08-28):
   - Identity collapsed to the aggregated (10-trace split-half) test only --
     the harder, honest variant.
-  - Stability column added when figures/stability_column.json exists:
-    agent-seed replicate retrieval P@1 on the 5-replicate small cohort
-    (chance 4/69 ~= 0.058), the one stability notion defined for every row.
+  - Stability column: pipeline test-retest self-retrieval P@1 (same trace,
+    resampled rubric creation + extraction; chance 1/107). Deterministic
+    rows are exactly 1.0; free-form retest pending.
 
 Cell text = raw metric. Color = desirability: for keep-columns (Task,
 Behavior, Stability) distance above chance toward the column max; for
@@ -51,7 +51,7 @@ stab_path = 'figures/stability_column.json'
 if os.path.exists(stab_path):
     stab = json.load(open(stab_path))
     for r in ROWS:
-        vals[r]['stability'] = stab['rows'][r]
+        vals[r]['stability'] = stab['rows'].get(r)
     chance['stability'] = stab['chance']
     COLS.append(('stability', 'Stability', 'keep'))
 
@@ -61,11 +61,17 @@ fig.patch.set_facecolor(SURFACE)
 ax.set_facecolor(SURFACE)
 
 for j, (key, lab, kind) in enumerate(COLS):
-    col = [vals[r][key] for r in ROWS]
+    col = [vals[r][key] for r in ROWS if vals[r][key] is not None]
     ch = chance[key]
     vmax = max(col)
     for i, r in enumerate(ROWS):
         v = vals[r][key]
+        if v is None:
+            ax.add_patch(Rectangle((j, i), 0.97, 0.97, facecolor='#eef2f9',
+                                   edgecolor=GRID, hatch='///', lw=0.8))
+            ax.text(j + 0.485, i + 0.485, 'pending', ha='center', va='center',
+                    fontsize=9, color='#9aa7c4', style='italic')
+            continue
         if kind == 'keep':
             desir = np.clip((v - ch) / max(vmax - ch, 1e-9), 0, 1)
         else:

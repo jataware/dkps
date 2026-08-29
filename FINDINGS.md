@@ -370,6 +370,31 @@ re-rendered with include_tool_output_chars=1500 (median 43K chars).
 Data: figures/stability_column.json; emb cache smallcohort_emb_nomic_v2.npz;
 scripts: smallcohort_judge.py, stability_column.py, fig_heatmap.py.
 
+**F26. Stability redefined + measured as pipeline test-retest (2026-08-29,
+per HH).** Definition: the SAME trace re-processed should map to ~the same
+place; stochastic stages are rubric creation + extraction; agent-run
+variance is variance in the world, not the measurement (the F25 replicate
+numbers are hereby relabeled BEHAVIORAL CONSISTENCY --
+figures/behavioral_consistency.json). Measurements (deepseek judge, nomic,
+q20 x 107, within-instance self-retrieval, chance 1/107=.009):
+extraction retest (same mini rubrics, resampled extraction) trace P@1 .316
+centered / .222 uncentered -- centering HELPS self-retrieval (removes shared
+instance content, sharpens the residual); distance ratio d(self)/med
+d(others) = .873; SYSTEM-level (20-instance aggregate) self-retrieval .804.
+Pipeline retest (rubrics REWRITTEN by deepseek -- also a cross-writer test,
+pass-1 rubrics were mini-written -- then extraction): trace P@1 .291 on 690
+pairs (partial; 402-blocked), only .025 below extraction-only => rubric
+perturbation is a minor noise source vs extraction sampling; first Model-1
+sensitivity datum. Deterministic rows (raw/head/tail/centered) are exactly
+1.0 by construction. PITFALL: computing pass-2 consensus centering over
+rows that include blank (missing) extractions poisons per-instance medians
+(P@1 .05 artifact -> .291 with valid-row centering). Cross-judge trace
+agreement (.12-.28, F-earlier) is confirmed as a lower bound on same-judge
+retest. Blocked on OpenRouter credits: 1450 pipeline pairs, free-form
+retest row. Data: figures/stability_retest_full.json,
+stability_retest_extraction.json, stability_column.json;
+script: stability_retest.py.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.

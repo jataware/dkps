@@ -1,0 +1,12 @@
+{
+  "metric": "agent-replicate retrieval P@1 (behavioral consistency, NOT embedding stability)",
+  "chance": 0.057971014492753624,
+  "rows": {
+    "raw": 0.324,
+    "head-only": 0.347,
+    "tail-only": 0.291,
+    "centered": 0.341,
+    "free-form judge": 0.337,
+    "qubric": 0.211
+  }
+}
