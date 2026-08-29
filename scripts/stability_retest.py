@@ -45,7 +45,8 @@ def run_extraction(key, systems, q20, rubrics, outdir):
         if not todo:
             continue
         graded = grade_traces(rubrics, todo, key, JUDGE,
-                              task_ids={q: q for q in todo}, workers=10)
+                              task_ids={q: q for q in todo}, workers=10,
+                              on_error='skip')
         os.makedirs(os.path.join(outdir, s), exist_ok=True)
         for q, g in graded.items():
             open(os.path.join(outdir, s, f'{q}.json'), 'w').write(json.dumps(g))

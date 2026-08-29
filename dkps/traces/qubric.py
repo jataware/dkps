@@ -144,7 +144,7 @@ def write_rubrics(tasks, api_key, model_name, sections=DEFAULT_SECTIONS,
 def grade_traces(rubrics, traces, api_key, model_name,
                  task_ids=None, sections=DEFAULT_SECTIONS,
                  base_url=DEFAULT_BASE_URL, workers=16,
-                 max_trace_chars=60_000):
+                 max_trace_chars=60_000, on_error='raise'):
     """rubrics: a single rubric dict, or dict[task_id -> rubric].
     traces: str | list[str] | dict[key -> trace text].
     task_ids: when rubrics is per-task, aligns each trace to its task
@@ -170,9 +170,14 @@ def grade_traces(rubrics, traces, api_key, model_name,
             t = t[:max_trace_chars * 2 // 3] + '\n...[omitted]...\n' \
                 + t[-max_trace_chars // 3:]
         rub = '\n'.join(f'- {s}: {rub_for[k].get(s, "")}' for s in sections)
-        g = _chat(api_key, model_name,
-                  GRADE_PROMPT.format(rubric=rub, keys=list(sections), trace=t),
-                  sections, base_url)
+        try:
+            g = _chat(api_key, model_name,
+                      GRADE_PROMPT.format(rubric=rub, keys=list(sections), trace=t),
+                      sections, base_url)
+        except RuntimeError:
+            if on_error == 'raise':
+                raise
+            return                      # on_error='skip': caller retries later
         with lock:
             out[k] = g
 
