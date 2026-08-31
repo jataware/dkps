@@ -56,27 +56,56 @@ def _parse_score(ev):
     return np.nan
 
 
-def _task_of(record):
+def _task_of(record, suite=None):
     src = (record.get('metadata') or {}).get('source_task')
     if not src:
         sid = record.get('sample_id') or ''
-        src = sid.split(':', 1)[0] if ':' in sid else (record.get('evaluation_id') or 'task').split('/')[0]
+        src = sid.split(':', 1)[0] if ':' in sid else (suite or 'task')
     return re.sub(r'[^0-9a-zA-Z_]+', '_', str(src))
 
 
-def record_to_row(record, model_id=None):
-    """One EEE instance-level dict -> one dkps record row (or None if unusable)."""
-    out = (record.get('output') or {}).get('raw')
-    if isinstance(out, list):
-        out = out[0] if out else None
+def _suite_of(record):
+    """Benchmark name from the record itself. evaluation_id is 'benchmark/dev_model/ts'
+    on some benchmarks and a bare run UUID on others; evaluation_name is the fallback."""
+    eid = record.get('evaluation_id') or ''
+    if '/' in eid:
+        return eid.split('/')[0]
+    return record.get('evaluation_name') or None
+
+
+def _response_of(record):
+    """Response text: output.raw (string or list) for single-turn records; for
+    multi-turn records (arenas, agent benchmarks) output is empty and the transcript
+    lives in 'messages' -- the model's own turns, joined, are the response."""
+    out = record.get('output')
+    raw = out.get('raw') if isinstance(out, dict) else None
+    if isinstance(raw, list):
+        raw = raw[0] if raw else None
+    if isinstance(raw, str) and raw:
+        return raw
+    msgs = record.get('messages')
+    if isinstance(msgs, list):
+        turns = [m.get('content') for m in msgs
+                 if isinstance(m, dict) and m.get('role') == 'assistant'
+                 and isinstance(m.get('content'), str) and m.get('content')]
+        if turns:
+            return '\n'.join(turns)
+    return None
+
+
+def record_to_row(record, model_id=None, suite=None):
+    """One EEE instance-level dict -> one dkps record row (or None if unusable).
+    model_id / suite override what the record carries (the store's directory layout
+    is the more reliable source for both)."""
+    out = _response_of(record)
     query = (record.get('input') or {}).get('raw')
     score = _parse_score(record.get('evaluation') or {})
     model = model_id or record.get('model_id')
     qid = record.get('sample_id')
-    if not model or qid is None or not query or not isinstance(out, str) or not out:
+    if not model or qid is None or not query or not out:
         return None
-    suite = (record.get('evaluation_id') or '').split('/')[0] or None
-    row = {'model_id': str(model), 'task_id': _task_of(record), 'query_id': str(qid),
+    suite = suite or _suite_of(record)
+    row = {'model_id': str(model), 'task_id': _task_of(record, suite), 'query_id': str(qid),
            'query': str(query), 'response': out,
            'score': score if np.isfinite(score) else np.nan}
     if suite:
@@ -109,12 +138,13 @@ def load_records(paths, max_queries_per_cell=32, seed=0, model_from='auto'):
     for order, fp in enumerate(sorted(files, key=lambda f: f.stat().st_mtime)):
         use_path = model_from == 'path' or (model_from == 'auto' and len(fp.parts) >= 3)
         path_id = f'{fp.parts[-3]}/{fp.parts[-2]}' if use_path else None
+        path_suite = fp.parts[-4] if (use_path and len(fp.parts) >= 4) else None
         with open(fp) as fh:
             for line in fh:
                 line = line.strip()
                 if not line:
                     continue
-                row = record_to_row(json.loads(line), model_id=path_id)
+                row = record_to_row(json.loads(line), model_id=path_id, suite=path_suite)
                 if row is None or not np.isfinite(row['score']):
                     dropped += 1
                     continue
@@ -141,10 +171,12 @@ def load_records(paths, max_queries_per_cell=32, seed=0, model_from='auto'):
     return df
 
 
-def fetch_samples(benchmarks, dest='eee_cache', newest_only=True):
+def fetch_samples(benchmarks='all', dest='eee_cache', newest_only=True):
     """Download the ``*_samples.jsonl`` runs for the given benchmarks from the EEE
     datastore on Hugging Face (cached in ``dest``). Returns the local file paths.
 
+    benchmarks : list of benchmark names, or 'all' (default) for every benchmark in
+        the manifest.
     newest_only : keep only the newest run per (benchmark, model) by the manifest's
         ``added_at`` (the store often holds several runs of the same model).
     """
@@ -159,7 +191,7 @@ def fetch_samples(benchmarks, dest='eee_cache', newest_only=True):
         if not path.endswith('_samples.jsonl'):
             continue
         parts = path.split('/')
-        if len(parts) < 5 or parts[1] not in benchmarks:
+        if len(parts) < 5 or (benchmarks != 'all' and parts[1] not in benchmarks):
             continue
         key = (parts[1], f'{parts[2]}/{parts[3]}') if newest_only else path
         if key not in best or meta['added_at'] > best[key][1]:

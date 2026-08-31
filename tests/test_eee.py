@@ -10,10 +10,11 @@ from dkps import PKPS, SampleScore
 from dkps.eee import load_records, record_to_row
 
 
-def make_store(tmp_path, n_models=6, n_tasks=2, n_queries=10):
-    """A miniature EEE store: one *_samples.jsonl per model, real schema quirks
-    included (string scores, is_correct fallback, list outputs)."""
-    root = tmp_path / 'bench'
+def make_store(tmp_path, n_models=6, n_tasks=2, n_queries=10, bench='bench'):
+    """A miniature EEE store: one *_samples.jsonl per model under a benchmark
+    directory (store layout), real schema quirks included (string scores,
+    is_correct fallback, list outputs)."""
+    root = tmp_path / bench
     for i in range(n_models):
         fp = root / f'dev{i % 3}' / f'model-{i}' / 'run_samples.jsonl'
         fp.parent.mkdir(parents=True)
@@ -24,12 +25,12 @@ def make_store(tmp_path, n_models=6, n_tasks=2, n_queries=10):
                          {'is_correct': 'True' if (i + q) % 2 else 'False'}
                     fh.write(json.dumps({
                         'model_id': f'dev{i % 3}/model-{i}',
-                        'evaluation_id': f'bench{t}/dev{i % 3}_model-{i}/1',
-                        'sample_id': f'bench_task{t}:{q}',
+                        'evaluation_id': f'{bench}/dev{i % 3}_model-{i}/1',
+                        'sample_id': f'{bench}_task{t}:{q}',
                         'input': {'raw': f'question {t}-{q}?'},
                         'output': {'raw': [f'answer {i}-{t}-{q}']},
                         'evaluation': ev,
-                        'metadata': {'source_task': f'bench_task{t}'},
+                        'metadata': {'source_task': f'{bench}_task{t}'},
                     }) + '\n')
     return root
 
@@ -109,14 +110,31 @@ def test_suite_column_blocks_responses(tmp_path, monkeypatch):
         return np.stack([np.random.default_rng(abs(hash(t)) % 2**32).normal(size=16)
                          for t in texts])
     monkeypatch.setattr(dkps.embed, 'embed_api', fake_embed)
-    records = load_records(make_store(tmp_path), max_queries_per_cell=None)
-    assert set(records.suite) == {'bench0', 'bench1'}
+    make_store(tmp_path, bench='bench_a')
+    make_store(tmp_path, bench='bench_b')
+    records = load_records(tmp_path, max_queries_per_cell=None)
+    assert set(records.suite) == {'bench_a', 'bench_b'}
     est = PKPS(query_kwargs=dict(pca_dim=None), mds_kwargs=dict(dim=4)).fit(records)
     md = est._model_data[est.model_names_[0]]
     sub = est._raw[est._raw.model_id == est.model_names_[0]].sort_values(['task_id', 'query_id'])
-    X0 = md['X'][(sub.suite == 'bench0').to_numpy()]
-    X1 = md['X'][(sub.suite == 'bench1').to_numpy()]
+    X0 = md['X'][(sub.suite == 'bench_a').to_numpy()]
+    X1 = md['X'][(sub.suite == 'bench_b').to_numpy()]
     assert np.abs(X0 @ X1.T).max() < 1e-12          # disjoint blocks
     np.testing.assert_allclose(np.linalg.norm(md['X'], axis=1), 1.0)   # unit-normalized
     assert all(np.isfinite(r['score_hat']) for r in
                est.predict([{'model_id': est.model_names_[0]}], holdout='family'))
+
+
+def test_multiturn_response_from_messages():
+    """Arena/agent records: output is empty, transcript in messages; the model's own
+    turns become the response."""
+    rec = {'model_id': 'd/m', 'sample_id': 'arena_44', 'evaluation_name': 'arena',
+           'input': {'raw': 'Guess the word.'}, 'output': None,
+           'messages': [{'role': 'system', 'content': 'rules'},
+                        {'role': 'assistant', 'content': 'CRANE'},
+                        {'role': 'user', 'content': 'feedback'},
+                        {'role': 'assistant', 'content': 'SLOTH'}],
+           'evaluation': {'score': '0.0', 'num_turns': '4'}}
+    row = record_to_row(rec)
+    assert row['response'] == 'CRANE\nSLOTH'
+    assert row['suite'] == 'arena' and row['task_id'] == 'arena'   # no ':' in sample_id

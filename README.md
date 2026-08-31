@@ -192,6 +192,15 @@ Practical notes:
   tasks; a single benchmark with few models predicts poorly. The adapter emits a
   `suite` column and `PKPS.fit` then reduces responses per benchmark into disjoint
   unit-normalized blocks (the paper's construction) automatically.
+- **Or use the whole store.** `fetch_samples('all')` pulls every benchmark, and the
+  adapter handles the store's full heterogeneity: single-turn `output.raw` and
+  multi-turn transcripts (arena and agent runs -- the model's own turns become the
+  response), per-benchmark `evaluation_id` conventions, and repeat uploads. On the
+  complete store (896 runs, 36 benchmarks) this yields 164 models x 46 tasks and a
+  fit in about a minute; every unevaluated (model, task) cell gets a prediction.
+  Keep expectations calibrated to coverage: 59% of model pairs share no benchmark,
+  and for those pairs the response channel carries no direct signal -- predictions
+  travel through the models that connect them.
 - **Cost.** Embedding is the only paid step and is cached on disk: the paper's full
   five-benchmark suite (~38k texts, ~11M tokens) cost under \$2 and ~13 minutes
   through `gemini-embedding-001`; other providers plug in via
