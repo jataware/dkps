@@ -176,6 +176,20 @@ ens = Ensemble([PKPS(), LRMC()], mode='cv', holdout=None,
 missing = ens.predict()
 ```
 
+**Look around: models, benchmarks, and every score.** After a fit, the estimator is
+also the catalog:
+
+```python
+est.model_names_, est.task_names_, est.suite_names_   # available models / tasks / benchmarks
+est.sample_scores_                     # observed (model x task) sample-score DataFrame
+
+tbl = est.score_table()                # one row per (model, task): the observed score
+                                       # where responses exist, the prediction where not
+tbl[tbl.model_id == 'openai/gpt-oss-20b']      # all scores for one model
+tbl[tbl.suite == 'gsm-mc']                     # all scores for one benchmark
+tbl[tbl.source == 'predicted']                 # just the filled-in cells
+```
+
 **Add your own run.** Point `load_records` at your local `*_samples.jsonl` files (or
 directories in the store's `benchmark/developer/model/` layout), and fold new runs
 into a fitted space without re-embedding the cache:
@@ -185,6 +199,11 @@ mine = load_records(['my_model_run_samples.jsonl'], model_from='record')
 est.update(mine)                       # only affinities involving your model recompute
 est.predict([{'model_id': mine.model_id.iloc[0]}])
 ```
+
+`update` covers new models and new responses on benchmarks the fit has seen. A new
+*benchmark* changes the block layout, which is frozen at fit time -- re-run `fit`
+over all records instead (embeddings are disk-cached, so only the new texts are
+embedded).
 
 Practical notes:
 

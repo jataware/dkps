@@ -138,3 +138,28 @@ def test_multiturn_response_from_messages():
     row = record_to_row(rec)
     assert row['response'] == 'CRANE\nSLOTH'
     assert row['suite'] == 'arena' and row['task_id'] == 'arena'   # no ':' in sample_id
+
+
+def test_score_table_and_listings(tmp_path, monkeypatch):
+    def fake_embed(provider, texts, **kw):
+        return np.stack([np.random.default_rng(abs(hash(t)) % 2**32).normal(size=16)
+                         for t in texts])
+    monkeypatch.setattr(dkps.embed, 'embed_api', fake_embed)
+    make_store(tmp_path, bench='bench_a')
+    make_store(tmp_path, n_models=4, bench='bench_b')
+    records = load_records(tmp_path, max_queries_per_cell=None)
+    est = PKPS(query_kwargs=dict(pca_dim=None), mds_kwargs=dict(dim=4)).fit(records)
+    assert est.suite_names_ == ['bench_a', 'bench_b']
+    assert est.task_suites_['bench_a_task0'] == 'bench_a'
+    tbl = est.score_table(holdout='family')
+    # one row per (model, task) cell; observed where responses exist, predicted otherwise
+    assert len(tbl) == len(est.model_names_) * len(est.task_names_)
+    assert set(tbl.source) == {'observed', 'predicted'}
+    missing = tbl[tbl.source == 'predicted']
+    assert (missing.suite == 'bench_b').all() or (missing.suite == 'bench_a').all()
+    one = tbl[tbl.model_id == est.model_names_[0]]
+    assert len(one) == len(est.task_names_)
+    # a new suite cannot enter through update(): frozen block layout, clear error
+    extra = records[records.suite == 'bench_a'].head(3).assign(suite='bench_c')
+    with pytest.raises(KeyError, match='fresh\\s+fit'):
+        est.update(extra)

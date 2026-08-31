@@ -152,7 +152,10 @@ class BlockDiagonalEmbedding:
         out = np.zeros((len(X), self.total_dim_))
         for g in set(groups.tolist()):
             if g not in self.pcas_:
-                raise KeyError(f'unknown group {g!r}; refit with its rows')
+                raise KeyError(f'unknown group {g!r}: the block layout is frozen at fit '
+                               'time, so adding a new suite/benchmark requires a fresh '
+                               'fit() over all records (embeddings are disk-cached, so '
+                               'only the new texts are embedded)')
             idx = np.where(groups == g)[0]
             R = self.pcas_[g].transform(X[idx])
             R = R / (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)

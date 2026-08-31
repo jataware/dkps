@@ -275,6 +275,29 @@ class PKPS:
             preds[(m, t)] = r
         return pairs_to_records(pairs, preds)
 
+    def score_table(self, **predict_kwargs):
+        """Every (model, task) cell as one tidy row: the observed sample score where the
+        cell has responses, the model's prediction where it does not.
+
+        Returns a DataFrame with columns model_id, task_id, score, source
+        ('observed' | 'predicted'), and suite (when the fit records carried one).
+        predict_kwargs are forwarded to predict() for the missing cells (k, holdout,
+        whiten, ...). Filter by model_id for one model's row, by task_id (or suite)
+        for one benchmark's column.
+        """
+        assert self._fitted, 'call fit() before score_table()'
+        S = self.sample_scores_
+        rows = [{'model_id': m, 'task_id': t, 'score': float(S.at[m, t]), 'source': 'observed'}
+                for m in self.model_names_ for t in self.task_names_
+                if pd.notna(S.at[m, t])]
+        rows += [{'model_id': r['model_id'], 'task_id': r['task_id'],
+                  'score': r['score_hat'], 'source': 'predicted'}
+                 for r in self.predict(None, **predict_kwargs)]
+        df = pd.DataFrame(rows)
+        if self.task_suites_:
+            df['suite'] = df['task_id'].map(self.task_suites_)
+        return df.sort_values(['model_id', 'task_id']).reset_index(drop=True)
+
     # ------------------------------------------------------------------
     # ingestion
     # ------------------------------------------------------------------
@@ -475,6 +498,13 @@ class PKPS:
         table = ScoreTable(self._raw, models=names)
         self.sample_scores_ = table.sample_
         self.task_names_ = table.tasks
+        if 'suite' in self._raw.columns:
+            ts = self._raw.dropna(subset=['suite']).groupby('task_id')['suite'].first()
+            self.task_suites_ = ts.to_dict()
+            self.suite_names_ = sorted(set(ts))
+        else:
+            self.task_suites_ = {}
+            self.suite_names_ = []
         ref = self._raw.dropna(subset=['reference_score']).groupby(['model_id', 'task_id'])[
             'reference_score'].first().unstack()
         self.reference_scores_ = ref.reindex(index=names, columns=self.task_names_)
