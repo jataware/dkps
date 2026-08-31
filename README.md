@@ -139,9 +139,11 @@ the store's native `*_samples.jsonl` runs directly -- your uploaded run is alrea
 the right format, and no preprocessing pipeline is needed.
 
 ```bash
-git clone <this repo> && cd dkps && pip install -e .    # or: pixi install
+git clone https://github.com/hhelm10/dkps && cd dkps && pip install -e .   # or: pixi install
 export GEMINI_API_KEY=...                               # embeds query/response text
 ```
+
+Python 3.11 or 3.12 (the window is set by the pinned graspologic fork). MIT licensed.
 
 `fit` itself does not embed anything: rows that carry raw `query`/`response` text are
 sent through the configured embedding backend (`embedding_kwargs=dict(provider=,
