@@ -96,6 +96,28 @@ ens = Ensemble([pkps, lrmc], mode='cv', holdout=None,
 missing = ens.predict()                                  # every cell without an observed score
 ```
 
+### PKPS on Every Eval Ever data
+
+`dkps.eee` reads the [EEE datastore](https://huggingface.co/datasets/evaleval/EEE_datastore)'s
+native `*_samples.jsonl` runs directly -- no preprocessing pipeline required:
+
+```python
+from dkps import PKPS
+from dkps.eee import fetch_samples, load_records
+
+paths = fetch_samples(['gsm-mc', 'gpqa-diamond'], dest='eee_cache')  # newest run per model
+records = load_records(paths)             # model/task/query/text/score records, 32 queries per cell
+est = PKPS().fit(records)                 # embeds the raw text (GEMINI_API_KEY), builds the space
+est.predict([{'model_id': 'openai/gpt-oss-20b'}])   # -> score_hat for every task
+```
+
+The adapter normalizes the store's quirks (string scores, `is_correct` fallback,
+list outputs, raw-repo vs. normalized model naming, duplicate runs) and emits a
+`suite` column, which makes `PKPS.fit` build the paper's block-diagonal
+multi-benchmark response space automatically. Verified on the live store: a joint
+fit over five benchmarks (69 models x 16 tasks at 8 queries per cell) predicts
+held-out-family sample scores at MAE 0.120 versus 0.153 for the task mean.
+
 ### Reproducing a paper result
 
 `examples/helm/example_table1.py` reproduces one cell of Table 1 end to end with

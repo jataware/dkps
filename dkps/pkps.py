@@ -28,7 +28,7 @@ from scipy.spatial.distance import cdist, pdist
 from sklearn.neighbors import KNeighborsRegressor
 from graspologic.embed import ClassicalMDS
 
-from .preprocessing import FrozenPCA, Whitener
+from .preprocessing import BlockDiagonalEmbedding, FrozenPCA, Whitener
 from .records import parse_records, merge_records, parse_pairs, pairs_to_records, ScoreTable
 
 
@@ -96,6 +96,17 @@ def _lomo_knn_error(Z, y, k):
     return errs
 
 
+class _BlockReducer:
+    """Response reducer for suite-labeled records: wraps BlockDiagonalEmbedding so the
+    grouped transform threads through the frozen-reducer plumbing."""
+
+    def __init__(self, block):
+        self.block = block
+
+    def transform(self, X, groups):
+        return self.block.transform(X, groups)
+
+
 class PKPS:
     """Product Kernel Perspective Space estimator.
 
@@ -157,10 +168,14 @@ class PKPS:
         Each record: model_id, task_id, query_id, a response (text under 'response', or
         a vector under 'response_embedding'/'embedding'), a query (text under 'query',
         or vector under 'query_embedding'; required unless the query kernel is
-        'delta'), an optional per-response 'score', and an optional cell-level
+        'delta'), an optional per-response 'score', and optional cell-level columns:
         'reference_score' (a known benchmark score for that (model, task), e.g. from a
         fully evaluated cache; used as the regression target in place of the sample
-        score when present).
+        score when present), 'sample_score' (overrides the per-cell mean of 'score'),
+        and 'suite' (a benchmark/domain label: responses are then PCA-reduced per
+        suite, unit-normalized, and placed in disjoint blocks, so a linear response
+        kernel is exactly zero across suites -- the paper's multi-benchmark
+        construction).
         """
         df = self._ingest(records)
         self._raw = df
@@ -290,6 +305,8 @@ class PKPS:
                 'reference_score', 'sample_score']
         if 'query_embedding' in df.columns:
             keep.append('query_embedding')
+        if 'suite' in df.columns:
+            keep.append('suite')
         df = df[keep].copy()
         assert not df.duplicated(['model_id', 'task_id', 'query_id']).any(), \
             'duplicate (model_id, task_id, query_id) rows'
@@ -314,19 +331,33 @@ class PKPS:
     # reduction + kernels
     # ------------------------------------------------------------------
     def _fit_reducers(self, df):
-        """Learn the per-channel PCA bases and resolve the kernel bandwidths. Both are frozen
-        afterwards so that update() can project new rows into the same space."""
+        """Learn the per-channel reducers and resolve the kernel bandwidths. Both are
+        frozen afterwards so that update() can project new rows into the same space.
+        With a 'suite' column the response channel is reduced per suite and placed in
+        disjoint unit-normalized blocks (BlockDiagonalEmbedding); update() then only
+        accepts suites seen at fit time."""
         R = np.stack([np.asarray(e, dtype=np.float64) for e in df['response_embedding']])
-        self._response_pca = FrozenPCA(self.response_kwargs['pca_dim'],
-                                       self.response_kwargs['pca_n_elbows']).fit(R)
+        if 'suite' in df.columns:
+            dim = self.response_kwargs['pca_dim']
+            self._response_pca = _BlockReducer(
+                BlockDiagonalEmbedding(reduce_dim=dim if isinstance(dim, int) else 48,
+                                       n_elbows=self.response_kwargs['pca_n_elbows']
+                                       ).fit(R, df['suite'].to_numpy()))
+        else:
+            self._response_pca = FrozenPCA(self.response_kwargs['pca_dim'],
+                                           self.response_kwargs['pca_n_elbows']).fit(R)
         self._response_bandwidth = None
         if self.response_kwargs['kernel'] == 'rbf':
             bw = self.response_kwargs['bandwidth']
             if bw == 'cv':
                 raise ValueError("bandwidth='cv' is only supported on the query channel")
-            self._response_bandwidth = self._scale(self.response_kwargs,
-                                                   self._response_pca.transform(R)) \
-                if not isinstance(bw, (int, float)) else float(bw)
+            if isinstance(bw, (int, float)):
+                self._response_bandwidth = float(bw)
+            else:
+                Rr = self._response_pca.transform(R, df['suite'].to_numpy()) \
+                    if isinstance(self._response_pca, _BlockReducer) \
+                    else self._response_pca.transform(R)
+                self._response_bandwidth = self._scale(self.response_kwargs, Rr)
 
         self._query_pca = None
         self._sigmas = [None]
@@ -360,7 +391,11 @@ class PKPS:
     def _reduce_model(self, sub):
         sub = sub.sort_values(['task_id', 'query_id'])
         X = np.stack([np.asarray(e, dtype=np.float64) for e in sub['response_embedding']])
-        md = {'query_ids': sub['query_id'].values, 'X': self._response_pca.transform(X)}
+        if isinstance(self._response_pca, _BlockReducer):
+            Xr = self._response_pca.transform(X, sub['suite'].to_numpy())
+        else:
+            Xr = self._response_pca.transform(X)
+        md = {'query_ids': sub['query_id'].values, 'X': Xr}
         if self._query_pca is not None:
             Q = np.stack([np.asarray(e, dtype=np.float64) for e in sub['query_embedding']])
             md['Q'] = self._query_pca.transform(Q)

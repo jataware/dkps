@@ -20,6 +20,7 @@ from .pkps import PKPS, DKPS
 from .dkps import DataKernelPerspectiveSpace
 from .synthetic import generate_benchmark_data
 from .unpaired_dkps import ProductKernelPerspectiveSpace, DoubleKernelDKPS
+from . import eee
 from .ensemble import Ensemble
 from .preprocessing import Whitener, FrozenPCA, BlockDiagonalEmbedding
 from .baselines import (
@@ -38,6 +39,7 @@ __all__ = [
     'DataKernelPerspectiveSpace',
     'ProductKernelPerspectiveSpace',
     'DoubleKernelDKPS',
+    'eee',
     'Ensemble',
     'SampleScore',
     'IRT',
