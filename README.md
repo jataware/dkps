@@ -96,28 +96,6 @@ ens = Ensemble([pkps, lrmc], mode='cv', holdout=None,
 missing = ens.predict()                                  # every cell without an observed score
 ```
 
-### PKPS on Every Eval Ever data
-
-`dkps.eee` reads the [EEE datastore](https://huggingface.co/datasets/evaleval/EEE_datastore)'s
-native `*_samples.jsonl` runs directly -- no preprocessing pipeline required:
-
-```python
-from dkps import PKPS
-from dkps.eee import fetch_samples, load_records
-
-paths = fetch_samples(['gsm-mc', 'gpqa-diamond'], dest='eee_cache')  # newest run per model
-records = load_records(paths)             # model/task/query/text/score records, 32 queries per cell
-est = PKPS().fit(records)                 # embeds the raw text (GEMINI_API_KEY), builds the space
-est.predict([{'model_id': 'openai/gpt-oss-20b'}])   # -> score_hat for every task
-```
-
-The adapter normalizes the store's quirks (string scores, `is_correct` fallback,
-list outputs, raw-repo vs. normalized model naming, duplicate runs) and emits a
-`suite` column, which makes `PKPS.fit` build the paper's block-diagonal
-multi-benchmark response space automatically. Verified on the live store: a joint
-fit over five benchmarks (69 models x 16 tasks at 8 queries per cell) predicts
-held-out-family sample scores at MAE 0.120 versus 0.153 for the task mean.
-
 ### Reproducing a paper result
 
 `examples/helm/example_table1.py` reproduces one cell of Table 1 end to end with
@@ -152,6 +130,84 @@ scripts produced. All rows agree to 0.
 pixi run pytest tests            # 14 tests: API, incremental update == fresh fit,
                                  # equality with the pipeline functions, leakage
 ```
+
+## For Every Eval Ever users
+
+The [EEE datastore](https://huggingface.co/datasets/evaleval/EEE_datastore) already
+holds what PKPS runs on: raw model responses with per-item scores. `dkps.eee` reads
+the store's native `*_samples.jsonl` runs directly -- your uploaded run is already in
+the right format, and no preprocessing pipeline is needed.
+
+```bash
+git clone <this repo> && cd dkps && pip install -e .    # or: pixi install
+export GEMINI_API_KEY=...                               # embeds query/response text
+```
+
+`fit` itself does not embed anything: rows that carry raw `query`/`response` text are
+sent through the configured embedding backend (`embedding_kwargs=dict(provider=,
+model=, api_key=)`; default Gemini via `GEMINI_API_KEY`, results disk-cached), and
+`provider='sentence-transformers'` embeds locally with no API key (requires the
+`sentence-transformers` package). Rows that already carry
+`response_embedding`/`query_embedding` vectors skip the backend entirely.
+
+**Score a model from a handful of queries.** Fit on cached runs across several
+benchmarks; every model in the fit gets a prediction for every task, using only the
+responses it happens to have:
+
+```python
+from dkps import PKPS
+from dkps.eee import fetch_samples, load_records
+
+paths = fetch_samples(['gsm-mc', 'gpqa-diamond', 'math-mc'])   # newest run per model, cached
+records = load_records(paths)          # model/task/query/text/score rows, 32 queries per cell
+est = PKPS().fit(records)              # embeds the text, builds the perspective space
+est.predict([{'model_id': 'openai/gpt-oss-20b'}])       # -> score_hat for every task
+```
+
+**Complete benchmarks a model never ran.** A model that answered *none* of a task's
+queries is still embedded from its responses elsewhere; `est.predict()` with no
+arguments returns every (model, task) cell that has no observed score. For the
+paper's strongest completion numbers, blend with the matrix-completion baseline:
+
+```python
+from dkps import LRMC, Ensemble
+ens = Ensemble([PKPS(), LRMC()], mode='cv', holdout=None,
+               predict_kwargs=[{'whiten': True}, {}]).fit(records)
+missing = ens.predict()
+```
+
+**Add your own run.** Point `load_records` at your local `*_samples.jsonl` files (or
+directories in the store's `benchmark/developer/model/` layout), and fold new runs
+into a fitted space without re-embedding the cache:
+
+```python
+mine = load_records(['my_model_run_samples.jsonl'], model_from='record')
+est.update(mine)                       # only affinities involving your model recompute
+est.predict([{'model_id': mine.model_id.iloc[0]}])
+```
+
+Practical notes:
+
+- **Fit across several benchmarks.** The method borrows strength across models and
+  tasks; a single benchmark with few models predicts poorly. The adapter emits a
+  `suite` column and `PKPS.fit` then reduces responses per benchmark into disjoint
+  unit-normalized blocks (the paper's construction) automatically.
+- **Cost.** Embedding is the only paid step and is cached on disk: the paper's full
+  five-benchmark suite (~38k texts, ~11M tokens) cost under \$2 and ~13 minutes
+  through `gemini-embedding-001`; other providers plug in via
+  `PKPS(embedding_kwargs=dict(provider=..., api_key=...))`.
+- **Query pools.** `load_records` caps each (model, task) cell at 32 queries (the
+  paper's setting) because PKPS cost grows with the product of two models' per-cell
+  counts; pass `max_queries_per_cell=None` to keep full depth.
+- **Naming.** The store's directory layout carries normalized model ids
+  (`cohere/c4ai-command-a-03-2025`) while in-file `model_id` is the raw repo name
+  (`CohereLabs/...`); the adapter prefers the path form so runs of the same model
+  line up. It also parses the store's string scores, `is_correct` fallback, and list
+  outputs, and resolves duplicate runs to the newest.
+- **Sanity check on the live store**: a joint fit over five benchmarks (69 models
+  x 16 tasks at 8 queries per cell) predicts held-out-family sample scores at MAE
+  0.120 versus 0.153 for the per-task mean. The paper's Table 1 reports the full
+  evaluation on a 45-model, 16-task submatrix.
 
 ## Repository layout
 
