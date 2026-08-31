@@ -167,3 +167,7 @@ cython_debug/
 # pixi environments
 .pixi
 *.egg-info
+
+# Shared local payloads (downloads, embedding parquets, caches) -- never tracked
+/data/*
+!/data/README.md

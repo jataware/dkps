@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'examples' / 'helm'))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'projects' / 'pkps' / 'helm'))
 from pipeline import loaders as H                       # noqa: E402
 from pipeline.query_select import _lofo_regress, family as fam_fn, max_dense_block as mdb_ref  # noqa: E402
 
