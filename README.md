@@ -33,8 +33,9 @@ notes/summary.tex       the write-up (pdflatex notes/summary.tex)
 ## Setup
 
 ```bash
-pip install -e . numpy scipy graspologic requests python-dotenv tqdm \
-    sentence-transformers datasets huggingface_hub awscli matplotlib
+pip install -e . numpy scipy graspologic "setuptools<81" requests \
+    python-dotenv tqdm sentence-transformers datasets huggingface_hub \
+    awscli matplotlib   # setuptools pin: graspologic still imports pkg_resources
 echo 'OPENROUTER_API_KEY=sk-or-...' > .env   # any OpenAI-compatible endpoint works
 ```
 
