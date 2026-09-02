@@ -170,3 +170,4 @@ notes/*.aux
 notes/*.log
 notes/*.out
 notes/pg-*.png
+share/

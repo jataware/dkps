@@ -12,7 +12,7 @@ rubric-structured description of it, embedded section-wise and centered
 against the cross-system consensus.
 
 Read `notes/summary.pdf` for the current write-up, `FINDINGS.md` for the
-complete experimental log (F1–F25), `PAPER.md` for the exhibit plan, and
+complete experimental log (F1–F26), `PAPER.md` for the exhibit plan, and
 `RELATED.md` for the literature context.
 
 ## Layout
@@ -115,10 +115,44 @@ inflates accuracy ~25% via model-family leakage), and per-instance
 consensus centering is part of the representation. See FINDINGS §2 for the
 full protocol and F17/F18 for the documented overfitting traps.
 
+## Figures
+
+Every figure in `notes/summary.pdf` regenerates from committed data:
+
+| figure | script | data |
+|---|---|---|
+| sensitivity radars | `scripts/fig_radar.py` | `figures/radar_all_data_v2.json`, `figures/family_metric.json` |
+| property heatmap | `scripts/fig_heatmap.py` | same + `figures/stability_column.json` |
+| QUENCH pair | `scripts/fig_quench.py` | `figures/pipeline_final.json`, `figures/qspec_fig_data_pkps.json`, `figures/quench_n.json` |
+
+Also available: `scripts/fig1_schematic.py` (methods schematic),
+`scripts/fig_judge_matrix.py` (judge x construction matrix). To recompute the
+underlying numbers rather than redraw: `scripts/pillars.py` (radar/heatmap
+metrics), `scripts/quench.py` (QUENCH curves), `scripts/judge_matrix.py`
+(matrix cells), `scripts/stability_retest.py` + `scripts/stability_column.py`
+(stability measurements).
+
+## Shared data artifacts
+
+Everything expensive or impossible to recreate ships as tarballs (~2.6GB;
+ask HH for the transfer location). From the repo root:
+
+```bash
+python scripts/data.py unpack-artifacts /path/to/share
+```
+
+This restores `data/judge/` (all LLM judge outputs -- rubrics, extractions
+for 6+ judges, retests, small-cohort judging, rendered trace texts,
+embedding caches), `.dkps_cache_lb/` (OpenAI embedding caches --
+irreplaceable), `data/multiembed_*.npz`, and the labels file. With these
+unpacked, every script above runs without any API key; the raw 40GB
+trajectory corpus is only needed to extend to new instances
+(`python scripts/data.py swebench-trajs`).
+
 ## Documents
 
 - `notes/summary.pdf` — the working two-pager + worked example appendix
-- `FINDINGS.md` — numbered findings F1–F25 with exact numbers and recipes
+- `FINDINGS.md` — numbered findings F1–F26 with exact numbers and recipes
 - `PAPER.md` — figure/table plan and evidence ledger
 - `NARRATIVE.md` — the project story
 - `RELATED.md` — related-work narrative + annotated bibliography

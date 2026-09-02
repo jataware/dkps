@@ -110,6 +110,26 @@ def terminalbench(args):
           'this to take a while even on fast links')
 
 
+def unpack_artifacts(args):
+    import tarfile
+    src = args.path
+    os.makedirs('data/leaderboard', exist_ok=True)
+    for name, dest in (('judge.tar', 'data'),
+                       ('multiembed.tar', 'data'),
+                       ('dkps_cache_lb.tar', '.')):
+        p = os.path.join(src, name)
+        if os.path.exists(p):
+            print('extracting', name)
+            with tarfile.open(p) as t:
+                t.extractall(dest)
+    lb = os.path.join(src, 'verified_labels.json')
+    if os.path.exists(lb):
+        shutil.copy(lb, LABELS)
+    if os.path.exists('dkps_cache_lb') and not os.path.exists('.dkps_cache_lb'):
+        os.rename('dkps_cache_lb', '.dkps_cache_lb')
+    print('done')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -120,10 +140,13 @@ def main():
                    help='only the first N submissions (smoke test)')
     tb = sp.add_parser('terminalbench')
     tb.add_argument('--workers', type=int, default=32)
+    ua = sp.add_parser('unpack-artifacts')
+    ua.add_argument('path', help='directory holding the shared tarballs')
     args = ap.parse_args()
     {'swebench-labels': swebench_labels,
      'swebench-trajs': swebench_trajs,
-     'terminalbench': terminalbench}[args.cmd](args)
+     'terminalbench': terminalbench,
+     'unpack-artifacts': unpack_artifacts}[args.cmd](args)
 
 
 if __name__ == '__main__':
