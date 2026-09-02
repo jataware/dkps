@@ -395,6 +395,17 @@ retest row. Data: figures/stability_retest_full.json,
 stability_retest_extraction.json, stability_column.json;
 script: stability_retest.py.
 
+**F27. Routing/selection v0 (2026-09-02, cache-only, PRELIMINARY).**
+Per-instance system selection with no outcome knowledge on the target
+instance: p(s solves q) = distance-weighted kNN over traces on OTHER
+instances (leave-one-LLM-out wrt s), route to argmax. q20, nomic. Routed
+resolve rate: qubric .700 > raw .650 > mean-system .593; best-single
+(hindsight) .850, oracle .950. Clears HH's bar (beat raw) but by ONE
+instance at q20 -- underpowered; rerun at q150 before claiming. Neither
+variant beats best-single yet; framing = recovers gap from mean toward best
+without knowing which system is best. Data: figures/routing.json;
+script: routing.py.
+
 ## 5. Negative results (do not re-run without new ideas)
 
 - Supervised channel-weight learning at 13 refs: five schemes all <= uniform.

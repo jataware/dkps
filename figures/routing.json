@@ -1,0 +1,13 @@
+{
+  "qubric": {
+    "routed_resolve_rate": 0.7,
+    "n_distinct_systems": 16
+  },
+  "raw": {
+    "routed_resolve_rate": 0.65,
+    "n_distinct_systems": 15
+  },
+  "mean_system": 0.5934579439252337,
+  "best_single_system": 0.85,
+  "oracle_per_instance": 0.95
+}
