@@ -14,7 +14,17 @@ alpha) with the correctness-count lookup from outcome_baselines.py, and geometry
 blended the same way with the raw sample score (the paper's ensemble).
 Writes / merges into figures/quench_constructions.json (rows keyed by name).
 
+Optional stage (--irt-blend): combine a representation with 2PL IRT under
+adaptive probe selection, two ways --
+  geometry_plus_irt_adaptive : honest alpha blend of the geometry kNN (on the
+                               adaptively chosen probes) with the 2PL prediction
+  irt_adaptive_trace_prior   : one model -- the geometry prediction sets the
+                               prior mean on ability (via a regression fitted on
+                               the references), adaptive probes update it.
+  irt_random_trace_prior     : the same model with random probes instead.
+
 Usage: python scripts/quench_constructions.py [--reps a,b,...] [--draws 40] [--k 3] [--list]
+       python scripts/quench_constructions.py --irt-blend --reps trace-end,qubric+trace-end
 """
 import argparse
 import json
@@ -24,7 +34,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from outcome_baselines import count_lookup, load_panel  # noqa: E402
+from outcome_baselines import ItemModel, count_lookup, load_panel  # noqa: E402
 
 EMB_TAG = 'openai_text-embedding-3-small'
 HEADTAIL_CFG = '1a49d97e'        # sha1('openai/text-embedding-3-small|headtail8000')[:8]
@@ -101,6 +111,54 @@ def honest_blend(p_a, p_b, y, allowed, alphas=np.linspace(0, 1, 11)):
     return out
 
 
+# ---------------------------------------------- geometry x adaptive IRT ----
+def irt_adaptive_stage(reps, ms, y, B, allowed, args):
+    """For each representation: combine its geometry with 2PL IRT under
+    adaptive probe selection (see module docstring). Merges two rows per
+    representation into the output JSON."""
+    M, Q = B.shape
+    models = [ItemModel(B[allowed[i]], y[allowed[i]], args.ridge_a) for i in range(M)]
+    paths = [models[i].adaptive_path(B[i])[0] for i in range(M)]          # per-target item order
+    out = json.load(open(args.out)) if os.path.exists(args.out) else {'m': ms}
+    out.setdefault('geometry_plus_irt_adaptive', {}); out.setdefault('irt_adaptive_trace_prior', {}); out.setdefault('irt_random_trace_prior', {})
+    rng = np.random.default_rng(0)
+    rand_draws = {m: ([np.arange(Q)] if m == Q else [np.array([q]) for q in range(Q)] if m == 1
+                      else [rng.choice(Q, m, replace=False) for _ in range(args.draws)]) for m in ms}
+
+    def trace_prior_predict(mdl, i, g, cols):
+        """Prior mean/width from the reference regression of ability on the
+        geometry prediction g; posterior after the target's outcomes on cols."""
+        r = allowed[i]
+        slope, intercept = np.polyfit(g[r], mdl.theta, 1)
+        resid_sd = float(np.std(mdl.theta - (intercept + slope * g[r])))
+        return mdl.predict(cols, B[i, cols], mu=intercept + slope * g[i], sd=resid_sd)
+    out['irt_adaptive'] = out.get('irt_adaptive') or [float(np.mean([abs(models[i].predict(paths[i][:m], B[i, paths[i][:m]]) - y[i]) for i in range(M)])) for m in ms]
+    print(f"{'representation':18s} " + ' '.join(f'{"m=%d" % m:>7s}' for m in ms) + '   (adaptive blend | adaptive trace-prior | random trace-prior)')
+    for name, X in reps.items():
+        e_blend = {m: [] for m in ms}; e_prior = {m: [] for m in ms}
+        for i in range(M):
+            mdl, r = models[i], allowed[i]
+            for m in ms:
+                cols = np.array(paths[i][:m])
+                g = knn_predict(X, cols, y, allowed, args.k)                 # geometry for everyone on target i's probes
+                p_irt = np.array([models[j].predict(cols, B[j, cols]) for j in range(M)])
+                e_blend[m].append(abs(honest_blend(p_irt, g, y, allowed)[i] - y[i]))
+                e_prior[m].append(abs(trace_prior_predict(mdl, i, g, cols) - y[i]))
+        e_rand = {m: [] for m in ms}                                           # random probes, trace prior
+        for m in ms:
+            for cols in rand_draws[m]:
+                g = knn_predict(X, cols, y, allowed, args.k)
+                e_rand[m].append(np.mean([abs(trace_prior_predict(models[i], i, g, cols) - y[i]) for i in range(M)]))
+        out['geometry_plus_irt_adaptive'][name] = [float(np.mean(e_blend[m])) for m in ms]
+        out['irt_adaptive_trace_prior'][name] = [float(np.mean(e_prior[m])) for m in ms]
+        out['irt_random_trace_prior'][name] = [float(np.mean(e_rand[m])) for m in ms]
+        json.dump(out, open(args.out, 'w'), indent=1)
+        print(f'{name:18s} ' + ' '.join(f"{a:7.4f}" for a in out['geometry_plus_irt_adaptive'][name]) + '  |  '
+              + ' '.join(f"{a:7.4f}" for a in out['irt_adaptive_trace_prior'][name]) + '  |  '
+              + ' '.join(f"{a:7.4f}" for a in out['irt_random_trace_prior'][name]))
+    print('wrote', args.out)
+
+
 # ------------------------------------------------------------------ main ----
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -110,6 +168,8 @@ def main():
     ap.add_argument('--k', type=int, default=3)
     ap.add_argument('--out', default='figures/quench_constructions.json')
     ap.add_argument('--list', action='store_true')
+    ap.add_argument('--irt-blend', action='store_true', help='run the IRT-adaptive combination stage instead of the sweep')
+    ap.add_argument('--ridge-a', type=float, default=10.0)
     args = ap.parse_args()
 
     systems, q20, y, B, allowed = load_panel()
@@ -125,6 +185,9 @@ def main():
         reps = {r: reps[r] for r in want}
 
     ms = [int(x) for x in args.ms.split(',')]
+    if args.irt_blend:
+        irt_adaptive_stage(reps, ms, y, B, allowed, args)
+        return
     rng = np.random.default_rng(0)
     draws = {m: ([np.arange(Q)] if m == Q else [np.array([q]) for q in range(Q)] if m == 1
                  else [rng.choice(Q, m, replace=False) for _ in range(args.draws)]) for m in ms}

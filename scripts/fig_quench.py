@@ -67,6 +67,17 @@ ax1.plot(m, qs['tail|large'], color=SLATE, lw=1.8, label='trace end (8K tok)')
 ax1.plot(m, qs['qspec|large'], color='#9db8e8', lw=1.8, label='qubric')
 ax1.plot(m, pf['dkps_eh'], color=NAVY, lw=2.0, label='qubric + trace-end')
 ax1.plot(m, pf['ens_eh'], color=AMBER, lw=2.2, label='ensemble vs sample')
+# trace geometry as the prior of the 2PL model, adaptive probes (scripts/quench_constructions.py --irt-blend)
+qc_path = 'figures/quench_constructions.json'
+if os.path.exists(qc_path):
+    qc = json.load(open(qc_path))
+    for rep, color, lw in (('qubric+trace-end', '#0f5132', 2.2), ('generic', '#2a9d8f', 1.8)):
+        if rep in qc.get('irt_adaptive_trace_prior', {}):
+            ax1.plot(qc['m'], qc['irt_adaptive_trace_prior'][rep], '-', color=color, lw=lw,
+                     label=f"2PL IRT, adaptive probes, {rep.replace('generic', 'common rubric')} geometry as prior")
+    if 'generic' in qc.get('irt_random_trace_prior', {}):
+        ax1.plot(qc['m'], qc['irt_random_trace_prior']['generic'], '--', color='#2a9d8f', lw=1.8,
+                 label='2PL IRT, random probes, common rubric geometry as prior')
 ax1.set_title('QUENCH(m): error vs probe budget --- '
               f'~{qn.get("n_ref", 106)} reference agents', fontsize=9.5,
               color=INK)

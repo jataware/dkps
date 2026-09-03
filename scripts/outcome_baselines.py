@@ -141,17 +141,20 @@ class ItemModel:
         # item response curves on the grid, P[grid, item]
         self.P_grid = sigmoid(self.a[None] * (GRID[:, None] - self.b[None]))
 
-    def posterior(self, cols, outcomes):
-        """Posterior weights over GRID after observing `outcomes` on `cols`."""
-        logp = -0.5 * ((GRID - self.mu) / self.sd) ** 2
+    def posterior(self, cols, outcomes, mu=None, sd=None):
+        """Posterior weights over GRID after observing `outcomes` on `cols`.
+        The prior is the population normal unless (mu, sd) is given."""
+        mu = self.mu if mu is None else mu
+        sd = self.sd if sd is None else sd
+        logp = -0.5 * ((GRID - mu) / sd) ** 2
         for q, o in zip(cols, outcomes):
             p = self.P_grid[:, q]
             logp += np.log(p if o else 1 - p)
         w = np.exp(logp - logp.max())
         return w / w.sum()
 
-    def predict(self, cols, outcomes):
-        return float(self.posterior(cols, outcomes) @ self.score_of_theta)
+    def predict(self, cols, outcomes, mu=None, sd=None):
+        return float(self.posterior(cols, outcomes, mu, sd) @ self.score_of_theta)
 
     def item_information(self, weights):
         """Expected Fisher information per item under ability weights on GRID."""
