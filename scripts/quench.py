@@ -22,8 +22,6 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from dkps.traces.qubric import (DEFAULT_SECTIONS, consensus_center,
-                                embed_graded)  # noqa: E402
 
 
 def load_labels(path='data/leaderboard/verified_labels.json'):
@@ -64,8 +62,18 @@ def main():
     ap.add_argument('--embed-model', default='nomic-ai/nomic-embed-text-v1.5')
     ap.add_argument('--ms', default='1,2,3,5,10,20')
     ap.add_argument('--draws', type=int, default=40)
-    ap.add_argument('--out', default='figures/quench_core.json')
+    ap.add_argument('--out', default='figures/quench_core_v2.json')
     args = ap.parse_args()
+
+    if args.judge_dir == 'data/judge/structured-qspec' \
+            and args.labels == 'data/leaderboard/verified_labels.json' \
+            and args.embed_model == 'nomic-ai/nomic-embed-text-v1.5':
+        from nested_quench import main as run_nested
+        run_nested(['--core', '--ms', args.ms, '--draws', str(args.draws), '--out', args.out])
+        return
+
+    # Custom caches retain transductive features, with outer scores excluded.
+    from dkps.traces.qubric import consensus_center, embed_graded
 
     labels = load_labels(args.labels)
     systems, queries, graded = load_graded(args.judge_dir, labels)
@@ -91,8 +99,11 @@ def main():
                         and tags[systems[j]] == tags[systems[i]])
                         for j in range(M)] for i in range(M)])
 
-    def knn_pred(D, i, k=3):
-        idx = np.where(allowed[i])[0]
+    def knn_pred(D, i, k=3, outer_pool=None):
+        mask = allowed[i].copy()
+        if outer_pool is not None:
+            mask &= outer_pool
+        idx = np.where(mask)[0]
         nn = idx[np.argsort(D[i][idx])[:k]]
         w = 1 / (D[i][nn] + 1e-12)
         return float(np.dot(w, y[nn]) / w.sum())
@@ -106,7 +117,7 @@ def main():
         """Pick alpha for target i from allowed references only."""
         idx = np.where(allowed[i])[0]
         D = squareform(pdist(Xc[:, cols, :].reshape(M, -1)))
-        gs = np.array([knn_pred(D, j) for j in idx])
+        gs = np.array([knn_pred(D, j, outer_pool=allowed[i]) for j in idx])
         ss = B[idx][:, cols].mean(1)
         errs = [np.abs(a * ss + (1 - a) * gs - y[idx]).mean() for a in alphas]
         a = alphas[int(np.argmin(errs))]
@@ -115,6 +126,8 @@ def main():
     rng = np.random.default_rng(0)
     ms = [int(x) for x in args.ms.split(',')]
     out = {'judge_dir': args.judge_dir, 'embed_model': args.embed_model,
+           'protocol_version': 'outer-score-excluded-v2',
+           'preprocessing': 'transductive panel centering (custom judge path)',
            'n_systems': M, 'n_instances': Q, 'curves': {}}
     for m in ms:
         gs, ss, es = [], [], []

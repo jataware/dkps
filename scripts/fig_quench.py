@@ -1,14 +1,19 @@
-"""Fig: QUENCH pair (rebuilt, data-driven).
+"""The familiar QUENCH figure, rebuilt only from audited nested-pool results.
 
-Left:  error vs probe budget m (figures/pipeline_final.json) -- sample score,
-       trace-end slice, qubric geometry, fused geometry, honest ensemble.
-Right: error vs reference-pool size n (figures/quench_n.json) at m=5 and
-       m=20, geometry and ensemble.
-
-Writes figures/fig4_quench.png.
+python scripts/quench_constructions.py
+python scripts/fig_quench.py
+Use --reference-comparison for the separate 20-vs-500 reference experiment.
+Historical PKPS curves with unavailable generating code are not mixed into
+this paired-DKPS figure. Original inputs/figures are archived separately.
 """
 import json
-import os
+from pathlib import Path
+import sys
+
+if '--reference-comparison' in sys.argv:
+    from fig_irt_reference_comparison import main
+    main()
+    raise SystemExit(0)
 
 import numpy as np
 import matplotlib
@@ -16,102 +21,84 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 INK, SURFACE, GRID = '#0A1638', '#f4f7fc', '#DFE6F2'
-NAVY, AMBER, SLATE = '#2E5CA6', '#D97706', '#6D93D6'
-
-pf = json.load(open('figures/pipeline_final.json'))
-qs = json.load(open('figures/qspec_fig_data_pkps.json'))
-qn = json.load(open('figures/quench_n.json'))
 
 
-def predict_mean_mae(labels='data/leaderboard/verified_labels.json',
-                     judge_dir='data/judge/structured-qspec', fallback=0.1343):
-    """Baseline: always guess the population mean resolve rate (mean over the
-    107 systems of their true full-500 rate, 0.553), scored against each
-    system's true rate like every other curve. Constant in m."""
-    if not (os.path.exists(labels) and os.path.isdir(judge_dir)):
-        return fallback
-    L = json.load(open(labels))
-    systems = sorted(s for s in os.listdir(judge_dir) if 'resolved' in L.get(s, {}))
-    y = np.array([len(L[s]['resolved']) / 500 for s in systems])
-    return float(np.abs(y.mean() - y).mean())
+def load_corrected():
+    path = Path('figures/quench_constructions_v2.json')
+    d = json.loads(path.read_text())
+    if d.get('protocol_version') != 'nested-pools-v2':
+        raise ValueError('The figure requires audited nested-pool predictions')
+    if len(d['records']) != len(set(d['groups'])):
+        raise ValueError('Refusing to plot an incomplete group holdout evaluation')
+    return d
 
 
-# outcome-only baselines (scripts/outcome_baselines.py); optional
-ob = json.load(open('figures/outcome_baselines.json')) if os.path.exists('figures/outcome_baselines.json') else None
-MEAN_MAE = ob['constant_mean_mae'] if ob else predict_mean_mae()
-
-SHOW_N_PANEL = False      # right panel (error vs reference-pool size) commented out for now
-if SHOW_N_PANEL:
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.6, 4.6))
-else:
-    fig, ax1 = plt.subplots(figsize=(11.0, 5.0))
-    ax2 = None
-fig.patch.set_facecolor(SURFACE)
-fig.suptitle('Query-efficient benchmarking from probe traces '
-             '(leave-one-model-out, true labels)', fontsize=12 if SHOW_N_PANEL else 10.5,
-             fontweight='bold', color=INK, y=0.98)
-
-m = pf['budgets']
-ax1.axhline(MEAN_MAE, color='#8a1c1c', lw=1.4, ls=(0, (2, 2)),
-            label=f'guess population mean, 0.553 (MAE {MEAN_MAE:.3f})')
-ax1.plot(m, pf['sample'], '--', color=INK, lw=1.6, label='sample score')
-if ob:
-    RED = '#8a1c1c'
-    ax1.plot(ob['m'], ob['count_lookup'], '-.', color=RED, lw=1.6,
-             label='average score of references with the same n correct')
-    for key, ls, lab in (('irt_2pl_random', '-', '2PL IRT, random probes'),
-                         ('irt_2pl_informative', '--', '2PL IRT, pre-computed informative probes'),
-                         ('irt_2pl_adaptive', ':', '2PL IRT, adaptive probes')):
-        ax1.plot(ob['m'], ob[key], ls, color='#c2410c', lw=1.8, label=lab)
-ax1.plot(m, qs['tail|large'], color=SLATE, lw=1.8, label='trace end (8K tok)')
-ax1.plot(m, qs['qspec|large'], color='#9db8e8', lw=1.8, label='qubric')
-ax1.plot(m, pf['dkps_eh'], color=NAVY, lw=2.0, label='qubric + trace-end')
-ax1.plot(m, pf['ens_eh'], color=AMBER, lw=2.2, label='ensemble vs sample')
-# trace geometry as the prior of the 2PL model, adaptive probes (scripts/quench_constructions.py --irt-blend)
-qc_path = 'figures/quench_constructions.json'
-if os.path.exists(qc_path):
-    qc = json.load(open(qc_path))
-    for rep, color, lw in (('qubric+trace-end', '#0f5132', 2.2), ('generic', '#2a9d8f', 1.8)):
-        if rep in qc.get('irt_adaptive_trace_prior', {}):
-            ax1.plot(qc['m'], qc['irt_adaptive_trace_prior'][rep], '-', color=color, lw=lw,
-                     label=f"2PL IRT, adaptive probes, {rep.replace('generic', 'common rubric')} geometry as prior")
-    if 'generic' in qc.get('irt_random_trace_prior', {}):
-        ax1.plot(qc['m'], qc['irt_random_trace_prior']['generic'], '--', color='#2a9d8f', lw=1.8,
-                 label='2PL IRT, random probes, common rubric geometry as prior')
-ax1.set_title('QUENCH(m): error vs probe budget --- '
-              f'~{qn.get("n_ref", 106)} reference agents', fontsize=9.5,
-              color=INK)
-ax1.set_xlabel('probe instances run on the new agent (m)', fontsize=9.5)
-ax1.set_ylabel('MAE of predicted resolve rate', fontsize=9.5)
-ax1.set_xticks(m)
-ax1.set_ylim(0.0, 0.15)
-ax1.legend(fontsize=8, frameon=False, loc='center left', bbox_to_anchor=(1.01, 0.5))
-
-if SHOW_N_PANEL:
-    ng = qn['n_grid']
-    styles = {'5': ('--', 1.6), '20': ('-', 2.0)}
-    for b in map(str, qn['budgets']):
-        ls, lw = styles[b]
-        ax2.plot(ng, qn['curves'][b]['dkps'], ls, color=NAVY, lw=lw,
-                 label=f'geometry, m={b}')
-        ax2.plot(ng, qn['curves'][b]['ens'], ls, color=AMBER, lw=lw,
-                 label=f'ensemble, m={b}')
-    for b, y in (('m=5', pf['sample'][3]), ('m=20', pf['sample'][5])):
-        ax2.axhline(y, color=INK, lw=0.9, ls=':', alpha=0.5)
-        ax2.text(ng[-1], y + 0.003, f'sample score, {b}', fontsize=7,
-                 color=INK, ha='right', alpha=0.7)
-    ax2.set_title('QUENCH(n): error vs reference pool -- qubric + trace-end',
-                  fontsize=9.5, color=INK)
-    ax2.set_xlabel('reference agents in the cache (n)', fontsize=9.5)
-    ax2.set_xticks(ng)
-    ax2.legend(fontsize=8, frameon=False, ncols=2)
-
-for ax in ([ax1, ax2] if SHOW_N_PANEL else [ax1]):
-    ax.set_facecolor(SURFACE)
-    ax.grid(color=GRID, lw=0.8)
-    for s in ax.spines.values():
-        s.set_color(GRID)
+def style(ax, m):
+    ax.set_xlabel('probe instances run on the new agent (m)', fontsize=9.5)
+    ax.set_ylabel('MAE of predicted resolve rate', fontsize=9.5)
+    ax.set_xticks(m); ax.set_facecolor(SURFACE); ax.grid(color=GRID, lw=.8)
+    for sp in ax.spines.values(): sp.set_color(GRID)
     ax.tick_params(labelsize=8.5, color=GRID)
-fig.tight_layout(rect=(0, 0, 1, 0.95))
-fig.savefig('figures/fig4_quench.png', dpi=200, facecolor=SURFACE)
-print('wrote figures/fig4_quench.png')
+
+
+def main():
+    d = load_corrected(); m = d['m']
+    fig, ax = plt.subplots(figsize=(12, 5.4)); fig.patch.set_facecolor(SURFACE)
+    ax.axhline(d['constant_mean_mae'], color='#8a1c1c', lw=1.4, ls=(0, (2, 2)),
+               label=f"guess reference-pool mean (MAE {d['constant_mean_mae']:.3f})")
+    ax.plot(m, d['sample_score'], '--', color=INK, lw=1.6, label='sample score')
+    ax.plot(m, d['count_lookup'], '-.', color='#8a1c1c', lw=1.6,
+            label='average score of references with the same n correct')
+    for key, ls, label in [('irt_2pl_random', '-', '2PL IRT, random probes'),
+                           ('irt_2pl_informative', '--', '2PL IRT, fixed informative probes'),
+                           ('irt_2pl_adaptive', ':', '2PL IRT, adaptive probes')]:
+        ax.plot(m, d[key], ls, color='#c2410c', lw=1.8, label=label)
+    for rep, color, label in [('trace-end', '#6D93D6', 'trace end (8K tokens)'),
+                              ('qubric', '#9db8e8', 'qubric'),
+                              ('qubric+trace-end', '#2E5CA6', 'qubric + trace-end')]:
+        ax.plot(m, d['geometry'][rep], color=color, lw=1.8, label=label)
+    ax.plot(m, d['geometry_plus_sample']['qubric+trace-end'], color='#D97706', lw=2.2,
+            label='qubric + trace-end blended with sample score (nested tuning)')
+    for rep, color, label in [('qubric+trace-end', '#0f5132', 'qubric + trace-end'),
+                              ('generic', '#2a9d8f', 'common rubric')]:
+        ax.plot(m, d['irt_adaptive_trace_prior'][rep], color=color, lw=2,
+                label=f'2PL adaptive, {label} geometry as prior')
+    ax.plot(m, d['irt_random_trace_prior']['generic'], '--', color='#2a9d8f', lw=1.8,
+            label='2PL random, common rubric geometry as prior')
+    nref = [len(r['train']) for r in d['records'] for _ in r['test']]
+    fig.suptitle('Query-efficient benchmarking from probe traces — corrected evaluation',
+                 fontsize=12, color=INK, fontweight='bold', y=.98)
+    ax.set_title(f"Paired DKPS; {len(d['systems'])} systems × q20; "
+                 f"{min(nref)}–{max(nref)} references; outer model-group exclusion", fontsize=9.5)
+    style(ax, m); ax.set_ylim(0, .15)
+    ax.legend(fontsize=8, frameon=False, loc='center left', bbox_to_anchor=(1.01, .5))
+    fig.text(.02, .025, 'Centering and calibration use permitted references only. '
+             f"Sample-score MAE at m=1 is {d['sample_score'][0]:.3f} (above the shown range).",
+             fontsize=8, color=INK)
+    fig.tight_layout(rect=(0, .06, 1, .95))
+    fig.savefig('figures/fig4_quench.png', dpi=200, facecolor=SURFACE)
+    fig.savefig('figures/fig4_quench.pdf', facecolor=SURFACE)
+    plt.close(fig)
+    print('wrote figures/fig4_quench.png and .pdf')
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5.2), sharey=True)
+    fig.patch.set_facecolor(SURFACE)
+    for ax, rep, policy in zip(axes, ['generic', 'qubric+trace-end', 'generic'],
+                               ['random', 'random', 'adaptive']):
+        key = f'{policy}:prior:{rep}'
+        a = d['audit'][key]
+        ax.plot(m, a['old_reproduction_mae'], '--', color='#8a1c1c', label='old dependency reproduced')
+        if policy == 'random':
+            ax.plot(m, d['all_curves'][f'score_mask_only:prior:{rep}'], ':', color='#D97706',
+                    label='score masks fixed; global centering retained')
+        ax.plot(m, a['corrected_mae'], '-', color='#2a9d8f', label='nested pools + reference-only centering')
+        ax.set_title(f"{'Common rubric' if rep == 'generic' else 'Qubric + trace-end'} prior, {policy}", fontsize=10)
+        style(ax, m); ax.set_ylim(bottom=0); ax.legend(fontsize=7.5, frameon=False)
+    fig.suptitle('Leakage audit: matched systems, probe draws and model settings', fontsize=12, color=INK)
+    fig.tight_layout(rect=(0, 0, 1, .94))
+    fig.savefig('figures/quench_leakage_audit.png', dpi=200, facecolor=SURFACE)
+    plt.close(fig)
+    print('wrote figures/quench_leakage_audit.png')
+
+
+if __name__ == '__main__': main()

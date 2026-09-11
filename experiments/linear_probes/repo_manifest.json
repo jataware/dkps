@@ -1,0 +1,97 @@
+{
+  "metadata": "metadata.csv",
+  "representations": {
+    "openai_generic": "openai_generic.npz",
+    "openai_qubric": "openai_qubric.npz",
+    "openai_raw": "openai_raw.npz",
+    "nomic_generic": "nomic_generic.npz",
+    "nomic_qubric": "nomic_qubric.npz",
+    "nomic_raw": "nomic_raw.npz"
+  },
+  "targets": {
+    "system": {
+      "label": "system",
+      "group": "task",
+      "description": "Exact submission identity on unseen tasks"
+    },
+    "model": {
+      "label": "model",
+      "group": "task",
+      "description": "Reported model_display on unseen tasks; unknown/mixed excluded"
+    },
+    "vendor": {
+      "label": "vendor",
+      "group": "task",
+      "description": "Reported model_org on unseen tasks; a coarse lineage proxy"
+    },
+    "harness": {
+      "label": "harness",
+      "group": "task",
+      "description": "Reported agent tag on unseen tasks; no keyword inference"
+    },
+    "task": {
+      "label": "task",
+      "group": "model_group",
+      "description": "Task identity on held-out model groups"
+    },
+    "outcome": {
+      "label": "outcome",
+      "group": "model_group",
+      "description": "Resolved/not resolved on held-out model groups"
+    }
+  },
+  "export_notes": {
+    "systems": 107,
+    "tasks": 20,
+    "retained_rows": 2129,
+    "excluded": [
+      {
+        "row_id": "20241002_lingma-agent_lingma-swe-gpt-7b/django__django-13810",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20241022_tools_claude-3-5-sonnet-updated/django__django-11099",
+        "construction": "structured-qspec"
+      },
+      {
+        "row_id": "20241108_autocoderover-v2.0-claude-3-5-sonnet-20241022/django__django-15554",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20241108_autocoderover-v2.0-claude-3-5-sonnet-20241022/django__django-15695",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20250122_autocoderover-v2.1-claude-3-5-sonnet-20241022/pylint-dev__pylint-6528",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20250122_autocoderover-v2.1-claude-3-5-sonnet-20241022/sympy__sympy-14248",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20250430_zencoder_ai/django__django-16145",
+        "construction": "structured-fixed"
+      },
+      {
+        "row_id": "20250514_aime_coder/sphinx-doc__sphinx-10466",
+        "construction": "structured-qspec"
+      },
+      {
+        "row_id": "20250616_Skywork-SWE-32B+TTS_Bo8/sphinx-doc__sphinx-9673",
+        "construction": "structured-qspec"
+      },
+      {
+        "row_id": "20251110_frogboss-32b/sphinx-doc__sphinx-9367",
+        "construction": "structured-qspec"
+      },
+      {
+        "row_id": "20251110_frogmini-14b/django__django-16145",
+        "construction": "structured-qspec"
+      }
+    ],
+    "judge": "gpt-5.4-mini",
+    "legacy_order": "Reconstructed from generating code and checked against labeled OpenAI caches",
+    "raw": "Concatenated head and tail; not full-trace embeddings"
+  }
+}

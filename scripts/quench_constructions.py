@@ -12,7 +12,7 @@ Representations
 For each representation: geometry alone, geometry blended (honest per-target
 alpha) with the correctness-count lookup from outcome_baselines.py, and geometry
 blended the same way with the raw sample score (the paper's ensemble).
-Writes / merges into figures/quench_constructions.json (rows keyed by name).
+The CLI now delegates to nested_quench.py and writes quench_constructions_v2.json.\nThe representation helpers below retain transductive centering for older callers.
 
 Optional stage (--irt-blend): combine a representation with 2PL IRT under
 adaptive probe selection, two ways --
@@ -99,122 +99,35 @@ def knn_predict(X, cols, y, allowed, k):
     return pred
 
 
-def honest_blend(p_a, p_b, y, allowed, alphas=np.linspace(0, 1, 11)):
-    """alpha * p_a + (1 - alpha) * p_b, alpha chosen per target to minimise the
-    error over that target's allowed references only."""
+def honest_blend(p_a, p_b, y, allowed, alphas=np.linspace(0, 1, 11),
+                 reference_predictions=None):
+    """Blend using explicitly outer-pool cross-fitted reference predictions.
+
+    reference_predictions=(A, B), with A[i,j] and B[i,j] predictions of
+    reference j fitted without outer group i or j's inner validation group.
+    Global leave-one-out vectors are insufficient and are rejected.
+    """
+    if reference_predictions is None:
+        raise ValueError('Outer-pool cross-fitted reference_predictions are required')
+    ra, rb = map(np.asarray, reference_predictions)
+    if ra.shape != allowed.shape or rb.shape != allowed.shape:
+        raise ValueError('Reference prediction matrices must match the exclusion matrix')
     out = np.zeros(len(y))
     for i in range(len(y)):
         r = allowed[i]
-        errs = [np.abs(a * p_a[r] + (1 - a) * p_b[r] - y[r]).mean() for a in alphas]
-        a = alphas[int(np.argmin(errs))]
+        if r[i] or not (np.isfinite(ra[i, r]).all() and np.isfinite(rb[i, r]).all()):
+            raise ValueError('Invalid outer-pool reference predictions')
+        errors = [np.abs(a * ra[i, r] + (1 - a) * rb[i, r] - y[r]).mean()
+                  for a in alphas]
+        a = alphas[int(np.argmin(errors))]
         out[i] = a * p_a[i] + (1 - a) * p_b[i]
     return out
 
 
-# ---------------------------------------------- geometry x adaptive IRT ----
-def irt_adaptive_stage(reps, ms, y, B, allowed, args):
-    """For each representation: combine its geometry with 2PL IRT under
-    adaptive probe selection (see module docstring). Merges two rows per
-    representation into the output JSON."""
-    M, Q = B.shape
-    models = [ItemModel(B[allowed[i]], y[allowed[i]], args.ridge_a) for i in range(M)]
-    paths = [models[i].adaptive_path(B[i])[0] for i in range(M)]          # per-target item order
-    out = json.load(open(args.out)) if os.path.exists(args.out) else {'m': ms}
-    out.setdefault('geometry_plus_irt_adaptive', {}); out.setdefault('irt_adaptive_trace_prior', {}); out.setdefault('irt_random_trace_prior', {})
-    rng = np.random.default_rng(0)
-    rand_draws = {m: ([np.arange(Q)] if m == Q else [np.array([q]) for q in range(Q)] if m == 1
-                      else [rng.choice(Q, m, replace=False) for _ in range(args.draws)]) for m in ms}
-
-    def trace_prior_predict(mdl, i, g, cols):
-        """Prior mean/width from the reference regression of ability on the
-        geometry prediction g; posterior after the target's outcomes on cols."""
-        r = allowed[i]
-        slope, intercept = np.polyfit(g[r], mdl.theta, 1)
-        resid_sd = float(np.std(mdl.theta - (intercept + slope * g[r])))
-        return mdl.predict(cols, B[i, cols], mu=intercept + slope * g[i], sd=resid_sd)
-    out['irt_adaptive'] = out.get('irt_adaptive') or [float(np.mean([abs(models[i].predict(paths[i][:m], B[i, paths[i][:m]]) - y[i]) for i in range(M)])) for m in ms]
-    print(f"{'representation':18s} " + ' '.join(f'{"m=%d" % m:>7s}' for m in ms) + '   (adaptive blend | adaptive trace-prior | random trace-prior)')
-    for name, X in reps.items():
-        e_blend = {m: [] for m in ms}; e_prior = {m: [] for m in ms}
-        for i in range(M):
-            mdl, r = models[i], allowed[i]
-            for m in ms:
-                cols = np.array(paths[i][:m])
-                g = knn_predict(X, cols, y, allowed, args.k)                 # geometry for everyone on target i's probes
-                p_irt = np.array([models[j].predict(cols, B[j, cols]) for j in range(M)])
-                e_blend[m].append(abs(honest_blend(p_irt, g, y, allowed)[i] - y[i]))
-                e_prior[m].append(abs(trace_prior_predict(mdl, i, g, cols) - y[i]))
-        e_rand = {m: [] for m in ms}                                           # random probes, trace prior
-        for m in ms:
-            for cols in rand_draws[m]:
-                g = knn_predict(X, cols, y, allowed, args.k)
-                e_rand[m].append(np.mean([abs(trace_prior_predict(models[i], i, g, cols) - y[i]) for i in range(M)]))
-        out['geometry_plus_irt_adaptive'][name] = [float(np.mean(e_blend[m])) for m in ms]
-        out['irt_adaptive_trace_prior'][name] = [float(np.mean(e_prior[m])) for m in ms]
-        out['irt_random_trace_prior'][name] = [float(np.mean(e_rand[m])) for m in ms]
-        json.dump(out, open(args.out, 'w'), indent=1)
-        print(f'{name:18s} ' + ' '.join(f"{a:7.4f}" for a in out['geometry_plus_irt_adaptive'][name]) + '  |  '
-              + ' '.join(f"{a:7.4f}" for a in out['irt_adaptive_trace_prior'][name]) + '  |  '
-              + ' '.join(f"{a:7.4f}" for a in out['irt_random_trace_prior'][name]))
-    print('wrote', args.out)
-
-
-# ------------------------------------------------------------------ main ----
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--reps', default='all')
-    ap.add_argument('--ms', default='1,2,3,5,10,20')
-    ap.add_argument('--draws', type=int, default=40)
-    ap.add_argument('--k', type=int, default=3)
-    ap.add_argument('--out', default='figures/quench_constructions.json')
-    ap.add_argument('--list', action='store_true')
-    ap.add_argument('--irt-blend', action='store_true', help='run the IRT-adaptive combination stage instead of the sweep')
-    ap.add_argument('--ridge-a', type=float, default=10.0)
-    args = ap.parse_args()
-
-    systems, q20, y, B, allowed = load_panel()
-    M, Q = B.shape
-    reps = build_representations(systems, q20)
-    if args.list:
-        print('\n'.join(reps)); return
-    if args.reps != 'all':
-        want = [r.strip() for r in args.reps.split(',')]
-        missing = [r for r in want if r not in reps]
-        if missing:
-            sys.exit(f'unknown representations {missing}; use --list')
-        reps = {r: reps[r] for r in want}
-
-    ms = [int(x) for x in args.ms.split(',')]
-    if args.irt_blend:
-        irt_adaptive_stage(reps, ms, y, B, allowed, args)
-        return
-    rng = np.random.default_rng(0)
-    draws = {m: ([np.arange(Q)] if m == Q else [np.array([q]) for q in range(Q)] if m == 1
-                 else [rng.choice(Q, m, replace=False) for _ in range(args.draws)]) for m in ms}
-    count_preds = {m: [np.array([count_lookup(B, y, allowed, i, cols) for i in range(M)])
-                       for cols in draws[m]] for m in ms}
-
-    out = json.load(open(args.out)) if os.path.exists(args.out) else {}
-    out['sample_score'] = [float(np.mean([np.abs(B[:, cols].mean(1) - y).mean() for cols in draws[m]])) for m in ms]
-    out.update({'m': ms, 'k': args.k, 'draws': args.draws, 'embedder': EMB_TAG, 'protocol': 'paired DKPS kNN, leave-one-LLM-out'})
-    for key in ('geometry', 'geometry_plus_count', 'geometry_plus_sample'):
-        out.setdefault(key, {})
-    print(f"{'representation':18s} " + ' '.join(f'{"m=%d" % m:>7s}' for m in ms) + '   | + count lookup: ' + ' '.join(f'{"m=%d" % m:>6s}' for m in ms))
-    for name, X in reps.items():
-        geo, geo_count, geo_sample = [], [], []
-        for m in ms:
-            e_g, e_gc, e_gs = [], [], []
-            for cols, pc in zip(draws[m], count_preds[m]):
-                pg = knn_predict(X, cols, y, allowed, args.k)
-                ps = B[:, cols].mean(1)                                   # raw sample score on the probes
-                e_g.append(np.abs(pg - y).mean())
-                e_gc.append(np.abs(honest_blend(pc, pg, y, allowed) - y).mean())
-                e_gs.append(np.abs(honest_blend(ps, pg, y, allowed) - y).mean())
-            geo.append(float(np.mean(e_g))); geo_count.append(float(np.mean(e_gc))); geo_sample.append(float(np.mean(e_gs)))
-        out['geometry'][name] = geo; out['geometry_plus_count'][name] = geo_count; out['geometry_plus_sample'][name] = geo_sample
-        json.dump(out, open(args.out, 'w'), indent=1)              # checkpoint after every representation
-        print(f'{name:18s} ' + ' '.join(f'{v:7.4f}' for v in geo) + '   |                  ' + ' '.join(f'{v:6.4f}' for v in geo_count))
-    print('wrote', args.out)
+    # One maintained evaluator computes all stages with nested reference pools.
+    from nested_quench import main as run_nested
+    run_nested()
 
 
 if __name__ == '__main__':

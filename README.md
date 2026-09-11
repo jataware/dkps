@@ -15,6 +15,11 @@ Read `notes/summary.pdf` for the current write-up, `FINDINGS.md` for the
 complete experimental log (F1–F26), `PAPER.md` for the exhibit plan, and
 `RELATED.md` for the literature context.
 
+For supervised tests of what trace embeddings reveal, see the standalone
+[linear-probe experiment](experiments/linear_probes/README.md) and its
+[results table](experiments/linear_probes/results.md). It includes a portable
+CSV/NPZ interface for adding embeddings without the rest of this repository.
+
 ## Layout
 
 ```
@@ -109,6 +114,11 @@ python scripts/pillars.py
 python scripts/judge_matrix.py && python scripts/fig_judge_matrix.py
 python scripts/fig_heatmap.py
 ```
+
+For the 20-versus-500-task reference calibration comparison (target candidates
+remain q20), see [IRT_REFERENCE_COMPARISON.md](IRT_REFERENCE_COMPARISON.md).
+`python scripts/fig_quench.py --reference-comparison` redraws its performance,
+regularization, and geometry-prior variance figures from cached results.
 
 Evaluation protocol notes that matter: cross-validation is
 **leave-one-LLM-out** (excluding same-`model_display` references; naive CV

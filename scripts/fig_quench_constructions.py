@@ -1,7 +1,7 @@
 """Fig: QUENCH by trace representation (does the judge prompt matter?).
 
-Reads figures/quench_constructions.json (scripts/quench_constructions.py) and
-figures/outcome_baselines.json (scripts/outcome_baselines.py). Three panels,
+Reads figures/quench_constructions_v2.json (scripts/quench_constructions.py).
+All baselines and combinations use the same corrected evaluation. Four panels,
 shared y-axis:
   1. single representations, geometry alone
   2. each judge construction fused with trace-end (trace-end alone for reference)
@@ -38,8 +38,10 @@ PANELS = [
      'fused, then blended with raw sample score'),
 ]
 
-d = json.load(open('figures/quench_constructions.json'))
-ob = json.load(open('figures/outcome_baselines.json')) if os.path.exists('figures/outcome_baselines.json') else None
+d = json.load(open('figures/quench_constructions_v2.json'))
+if d.get('protocol_version') != 'nested-pools-v2' or len(d['records']) != len(set(d['groups'])):
+    raise ValueError('Complete corrected nested-pool results are required')
+ob = d
 
 fig, axes = plt.subplots(1, 4, figsize=(21.0, 5.0), sharey=True)
 fig.patch.set_facecolor(SURFACE)
@@ -66,7 +68,8 @@ for ax, (key, names, title) in zip(axes, PANELS):
     ax.tick_params(labelsize=8.5, color=GRID)
     ax.legend(fontsize=7.5, frameon=False, loc='lower left')
 axes[0].set_ylabel('MAE of predicted resolve rate', fontsize=9.5)
-fig.suptitle(f"QUENCH by trace representation ({d.get('embedder', '')}, {d.get('protocol', '')}, 107 systems x q20)",
+fig.suptitle('QUENCH by trace representation — corrected nested calibration; '
+             f"reference-only centering; {len(d['systems'])} systems × q20",
              fontsize=11, fontweight='bold', color=INK, y=0.99)
 fig.tight_layout(rect=(0, 0, 1, 0.95))
 fig.savefig('figures/quench_constructions.png', dpi=200, facecolor=SURFACE)
