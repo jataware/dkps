@@ -29,17 +29,14 @@ both the new base and the archived published protocols (8/8 validation checks).
 - [ ] Re-read the abstract/intro for any remaining "block" phrasing once the appendix
       rewrite lands — the main text should read as: one shared space, kernel-gated.
 
-## 3. Experiments — optional rigor for the new appendix claims
+## 3. Ablations — NOT in the paper (user decision 2026-09-16)
 
-- [ ] HELM response-space ablation currently covers m ∈ {1, 8} only
-      (`results-abl/opttext-blocked-helm-blocked/`, plus the d92 pilot). Extend the
-      blocked (option-text) arm to the full budget grid if a reviewer-proof
-      "indistinguishable at every budget" claim is wanted:
-      `query_efficiency.py --suite helm --sweep budget --response_space blocked --outdir ...`
-- [ ] HELM completion under the blocked (option-text) construction has not been run;
-      the drafted ablation paragraph only claims completion indistinguishability on
-      EEE. Run `completion.py --suite helm --sweep coverage --response_space blocked`
-      if the paragraph should cover HELM completion too.
+The Pipeline Ablations appendix (app:abl) is dropped entirely: the only worthwhile
+comparison is to DKPS, handled in the main text. The ablation results stay in the
+repo (results-abl/, git-ignored, regenerable from flags) for internal confidence and
+potential rebuttals only. Remove all three \ref{app:abl} sites in Overleaf: the
+main-text "Ablations of ..." sentence, the Appendix A Ensemble paragraph's closing
+sentence, and the app:abl section itself.
 
 ## 4. Parked experiments (revisit only if the paper grows an embedding appendix)
 
