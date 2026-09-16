@@ -301,7 +301,7 @@ def main():
     if args.suite == 'helm':
         # native answers cannot share a space with text -> blocked regardless of the
         # (EEE-oriented) response_space default; text answers honor the flag
-        hrs = args.response_space if args.resp_mode == 'text' else 'blocked'
+        hrs = args.response_space if args.resp_mode != 'native' else 'blocked'
         data = H.load_suite(resp_mode=args.resp_mode, response_space=hrs)
     else:
         data = H.load_eee(emb_tag=args.emb_tag, response_space=args.response_space,
