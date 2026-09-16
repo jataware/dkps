@@ -107,12 +107,12 @@ cd projects/pkps/helm
 pixi run python example_table1.py --m 1 --seed 0
 #  sample score  0.302
 #  IRT           0.360   (binary tasks only)
-#  DKPS          0.161
-#  PKPS          0.137
-#  Ensemble      0.128
+#  DKPS          0.167
+#  PKPS          0.144
+#  Ensemble      0.135
 ```
 
-(Table 1 reports the 16-seed means: 0.292 / 0.348 / 0.168 / 0.136 / 0.125.)
+(Table 1 reports the 16-seed means: 0.292 / 0.348 / 0.171 / 0.137 / 0.126.)
 The script is ~60 lines: load the suite, sample `m` responses per cell, build
 records, fit the five estimators, score against the full-benchmark scores. The
 two protocol choices it makes -- `bandwidth='cv'` around the within-domain
@@ -202,10 +202,10 @@ est.update(mine)                       # only affinities involving your model re
 est.predict([{'model_id': mine.model_id.iloc[0]}])
 ```
 
-`update` covers new models and new responses on benchmarks the fit has seen. A new
-*benchmark* changes the block layout, which is frozen at fit time -- re-run `fit`
-over all records instead (embeddings are disk-cached, so only the new texts are
-embedded).
+`update` covers new models, new responses, and new *benchmarks* alike: the shared
+response space is frozen at fit time and new benchmarks' responses are projected
+into it (only the opt-in `suite_mode='blocked'` ablation fixes a per-benchmark
+block layout and needs a fresh `fit` for a new benchmark).
 
 Practical notes:
 
