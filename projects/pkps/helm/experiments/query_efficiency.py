@@ -277,12 +277,16 @@ def main():
                     help='enforce disjoint query sets across models (exact rho=0)')
     ap.add_argument('--sigma_idx', type=int, default=-1,
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
+    ap.add_argument('--emb_tag', default=None,
+                    help='alternative embedding parquets suffix (EEE only; sensitivity study)')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
     if args.outdir is None:
         args.outdir = 'results-pkps-rd1' if args.suite == 'helm' else 'results-eee-rd1'
+    if args.emb_tag:
+        args.outdir = f'{args.outdir}-{args.emb_tag}'
 
-    data = H.load_suite() if args.suite == 'helm' else H.load_eee()
+    data = H.load_suite() if args.suite == 'helm' else H.load_eee(emb_tag=args.emb_tag)
     print(f'suite: {len(data[7])} models, {len(data[8])} tasks')
     # pairing cliff (headline): one full rho-curve per budget (robustness). Query-efficiency
     # panels vary p_query (m), cohort n, or task coverage p_task. breakdown dumps per-cell

@@ -272,7 +272,7 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
 
 
-def load_eee(reduce_dim=48, seed=0):
+def load_eee(reduce_dim=48, seed=0, emb_tag=None):
     """The Every Eval Ever suite (data/eee.py + data/embed_eee.py): 5 benchmarks
     (math-mc, gsm-mc, gpqa-diamond, judgebench, reward-bench-2) -> 16 tasks over the
     models shared by all five. Same block-diagonal construction as load_suite -- each
@@ -282,8 +282,9 @@ def load_eee(reduce_dim=48, seed=0):
     queries/cell), while the loaded rows are the capped per-cell pools; the pools are
     sampled with model-dependent seeds, so the suite is unpaired by construction.
     Returns the load_suite 12-tuple."""
-    emb = pd.read_parquet(data_path('exports/eee_response_embeddings.parquet'))
-    qdf = pd.read_parquet(data_path('exports/eee_query_embeddings.parquet'))
+    sfx = f'__{emb_tag}' if emb_tag else ''    # alternative embedding models (sensitivity study)
+    emb = pd.read_parquet(data_path(f'exports/eee_response_embeddings{sfx}.parquet'))
+    qdf = pd.read_parquet(data_path(f'exports/eee_query_embeddings{sfx}.parquet'))
     tgt = pd.read_parquet(data_path('exports/eee_cell_targets.parquet'))
 
     shared = set.intersection(*[set(g['model']) for _, g in emb.groupby('bench')])
