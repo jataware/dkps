@@ -32,12 +32,12 @@ MODELS = {
     'qwen06b':   ('Qwen/Qwen3-Embedding-0.6B', 'st', None, {}),
     'potion8m':  ('minishlab/potion-base-8M', 'model2vec', None, {}),
     # jina v5 family: both text sizes, base + task-distilled variants, + omni
-    'jina5-nano':        ('jinaai/jina-embeddings-v5-text-nano', 'st', None, {}),
+    'jina5-nano':        ('jinaai/jina-embeddings-v5-text-nano', 'st-task', None, {}),
     'jina5-nano-retr':   ('jinaai/jina-embeddings-v5-text-nano-retrieval', 'st', None, {}),
     'jina5-nano-match':  ('jinaai/jina-embeddings-v5-text-nano-text-matching', 'st', None, {}),
     'jina5-nano-clust':  ('jinaai/jina-embeddings-v5-text-nano-clustering', 'st', None, {}),
     'jina5-nano-class':  ('jinaai/jina-embeddings-v5-text-nano-classification', 'st', None, {}),
-    'jina5-small':       ('jinaai/jina-embeddings-v5-text-small', 'st', None, {}),
+    'jina5-small':       ('jinaai/jina-embeddings-v5-text-small', 'st-task', None, {}),
     'jina5-small-retr':  ('jinaai/jina-embeddings-v5-text-small-retrieval', 'st', None, {}),
     'jina5-small-match': ('jinaai/jina-embeddings-v5-text-small-text-matching', 'st', None, {}),
     'jina5-small-clust': ('jinaai/jina-embeddings-v5-text-small-clustering', 'st', None, {}),
@@ -56,7 +56,8 @@ def load_model(tag):
     else:
         import torch
         from sentence_transformers import SentenceTransformer
-        m = SentenceTransformer(hf_id, device='cpu', trust_remote_code=True)
+        kw = dict(model_kwargs={'default_task': 'text-matching'}) if backend == 'st-task' else {}
+        m = SentenceTransformer(hf_id, device='cpu', trust_remote_code=True, **kw)
         n_params = sum(p.numel() for p in m.parameters())
         enc = lambda texts, bs: m.encode(texts, batch_size=bs, convert_to_numpy=True,
                                          show_progress_bar=True, normalize_embeddings=False)

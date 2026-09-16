@@ -69,12 +69,12 @@ def one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups, row_score, sc
     return rows
 
 
-def load(dataset, emb_tag=None):
+def load(dataset, emb_tag=None, response_space='blocked'):
     if dataset == 'suite':
         d = H.load_suite()
         return d[:11], d[11], True
     if dataset == 'eee':
-        d = H.load_eee(emb_tag=emb_tag)
+        d = H.load_eee(emb_tag=emb_tag, response_space=response_space)
         return d[:11], d[11], True
     if dataset == 'pooled':
         return H.load_pooled(('math', 'wmt_14')), None, False

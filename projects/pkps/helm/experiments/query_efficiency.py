@@ -279,14 +279,19 @@ def main():
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--emb_tag', default=None,
                     help='alternative embedding parquets suffix (EEE only; sensitivity study)')
+    ap.add_argument('--response_space', choices=['blocked', 'joint'], default='blocked',
+                    help='joint: one shared response PCA space; relatedness left to k_Q')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
     if args.outdir is None:
         args.outdir = 'results-pkps-rd1' if args.suite == 'helm' else 'results-eee-rd1'
     if args.emb_tag:
         args.outdir = f'{args.outdir}-{args.emb_tag}'
+    if args.response_space != 'blocked':
+        args.outdir = f'{args.outdir}-{args.response_space}'
 
-    data = H.load_suite() if args.suite == 'helm' else H.load_eee(emb_tag=args.emb_tag)
+    data = H.load_suite() if args.suite == 'helm' else H.load_eee(
+        emb_tag=args.emb_tag, response_space=args.response_space)
     print(f'suite: {len(data[7])} models, {len(data[8])} tasks')
     # pairing cliff (headline): one full rho-curve per budget (robustness). Query-efficiency
     # panels vary p_query (m), cohort n, or task coverage p_task. breakdown dumps per-cell

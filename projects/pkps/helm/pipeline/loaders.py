@@ -272,7 +272,7 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
 
 
-def load_eee(reduce_dim=48, seed=0, emb_tag=None):
+def load_eee(reduce_dim=48, seed=0, emb_tag=None, response_space='blocked'):
     """The Every Eval Ever suite (data/eee.py + data/embed_eee.py): 5 benchmarks
     (math-mc, gsm-mc, gpqa-diamond, judgebench, reward-bench-2) -> 16 tasks over the
     models shared by all five. Same block-diagonal construction as load_suite -- each
@@ -291,21 +291,31 @@ def load_eee(reduce_dim=48, seed=0, emb_tag=None):
     df = emb[emb['model'].isin(shared)].reset_index(drop=True)
     df = df.rename(columns={'model': 'model_id', 'task': 'task_id'})
 
-    # block-diagonal response space, one block per benchmark
-    blocks, dims = {}, {}
-    for b, g in df.groupby('bench'):
-        R = np.stack(g['emb'].values).astype(np.float64)
+    if response_space == 'joint':
+        # one shared response space: a single PCA over all responses, unit-normalized.
+        # No hard cross-benchmark zeroing -- the query kernel alone decides which
+        # response comparisons carry weight (soft gating via its bandwidth).
+        R = np.stack(df['emb'].values).astype(np.float64)
         if R.shape[1] > reduce_dim:
             R = pca_reduce_elbow(R, max_components=reduce_dim)
         R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
-        blocks[b] = (g.index.to_numpy(), R.astype(np.float32))
-        dims[b] = R.shape[1]
-    total, off = sum(dims.values()), 0
-    resp_X = np.zeros((len(df), total), np.float32)
-    for b in sorted(dims):
-        idx, R = blocks[b]
-        resp_X[idx, off:off + dims[b]] = R
-        off += dims[b]
+        resp_X = R.astype(np.float32)
+    else:
+        # block-diagonal response space, one block per benchmark
+        blocks, dims = {}, {}
+        for b, g in df.groupby('bench'):
+            R = np.stack(g['emb'].values).astype(np.float64)
+            if R.shape[1] > reduce_dim:
+                R = pca_reduce_elbow(R, max_components=reduce_dim)
+            R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
+            blocks[b] = (g.index.to_numpy(), R.astype(np.float32))
+            dims[b] = R.shape[1]
+        total, off = sum(dims.values()), 0
+        resp_X = np.zeros((len(df), total), np.float32)
+        for b in sorted(dims):
+            idx, R = blocks[b]
+            resp_X[idx, off:off + dims[b]] = R
+            off += dims[b]
 
     df = df.assign(_row=np.arange(len(df))).sort_values(
         ['model_id', 'task_id', 'query_id']).reset_index(drop=True)
