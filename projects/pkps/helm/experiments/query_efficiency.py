@@ -279,9 +279,10 @@ def main():
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--emb_tag', default=None,
                     help='alternative embedding parquets suffix (EEE only; sensitivity study)')
-    ap.add_argument('--resp_mode', choices=['native', 'text'], default='native',
-                    help='HELM only: text = Google-embed the MCQ/label answer strings '
-                         'instead of one-hot (enables a joint HELM response space)')
+    ap.add_argument('--resp_mode', choices=['native', 'text', 'option-text'], default='native',
+                    help='HELM only: text = Google-embed the raw MCQ/label answer strings; '
+                         'option-text = resolve each answer to its standardized option/class '
+                         'text and embed that (enables a joint HELM response space)')
     ap.add_argument('--response_space', choices=['blocked', 'joint'], default='joint',
                     help='joint: one shared response PCA space; relatedness left to k_Q')
     ap.add_argument('--reduce_dim', type=int, default=None,

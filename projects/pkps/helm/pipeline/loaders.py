@@ -158,11 +158,15 @@ def load_pooled(keys=('math', 'wmt_14')):
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score)
 
 
-def _suite_dataset_long(key, max_q_per_task=None, seed=0, answer_text=False):
+def _suite_dataset_long(key, max_q_per_task=None, seed=0, answer_mode=None):
     """One suite dataset -> long df (model_id, task_id, query_id, resp_vec, query_embedding,
     score). resp_vec is the native response representation (Google emb or one-hot answer);
-    answer_text=True swaps the one-hot for the Google embedding of the answer STRING itself
-    (the MCQ letter / class label), putting every dataset in the same 3072-d text space."""
+    answer_mode='string' swaps the one-hot for the Google embedding of the answer STRING
+    itself (the MCQ letter / class label); answer_mode='option' resolves the answer to its
+    STANDARDIZED text -- the MedQA option text the letter denotes (per-instance map,
+    verified against model behavior) or the LegalBench class name the digit indexes --
+    and embeds that, putting every dataset in the same semantic 3072-d text space
+    (unresolvable answers fall back to the raw-string embedding)."""
     cfg = SUITE[key]
     meta = pd.read_csv(data_path(cfg['tsv']), sep='\t')
     score = meta[cfg['score_col']].to_numpy(dtype=float)
@@ -178,11 +182,26 @@ def _suite_dataset_long(key, max_q_per_task=None, seed=0, answer_text=False):
         df = base.merge(emb, on=['dataset', 'model_id', 'instance_id'], how='inner')
         df['resp_vec'] = list(np.stack(df['embedding'].values).astype(np.float32))
         df = df.drop(columns='embedding')
-    elif answer_text:  # embed the answer string (letters/labels share the text space)
+    elif answer_mode:  # embed the answer as text (shared 3072-d space across datasets)
         adf = pd.read_parquet(data_path('exports/answer_string_google_embeddings.parquet'))
         amap = {r: np.asarray(v, dtype=np.float32) for r, v in zip(adf['response'], adf['embedding'])}
         df = base.copy()
-        df['resp_vec'] = [amap[r] for r in df['response']]
+        if answer_mode == 'option':
+            tmap = pd.read_parquet(data_path('exports/answer_option_text_map.parquet'))
+            odf = pd.read_parquet(data_path('exports/answer_option_text_google_embeddings.parquet'))
+            omap = {t: np.asarray(v, dtype=np.float32) for t, v in zip(odf['text'], odf['embedding'])}
+            by_inst = {(d, i, r): t for d, i, r, t in
+                       zip(tmap['dataset'], tmap['instance_id'], tmap['response'], tmap['text']) if i}
+            by_ds = {(d, r): t for d, i, r, t in
+                     zip(tmap['dataset'], tmap['instance_id'], tmap['response'], tmap['text']) if not i}
+            def vec(ds_, iid, resp):
+                rr = str(resp).rstrip('.')
+                t = by_inst.get((ds_, iid, rr)) or by_ds.get((ds_, rr))
+                return omap[t] if t is not None else amap[str(resp)]
+            df['resp_vec'] = [vec(d, i, r) for d, i, r in
+                              zip(df['dataset'], df['instance_id'], df['response'])]
+        else:
+            df['resp_vec'] = [amap[r] for r in df['response']]
     else:  # one-hot answer agreement
         vocab = sorted(base['response'].unique())
         vi = {v: i for i, v in enumerate(vocab)}
@@ -220,11 +239,11 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
     Query embeddings share one Google space; the within-domain median query distance
     (returned as query_med) keeps the RBF query kernel ~0 across domains. Restricted to
     shared models. Returns the load_helm_math 11-tuple plus query_med."""
-    answer_text = resp_mode == 'text'
-    if response_space == 'joint' and not answer_text:
-        raise ValueError("response_space='joint' needs resp_mode='text' (one-hot blocks "
-                         "cannot share a space with text embeddings)")
-    longs = {k: _suite_dataset_long(k, max_q_per_task, seed, answer_text=answer_text)
+    answer_mode = {'native': None, 'text': 'string', 'option-text': 'option'}[resp_mode]
+    if response_space == 'joint' and answer_mode is None:
+        raise ValueError("response_space='joint' needs resp_mode='text' or 'option-text' "
+                         "(one-hot blocks cannot share a space with text embeddings)")
+    longs = {k: _suite_dataset_long(k, max_q_per_task, seed, answer_mode=answer_mode)
              for k in keys}
     shared = set.intersection(*[set(l['model_id']) for l in longs.values()])
 
