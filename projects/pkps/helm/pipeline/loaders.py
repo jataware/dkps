@@ -158,9 +158,11 @@ def load_pooled(keys=('math', 'wmt_14')):
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score)
 
 
-def _suite_dataset_long(key, max_q_per_task=None, seed=0):
+def _suite_dataset_long(key, max_q_per_task=None, seed=0, answer_text=False):
     """One suite dataset -> long df (model_id, task_id, query_id, resp_vec, query_embedding,
-    score). resp_vec is the native response representation (Google emb or one-hot answer)."""
+    score). resp_vec is the native response representation (Google emb or one-hot answer);
+    answer_text=True swaps the one-hot for the Google embedding of the answer STRING itself
+    (the MCQ letter / class label), putting every dataset in the same 3072-d text space."""
     cfg = SUITE[key]
     meta = pd.read_csv(data_path(cfg['tsv']), sep='\t')
     score = meta[cfg['score_col']].to_numpy(dtype=float)
@@ -176,6 +178,11 @@ def _suite_dataset_long(key, max_q_per_task=None, seed=0):
         df = base.merge(emb, on=['dataset', 'model_id', 'instance_id'], how='inner')
         df['resp_vec'] = list(np.stack(df['embedding'].values).astype(np.float32))
         df = df.drop(columns='embedding')
+    elif answer_text:  # embed the answer string (letters/labels share the text space)
+        adf = pd.read_parquet(data_path('exports/answer_string_google_embeddings.parquet'))
+        amap = {r: np.asarray(v, dtype=np.float32) for r, v in zip(adf['response'], adf['embedding'])}
+        df = base.copy()
+        df['resp_vec'] = [amap[r] for r in df['response']]
     else:  # one-hot answer agreement
         vocab = sorted(base['response'].unique())
         vi = {v: i for i, v in enumerate(vocab)}
@@ -201,40 +208,70 @@ def _suite_dataset_long(key, max_q_per_task=None, seed=0):
 
 
 def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
-               max_q_per_task=120, seed=0):
-    """Heterogeneous joint benchmark. Each dataset's responses are reduced (Google) or
-    kept (one-hot), unit-normalized, and placed in a DISJOINT block of the response
-    vector -> with a linear response kernel, cross-dataset k_R = 0 exactly. Query
-    embeddings share one Google space; the within-domain median query distance (returned
-    as query_med) keeps the RBF query kernel ~0 across domains. Restricted to shared
-    models. Returns the load_helm_math 11-tuple plus query_med."""
-    longs = {k: _suite_dataset_long(k, max_q_per_task, seed) for k in keys}
+               max_q_per_task=120, seed=0, resp_mode='native', response_space='blocked',
+               joint_force_dim=None):
+    """Heterogeneous joint benchmark. blocked (published protocol): each dataset's
+    responses are reduced (Google) or kept (one-hot), unit-normalized, and placed in a
+    DISJOINT block of the response vector -> with a linear response kernel, cross-dataset
+    k_R = 0 exactly. resp_mode='text' embeds the MCQ/label answer STRINGS with Google
+    instead of one-hot, putting all four datasets in one text space; response_space='joint'
+    (requires resp_mode='text') then reduces everything with a single shared PCA (capped
+    at reduce_dim per dataset, as in load_eee) so k_Q alone gates cross-dataset flow.
+    Query embeddings share one Google space; the within-domain median query distance
+    (returned as query_med) keeps the RBF query kernel ~0 across domains. Restricted to
+    shared models. Returns the load_helm_math 11-tuple plus query_med."""
+    answer_text = resp_mode == 'text'
+    if response_space == 'joint' and not answer_text:
+        raise ValueError("response_space='joint' needs resp_mode='text' (one-hot blocks "
+                         "cannot share a space with text embeddings)")
+    longs = {k: _suite_dataset_long(k, max_q_per_task, seed, answer_text=answer_text)
+             for k in keys}
     shared = set.intersection(*[set(l['model_id']) for l in longs.values()])
 
-    blocks, dims = {}, {}
-    for k, l in longs.items():
-        R = np.stack(l['resp_vec'].values).astype(np.float64)
-        if R.shape[1] > reduce_dim:
-            R = pca_reduce_elbow(R, max_components=reduce_dim)
+    if response_space == 'joint':
+        # one shared PCA over all datasets' 3072-d responses (capacity-matched to the
+        # blocked construction: reduce_dim components per dataset), then unit-norm --
+        # cross-dataset response similarity is real and the query kernel gates it
+        parts = []
+        for k in keys:
+            l = longs[k][longs[k]['model_id'].isin(shared)].reset_index(drop=True)
+            parts.append(l)
+        df = pd.concat(parts, ignore_index=True)
+        R = np.stack(df['resp_vec'].values).astype(np.float64)
+        if joint_force_dim:  # capacity control: fixed dim instead of the elbow choice
+            Rc = R - R.mean(axis=0)
+            from sklearn.utils.extmath import randomized_svd
+            _, S, Vt = randomized_svd(Rc, n_components=joint_force_dim, random_state=0)
+            R = Rc @ Vt.T
+        else:
+            R = pca_reduce_elbow(R, max_components=reduce_dim * len(keys))
         R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
-        blocks[k] = R.astype(np.float32)
-        dims[k] = R.shape[1]
-    total = sum(dims.values())
-    offset, off = {}, 0
-    for k in keys:
-        offset[k] = off
-        off += dims[k]
+        df['embedding'] = list(R.astype(np.float32))
+    else:
+        blocks, dims = {}, {}
+        for k, l in longs.items():
+            R = np.stack(l['resp_vec'].values).astype(np.float64)
+            if R.shape[1] > reduce_dim:
+                R = pca_reduce_elbow(R, max_components=reduce_dim)
+            R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
+            blocks[k] = R.astype(np.float32)
+            dims[k] = R.shape[1]
+        total = sum(dims.values())
+        offset, off = {}, 0
+        for k in keys:
+            offset[k] = off
+            off += dims[k]
 
-    parts = []
-    for k in keys:
-        l = longs[k][longs[k]['model_id'].isin(shared)].reset_index(drop=True)
-        idx = longs[k].index[longs[k]['model_id'].isin(shared)]
-        B = np.zeros((len(l), total), np.float32)
-        B[:, offset[k]:offset[k] + dims[k]] = blocks[k][[longs[k].index.get_loc(i) for i in idx]]
-        l = l.copy()
-        l['embedding'] = list(B)
-        parts.append(l)
-    df = pd.concat(parts, ignore_index=True)
+        parts = []
+        for k in keys:
+            l = longs[k][longs[k]['model_id'].isin(shared)].reset_index(drop=True)
+            idx = longs[k].index[longs[k]['model_id'].isin(shared)]
+            B = np.zeros((len(l), total), np.float32)
+            B[:, offset[k]:offset[k] + dims[k]] = blocks[k][[longs[k].index.get_loc(i) for i in idx]]
+            l = l.copy()
+            l['embedding'] = list(B)
+            parts.append(l)
+        df = pd.concat(parts, ignore_index=True)
     df = df.sort_values(['model_id', 'task_id', 'query_id']).reset_index(drop=True)
 
     resp_X = np.stack(df['embedding'].values).astype(np.float32)
