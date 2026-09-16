@@ -69,7 +69,7 @@ def one(resp_X, Qu, qid_code, model_id, task_id, query_id, groups, row_score, sc
     return rows
 
 
-def load(dataset, emb_tag=None, response_space='blocked'):
+def load(dataset, emb_tag=None, response_space='joint'):
     if dataset == 'suite':
         d = H.load_suite()
         return d[:11], d[11], True

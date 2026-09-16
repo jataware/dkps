@@ -211,8 +211,8 @@ Practical notes:
 
 - **Fit across several benchmarks.** The method borrows strength across models and
   tasks; a single benchmark with few models predicts poorly. The adapter emits a
-  `suite` column and `PKPS.fit` then reduces responses per benchmark into disjoint
-  unit-normalized blocks (the paper's construction) automatically.
+  `suite` column; responses share one unit-normalized space and the query kernel
+  gates cross-benchmark comparisons automatically.
 - **Or use the whole store.** `fetch_samples('all')` pulls every benchmark, and the
   adapter handles the store's full heterogeneity: single-turn `output.raw` and
   multi-turn transcripts (arena and agent runs -- the model's own turns become the

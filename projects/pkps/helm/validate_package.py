@@ -151,7 +151,10 @@ def main():
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--tol', type=float, default=5e-4, help='per-row |diff| tolerance')
     args = ap.parse_args()
-    data = H.load_suite() if args.suite == 'helm' else H.load_eee()
+    # pinned to the published Table 1 protocol (blocked response space, 48/block);
+    # the pipeline's base method is now the joint space -- revisit after regeneration
+    data = H.load_suite() if args.suite == 'helm' else H.load_eee(
+        response_space='blocked', reduce_dim=240)
     nmax = len(data[7])
     print(f'suite {args.suite}: {nmax} models, {len(data[8])} tasks')
 

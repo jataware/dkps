@@ -272,7 +272,7 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
             df['query_id'].to_numpy(), score_mat, models, tasks, groups, row_score, query_med)
 
 
-def load_eee(reduce_dim=48, seed=0, emb_tag=None, response_space='blocked'):
+def load_eee(reduce_dim=None, seed=0, emb_tag=None, response_space='joint'):
     """The Every Eval Ever suite (data/eee.py + data/embed_eee.py): 5 benchmarks
     (math-mc, gsm-mc, gpqa-diamond, judgebench, reward-bench-2) -> 16 tasks over the
     models shared by all five. Same block-diagonal construction as load_suite -- each
@@ -291,22 +291,27 @@ def load_eee(reduce_dim=48, seed=0, emb_tag=None, response_space='blocked'):
     df = emb[emb['model'].isin(shared)].reset_index(drop=True)
     df = df.rename(columns={'model': 'model_id', 'task': 'task_id'})
 
+    n_bench = df['bench'].nunique()
     if response_space == 'joint':
-        # one shared response space: a single PCA over all responses, unit-normalized.
-        # No hard cross-benchmark zeroing -- the query kernel alone decides which
-        # response comparisons carry weight (soft gating via its bandwidth).
+        # BASE METHOD: one shared response space -- a single PCA over all responses,
+        # unit-normalized, capacity matched to the blocked ablation (48 per benchmark).
+        # No hard cross-benchmark zeroing: the query kernel alone decides which response
+        # comparisons carry weight (soft gating via its bandwidth). PKPS exists to let
+        # information flow across unpaired, sparse collections; blocking is the ablation.
+        cap = reduce_dim if reduce_dim is not None else 48 * n_bench
         R = np.stack(df['emb'].values).astype(np.float64)
-        if R.shape[1] > reduce_dim:
-            R = pca_reduce_elbow(R, max_components=reduce_dim)
+        if R.shape[1] > cap:
+            R = pca_reduce_elbow(R, max_components=cap)
         R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
         resp_X = R.astype(np.float32)
     else:
-        # block-diagonal response space, one block per benchmark
+        # ABLATION: block-diagonal response space, one block per benchmark
+        per_block = (reduce_dim if reduce_dim is not None else 48 * n_bench) // n_bench
         blocks, dims = {}, {}
         for b, g in df.groupby('bench'):
             R = np.stack(g['emb'].values).astype(np.float64)
-            if R.shape[1] > reduce_dim:
-                R = pca_reduce_elbow(R, max_components=reduce_dim)
+            if R.shape[1] > per_block:
+                R = pca_reduce_elbow(R, max_components=per_block)
             R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
             blocks[b] = (g.index.to_numpy(), R.astype(np.float32))
             dims[b] = R.shape[1]

@@ -103,9 +103,10 @@ def test_eee_records_fit_predict_via_text_embedding(tmp_path, monkeypatch):
                                     'task_id': 'bench_task0'}])[0]['score_hat'])
 
 
-def test_suite_column_blocks_responses(tmp_path, monkeypatch):
-    """With the adapter's suite column, PKPS reduces responses per suite into disjoint
-    blocks: reduced vectors from different suites are exactly orthogonal."""
+def test_suite_column_joint_default_and_blocked_option(tmp_path, monkeypatch):
+    """Suite-labeled records default to one shared unit-normalized space (the base
+    method: k_Q alone gates cross-suite comparisons); suite_mode='blocked' gives the
+    block-diagonal ablation with exact cross-suite orthogonality."""
     def fake_embed(provider, texts, **kw):
         return np.stack([np.random.default_rng(abs(hash(t)) % 2**32).normal(size=16)
                          for t in texts])
@@ -119,10 +120,18 @@ def test_suite_column_blocks_responses(tmp_path, monkeypatch):
     sub = est._raw[est._raw.model_id == est.model_names_[0]].sort_values(['task_id', 'query_id'])
     X0 = md['X'][(sub.suite == 'bench_a').to_numpy()]
     X1 = md['X'][(sub.suite == 'bench_b').to_numpy()]
-    assert np.abs(X0 @ X1.T).max() < 1e-12          # disjoint blocks
     np.testing.assert_allclose(np.linalg.norm(md['X'], axis=1), 1.0)   # unit-normalized
+    assert np.abs(X0 @ X1.T).max() > 1e-6           # joint default: cross-suite k_R nonzero
     assert all(np.isfinite(r['score_hat']) for r in
                est.predict([{'model_id': est.model_names_[0]}], holdout='family'))
+    # blocked ablation: exact cross-suite orthogonality
+    estb = PKPS(query_kwargs=dict(pca_dim=None),
+                response_kwargs=dict(suite_mode='blocked'),
+                mds_kwargs=dict(dim=4)).fit(records)
+    mdb = estb._model_data[estb.model_names_[0]]
+    B0 = mdb['X'][(sub.suite == 'bench_a').to_numpy()]
+    B1 = mdb['X'][(sub.suite == 'bench_b').to_numpy()]
+    assert np.abs(B0 @ B1.T).max() < 1e-12
 
 
 def test_multiturn_response_from_messages():
@@ -159,7 +168,15 @@ def test_score_table_and_listings(tmp_path, monkeypatch):
     assert (missing.suite == 'bench_b').all() or (missing.suite == 'bench_a').all()
     one = tbl[tbl.model_id == est.model_names_[0]]
     assert len(one) == len(est.task_names_)
-    # a new suite cannot enter through update(): frozen block layout, clear error
-    extra = records[records.suite == 'bench_a'].head(3).assign(suite='bench_c')
+    # joint default: a NEW suite folds in through update() (shared space transforms it)
+    extra = records[records.suite == 'bench_a'].head(3).assign(
+        suite='bench_c', task_id='bench_c_task0',
+        query_id=[f'bench_c_task0:{i}' for i in range(3)])
+    est.update(extra)
+    assert 'bench_c' in est.suite_names_
+    # blocked ablation: frozen block layout still refuses unseen suites, clear error
+    estb2 = PKPS(query_kwargs=dict(pca_dim=None),
+                 response_kwargs=dict(suite_mode='blocked'),
+                 mds_kwargs=dict(dim=4)).fit(records)
     with pytest.raises(KeyError, match='fresh\\s+fit'):
-        est.update(extra)
+        estb2.update(extra)

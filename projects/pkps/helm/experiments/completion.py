@@ -130,14 +130,14 @@ def main():
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
     ap.add_argument('--emb_tag', default=None)
-    ap.add_argument('--response_space', choices=['blocked', 'joint'], default='blocked')
+    ap.add_argument('--response_space', choices=['blocked', 'joint'], default='joint')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
     if args.outdir is None:
         args.outdir = 'results-pkps-unified' if args.suite == 'helm' else 'results-eee-unified'
     if args.emb_tag:
         args.outdir = f'{args.outdir}-{args.emb_tag}'
-    if args.response_space != 'blocked':
+    if args.response_space != 'joint':
         args.outdir = f'{args.outdir}-{args.response_space}'
     data, qmed, suite = load('suite' if args.suite == 'helm' else 'eee',
                              emb_tag=args.emb_tag, response_space=args.response_space)

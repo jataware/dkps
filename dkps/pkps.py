@@ -36,7 +36,7 @@ QUERY_DEFAULTS = dict(kernel='rbf', bandwidth='median', bandwidth_ref=None, band
                       bandwidth_grid=(0.03, 0.1, 0.3, 1.0, 3.0), cv_k=8,
                       pca_dim='elbow', pca_n_elbows=2)
 RESPONSE_DEFAULTS = dict(kernel='linear', bandwidth='median', bandwidth_ref=None, bandwidth_mult=1.0,
-                         pca_dim='elbow', pca_n_elbows=2)
+                         pca_dim='elbow', pca_n_elbows=2, suite_mode='joint')
 MDS_DEFAULTS = dict(dim=None, n_elbows=2)
 EMBEDDING_DEFAULTS = dict(provider='google', model=None, api_key=None)
 
@@ -94,6 +94,18 @@ def _lomo_knn_error(Z, y, k):
         w = 1.0 / (np.sqrt(D2[a][nbr]) + 1e-9)
         errs.append(abs(np.average(y[nbr], weights=w) - y[a]))
     return errs
+
+
+class _JointNormReducer:
+    """Shared-space response reducer for suite-labeled records: one frozen PCA over all
+    suites, rows unit-normalized (scale comparability across suites)."""
+
+    def __init__(self, pca):
+        self.pca = pca
+
+    def transform(self, X, groups=None):
+        R = self.pca.transform(np.asarray(X, dtype=np.float64))
+        return R / (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
 
 
 class _BlockReducer:
@@ -172,10 +184,11 @@ class PKPS:
         'reference_score' (a known benchmark score for that (model, task), e.g. from a
         fully evaluated cache; used as the regression target in place of the sample
         score when present), 'sample_score' (overrides the per-cell mean of 'score'),
-        and 'suite' (a benchmark/domain label: responses are then PCA-reduced per
-        suite, unit-normalized, and placed in disjoint blocks, so a linear response
-        kernel is exactly zero across suites -- the paper's multi-benchmark
-        construction).
+        and 'suite' (a benchmark/domain label: responses are reduced into one shared
+        unit-normalized space and the query kernel alone gates cross-suite
+        comparisons -- the base method; pass response_kwargs=dict(suite_mode='blocked')
+        for the block-diagonal ablation, where a linear response kernel is exactly
+        zero across suites).
         """
         df = self._ingest(records)
         self._raw = df
@@ -360,12 +373,20 @@ class PKPS:
         disjoint unit-normalized blocks (BlockDiagonalEmbedding); update() then only
         accepts suites seen at fit time."""
         R = np.stack([np.asarray(e, dtype=np.float64) for e in df['response_embedding']])
-        if 'suite' in df.columns:
+        if 'suite' in df.columns and self.response_kwargs.get('suite_mode') == 'blocked':
+            # ablation: per-suite PCA in disjoint blocks (cross-suite k_R exactly 0)
             dim = self.response_kwargs['pca_dim']
             self._response_pca = _BlockReducer(
                 BlockDiagonalEmbedding(reduce_dim=dim if isinstance(dim, int) else 48,
                                        n_elbows=self.response_kwargs['pca_n_elbows']
                                        ).fit(R, df['suite'].to_numpy()))
+        elif 'suite' in df.columns:
+            # base method: one shared space, unit-normalized; the query kernel alone
+            # gates cross-suite comparisons (PKPS's information flow across collections)
+            self._response_pca = _JointNormReducer(
+                FrozenPCA(self.response_kwargs['pca_dim'],
+                          self.response_kwargs['pca_n_elbows'],
+                          max_components=48 * df['suite'].nunique()).fit(R))
         else:
             self._response_pca = FrozenPCA(self.response_kwargs['pca_dim'],
                                            self.response_kwargs['pca_n_elbows']).fit(R)
@@ -378,7 +399,7 @@ class PKPS:
                 self._response_bandwidth = float(bw)
             else:
                 Rr = self._response_pca.transform(R, df['suite'].to_numpy()) \
-                    if isinstance(self._response_pca, _BlockReducer) \
+                    if isinstance(self._response_pca, (_BlockReducer, _JointNormReducer)) \
                     else self._response_pca.transform(R)
                 self._response_bandwidth = self._scale(self.response_kwargs, Rr)
 
@@ -414,7 +435,7 @@ class PKPS:
     def _reduce_model(self, sub):
         sub = sub.sort_values(['task_id', 'query_id'])
         X = np.stack([np.asarray(e, dtype=np.float64) for e in sub['response_embedding']])
-        if isinstance(self._response_pca, _BlockReducer):
+        if isinstance(self._response_pca, (_BlockReducer, _JointNormReducer)):
             Xr = self._response_pca.transform(X, sub['suite'].to_numpy())
         else:
             Xr = self._response_pca.transform(X)
