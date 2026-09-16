@@ -150,16 +150,17 @@ def main():
     ap.add_argument('--n_seeds', type=int, default=16)
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--tol', type=float, default=5e-4, help='per-row |diff| tolerance')
+    ap.add_argument('--response_space', choices=['joint', 'blocked'], default='joint',
+                    help='EEE only: joint = base method (default dirs); blocked = the '
+                         'published-protocol ablation (reads the -blocked result dirs)')
     args = ap.parse_args()
-    # pinned to the published Table 1 protocol (blocked response space, 48/block);
-    # the pipeline's base method is now the joint space -- revisit after regeneration
-    data = H.load_suite() if args.suite == 'helm' else H.load_eee(
-        response_space='blocked', reduce_dim=240)
+    data = H.load_suite() if args.suite == 'helm' else H.load_eee(response_space=args.response_space)
+    sfx = '' if (args.suite == 'helm' or args.response_space == 'joint') else '-blocked'
     nmax = len(data[7])
     print(f'suite {args.suite}: {nmax} models, {len(data[8])} tasks')
 
     if args.protocol == 'qe':
-        ref = pd.read_csv(f"results-{'pkps' if args.suite == 'helm' else 'eee'}-rd1/rd1_suite_budget.csv")
+        ref = pd.read_csv(f"results-{'pkps' if args.suite == 'helm' else 'eee'}-rd1{sfx}/rd1_suite_budget.csv")
         ref = ref[(ref['n_paired'] == -1) & ref['m'].isin(args.m) & (ref['seed'] < args.n_seeds)]
         jobs = [delayed(qe_seed)(data, m, s) for m in args.m for s in range(args.n_seeds)]
         got = pd.DataFrame([r for sub in Parallel(n_jobs=args.n_jobs, verbose=2)(jobs) for r in sub])
@@ -167,7 +168,7 @@ def main():
         cmp = ref[keys + ['mae']].merge(got, on=keys, how='outer', suffixes=('_paper', '_pkg'))
         summary = cmp.groupby(['m', 'method'])[['mae_paper', 'mae_pkg']].mean()
     else:
-        ref = pd.read_csv(f"results-{'pkps' if args.suite == 'helm' else 'eee'}-unified/completion_suite_coverage.csv")
+        ref = pd.read_csv(f"results-{'pkps' if args.suite == 'helm' else 'eee'}-unified{sfx}/completion_suite_coverage.csv")
         specs = [(10, 0.5), (nmax, 0.5), (10, 0.2)]
         ref = ref[ref.apply(lambda r: (r['n_models'], r['p_task']) in specs, axis=1) & (ref['seed'] < args.n_seeds)]
         jobs = [delayed(completion_seed)(data, data[11], n, p, s) for n, p in specs for s in range(args.n_seeds)]
@@ -189,7 +190,7 @@ def main():
     if len(bad):
         print(bad.head(20).to_string())
     out = Path('results-validation'); out.mkdir(exist_ok=True)
-    cmp.to_csv(out / f'{args.suite}_{args.protocol}.csv', index=False)
+    cmp.to_csv(out / f'{args.suite}_{args.protocol}{sfx}.csv', index=False)
 
 
 if __name__ == '__main__':
