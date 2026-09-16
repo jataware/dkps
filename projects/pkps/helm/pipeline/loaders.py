@@ -43,6 +43,26 @@ from dkps.unpaired_dkps import (DoubleKernelDKPS, ProductKernelPerspectiveSpace,
                                 pca_reduce_elbow)
 from dkps.baselines import matrix_completion_predict
 
+
+def _pca_forced(R, dim):
+    """Center + PCA to exactly `dim` components (the shared-space capacity rule)."""
+    from sklearn.utils.extmath import randomized_svd
+    Rc = R - R.mean(axis=0)
+    k = int(min(dim, Rc.shape[0] - 1, Rc.shape[1]))
+    _, _, Vt = randomized_svd(Rc, n_components=k, random_state=0)
+    return Rc @ Vt.T
+
+
+def _matched_total(groups, per_cap):
+    """Total dimension the per-dataset construction retains: second Zhu--Ghodsi elbow
+    per group within per_cap, summed. The joint space uses this as its (forced)
+    dimension so the two constructions are capacity-matched by definition."""
+    total = 0
+    for R in groups:
+        total += (pca_reduce_elbow(R, max_components=per_cap).shape[1]
+                  if R.shape[1] > per_cap else R.shape[1])
+    return total
+
 # Shared payloads (downloads, embedding parquets, caches) live at the repo-level data/
 # directory (override with DKPS_DATA); the prep code stays in this project.
 DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
@@ -227,22 +247,24 @@ def _suite_dataset_long(key, max_q_per_task=None, seed=0, answer_mode=None):
 
 
 def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
-               max_q_per_task=120, seed=0, resp_mode='native', response_space='blocked',
+               max_q_per_task=120, seed=0, resp_mode='option-text', response_space='joint',
                joint_force_dim=None):
-    """Heterogeneous joint benchmark. blocked (published protocol): each dataset's
-    responses are reduced (Google) or kept (one-hot), unit-normalized, and placed in a
-    DISJOINT block of the response vector -> with a linear response kernel, cross-dataset
-    k_R = 0 exactly. resp_mode='text' embeds the MCQ/label answer STRINGS with Google
-    instead of one-hot, putting all four datasets in one text space; response_space='joint'
-    (requires resp_mode='text') then reduces everything with a single shared PCA (capped
-    at reduce_dim per dataset, as in load_eee) so k_Q alone gates cross-dataset flow.
-    Query embeddings share one Google space; the within-domain median query distance
-    (returned as query_med) keeps the RBF query kernel ~0 across domains. Restricted to
-    shared models. Returns the load_helm_math 11-tuple plus query_med."""
+    """Heterogeneous joint benchmark. BASE METHOD (option-text, joint): every response
+    is embedded text -- free text for MATH/WMT, and for the MCQ/label datasets the
+    STANDARDIZED answer text (the MedQA option text the letter denotes, the LegalBench
+    class name the digit indexes; see data/resolve_answer_option_text.py) -- reduced by
+    ONE shared PCA whose dimension matches what the per-dataset construction retains in
+    total (capacity-matched by definition), then unit-normalized. No hard cross-dataset
+    zeroing: the query kernel alone decides which response comparisons carry weight.
+    The published one-hot protocol is resp_mode='native' (one-hot answers, forces
+    blocked); response_space='blocked' gives the per-dataset disjoint-block ablation
+    (linear cross-dataset k_R = 0 exactly). Query embeddings share one Google space;
+    the within-domain median query distance (returned as query_med) keeps the RBF query
+    kernel ~0 across domains. Restricted to shared models. Returns the load_helm_math
+    11-tuple plus query_med."""
     answer_mode = {'native': None, 'text': 'string', 'option-text': 'option'}[resp_mode]
     if response_space == 'joint' and answer_mode is None:
-        raise ValueError("response_space='joint' needs resp_mode='text' or 'option-text' "
-                         "(one-hot blocks cannot share a space with text embeddings)")
+        response_space = 'blocked'  # one-hot answers cannot share a space: published protocol
     longs = {k: _suite_dataset_long(k, max_q_per_task, seed, answer_mode=answer_mode)
              for k in keys}
     shared = set.intersection(*[set(l['model_id']) for l in longs.values()])
@@ -257,13 +279,12 @@ def load_suite(keys=('math', 'wmt_14', 'med_qa', 'legalbench'), reduce_dim=48,
             parts.append(l)
         df = pd.concat(parts, ignore_index=True)
         R = np.stack(df['resp_vec'].values).astype(np.float64)
-        if joint_force_dim:  # capacity control: fixed dim instead of the elbow choice
-            Rc = R - R.mean(axis=0)
-            from sklearn.utils.extmath import randomized_svd
-            _, S, Vt = randomized_svd(Rc, n_components=joint_force_dim, random_state=0)
-            R = Rc @ Vt.T
-        else:
-            R = pca_reduce_elbow(R, max_components=reduce_dim * len(keys))
+        # shared-space dimension = what the per-dataset construction retains in total
+        # (capacity-matched by definition); joint_force_dim overrides for controls
+        dim = joint_force_dim or _matched_total(
+            (np.stack(longs[k]['resp_vec'].values).astype(np.float64) for k in keys),
+            reduce_dim)
+        R = _pca_forced(R, dim)
         R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
         df['embedding'] = list(R.astype(np.float32))
     else:
@@ -354,10 +375,14 @@ def load_eee(reduce_dim=None, seed=0, emb_tag=None, response_space='joint'):
         # No hard cross-benchmark zeroing: the query kernel alone decides which response
         # comparisons carry weight (soft gating via its bandwidth). PKPS exists to let
         # information flow across unpaired, sparse collections; blocking is the ablation.
-        cap = reduce_dim if reduce_dim is not None else 48 * n_bench
         R = np.stack(df['emb'].values).astype(np.float64)
-        if R.shape[1] > cap:
-            R = pca_reduce_elbow(R, max_components=cap)
+        if reduce_dim is not None:      # explicit cap: elbow within it (legacy protocol)
+            if R.shape[1] > reduce_dim:
+                R = pca_reduce_elbow(R, max_components=reduce_dim)
+        else:                           # capacity-matched to the blocked construction
+            dim = _matched_total((np.stack(g['emb'].values).astype(np.float64)
+                                  for _, g in df.groupby('bench')), 48)
+            R = _pca_forced(R, dim)
         R /= (np.linalg.norm(R, axis=1, keepdims=True) + 1e-12)
         resp_X = R.astype(np.float32)
     else:

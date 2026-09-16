@@ -382,11 +382,17 @@ class PKPS:
                                        ).fit(R, df['suite'].to_numpy()))
         elif 'suite' in df.columns:
             # base method: one shared space, unit-normalized; the query kernel alone
-            # gates cross-suite comparisons (PKPS's information flow across collections)
-            self._response_pca = _JointNormReducer(
-                FrozenPCA(self.response_kwargs['pca_dim'],
-                          self.response_kwargs['pca_n_elbows'],
-                          max_components=48 * df['suite'].nunique()).fit(R))
+            # gates cross-suite comparisons (PKPS's information flow across collections).
+            # Its dimension matches what the per-suite construction would retain in
+            # total (second Zhu-Ghodsi elbow per suite, cap 48) -- capacity-matched to
+            # the blocked ablation by definition; an int pca_dim overrides.
+            dim = self.response_kwargs['pca_dim']
+            if not isinstance(dim, int):
+                suites = df['suite'].to_numpy()
+                dim = sum(FrozenPCA('elbow', self.response_kwargs['pca_n_elbows'],
+                                    max_components=48).fit(R[suites == s])
+                          .components_.shape[0] for s in np.unique(suites))
+            self._response_pca = _JointNormReducer(FrozenPCA(dim).fit(R))
         else:
             self._response_pca = FrozenPCA(self.response_kwargs['pca_dim'],
                                            self.response_kwargs['pca_n_elbows']).fit(R)

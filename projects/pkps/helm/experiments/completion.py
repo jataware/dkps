@@ -130,17 +130,24 @@ def main():
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--suite', choices=['helm', 'eee'], default='helm')
     ap.add_argument('--emb_tag', default=None)
+    ap.add_argument('--resp_mode', choices=['native', 'text', 'option-text'], default='option-text',
+                    help='HELM only: response representation (native = published one-hot)')
     ap.add_argument('--response_space', choices=['blocked', 'joint'], default='joint')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
+    if args.suite == 'helm' and args.resp_mode == 'native':
+        args.response_space = 'blocked'   # one-hot answers cannot share a space
     if args.outdir is None:
         args.outdir = 'results-pkps-unified' if args.suite == 'helm' else 'results-eee-unified'
     if args.emb_tag:
         args.outdir = f'{args.outdir}-{args.emb_tag}'
+    if args.suite == 'helm' and args.resp_mode != 'option-text':
+        args.outdir += {'native': '-onehot', 'text': '-anstext'}[args.resp_mode]
     if args.response_space != 'joint':
         args.outdir = f'{args.outdir}-{args.response_space}'
     data, qmed, suite = load('suite' if args.suite == 'helm' else 'eee',
-                             emb_tag=args.emb_tag, response_space=args.response_space)
+                             emb_tag=args.emb_tag, response_space=args.response_space,
+                             resp_mode=args.resp_mode)
     # each spec is (n_models, n_tasks, p_task, p_query). The lever panels show one line per
     # n_models in --line_models; the n_models panel sweeps n at fixed levers.
     if args.sweep == 'n_models':

@@ -279,30 +279,31 @@ def main():
                     help='force a fixed bandwidth: 0-4 = grid multiplier index, 5 = delta; -1 = CV')
     ap.add_argument('--emb_tag', default=None,
                     help='alternative embedding parquets suffix (EEE only; sensitivity study)')
-    ap.add_argument('--resp_mode', choices=['native', 'text', 'option-text'], default='native',
-                    help='HELM only: text = Google-embed the raw MCQ/label answer strings; '
-                         'option-text = resolve each answer to its standardized option/class '
-                         'text and embed that (enables a joint HELM response space)')
+    ap.add_argument('--resp_mode', choices=['native', 'text', 'option-text'], default='option-text',
+                    help='HELM only: option-text (base) = resolve each MCQ/label answer to its '
+                         'standardized option/class text and embed it; text = embed the raw '
+                         'answer string; native = the published one-hot (forces blocked)')
     ap.add_argument('--response_space', choices=['blocked', 'joint'], default='joint',
                     help='joint: one shared response PCA space; relatedness left to k_Q')
     ap.add_argument('--reduce_dim', type=int, default=None,
                     help='PCA cap for the response space (per block, or total when joint)')
     ap.add_argument('--outdir', default=None)
     args = ap.parse_args()
+    if args.suite == 'helm' and args.resp_mode == 'native':
+        args.response_space = 'blocked'   # one-hot answers cannot share a space
     if args.outdir is None:
         args.outdir = 'results-pkps-rd1' if args.suite == 'helm' else 'results-eee-rd1'
     if args.emb_tag:
         args.outdir = f'{args.outdir}-{args.emb_tag}'
+    if args.suite == 'helm' and args.resp_mode != 'option-text':
+        args.outdir += {'native': '-onehot', 'text': '-anstext'}[args.resp_mode]
     if args.response_space != 'joint':
         args.outdir = f'{args.outdir}-{args.response_space}'
 
     if args.reduce_dim is not None:
         args.outdir = f'{args.outdir}-d{args.reduce_dim}'
     if args.suite == 'helm':
-        # native answers cannot share a space with text -> blocked regardless of the
-        # (EEE-oriented) response_space default; text answers honor the flag
-        hrs = args.response_space if args.resp_mode != 'native' else 'blocked'
-        data = H.load_suite(resp_mode=args.resp_mode, response_space=hrs)
+        data = H.load_suite(resp_mode=args.resp_mode, response_space=args.response_space)
     else:
         data = H.load_eee(emb_tag=args.emb_tag, response_space=args.response_space,
                           reduce_dim=args.reduce_dim)

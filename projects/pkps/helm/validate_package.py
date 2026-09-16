@@ -151,11 +151,17 @@ def main():
     ap.add_argument('--n_jobs', type=int, default=-1)
     ap.add_argument('--tol', type=float, default=5e-4, help='per-row |diff| tolerance')
     ap.add_argument('--response_space', choices=['joint', 'blocked'], default='joint',
-                    help='EEE only: joint = base method (default dirs); blocked = the '
-                         'published-protocol ablation (reads the -blocked result dirs)')
+                    help='joint = base method (default result dirs); blocked = the '
+                         'archived per-dataset protocol (HELM: the published one-hot '
+                         'construction in the -onehot-blocked dirs; EEE: -blocked dirs)')
     args = ap.parse_args()
-    data = H.load_suite() if args.suite == 'helm' else H.load_eee(response_space=args.response_space)
-    sfx = '' if (args.suite == 'helm' or args.response_space == 'joint') else '-blocked'
+    if args.suite == 'helm':
+        data = H.load_suite() if args.response_space == 'joint' else H.load_suite(
+            resp_mode='native', response_space='blocked')
+        sfx = '' if args.response_space == 'joint' else '-onehot-blocked'
+    else:
+        data = H.load_eee(response_space=args.response_space)
+        sfx = '' if args.response_space == 'joint' else '-blocked'
     nmax = len(data[7])
     print(f'suite {args.suite}: {nmax} models, {len(data[8])} tasks')
 
