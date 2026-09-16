@@ -1,21 +1,17 @@
 \documentclass{article}
-\usepackage{iclr2025_conference}
+\usepackage{iclr2027/iclr2027_conference, times}
+\usepackage{enumitem}
 \usepackage{amsmath,amssymb}
-% indicator: \mathbbm{1} (bbm) or \mathds{1} (dsfont) render a
-% blackboard 1 but need extra font packages; \mathbf{1} is portable.
-\newcommand{\indone}{\mathbf{1}}
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
 \newtheorem{corollary}{Corollary}
 \newtheorem{proposition}{Proposition}
 \newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Remark}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
 \newtheorem{assumption}{Assumption}
-\theoremstyle{remark}
-\newtheorem{remark}{Remark}
 \theoremstyle{plain}
-\usepackage{enumitem}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -23,19 +19,19 @@
 \usepackage[colorlinks=true,allcolors=blue]{hyperref}
 \graphicspath{{figures/}}
 % pack floats and text more tightly (defaults strand ~1/3 page under two floats)
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.6}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.9}
-\setlength{\textfloatsep}{7pt plus 2pt minus 3pt}
-\setlength{\intextsep}{8pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{4pt}
+% \renewcommand{\topfraction}{0.95}
+% \renewcommand{\bottomfraction}{0.6}
+% \renewcommand{\textfraction}{0.05}
+% \renewcommand{\floatpagefraction}{0.9}
+% \setlength{\textfloatsep}{7pt plus 2pt minus 3pt}
+% \setlength{\intextsep}{8pt plus 2pt minus 2pt}
+% \setlength{\abovecaptionskip}{4pt}
 
-\usepackage{xspace}
 \newcommand{\PKPS}{PKPS\xspace}
+\usepackage{xspace}
 
 \title{Benchmark Prediction with Sparse and Unpaired Cached Responses}
-\author{Anonymous}
+% \author{Anonymous}
 
 \begin{document}
 \maketitle
@@ -49,7 +45,7 @@ this paper, we introduce the Product Kernel Perspective Space (\PKPS), a collect
 low-dimensional representations of models based on their embedded responses. \PKPS
 generalizes existing methods for representing black-box generative models by comparing responses to similar -- rather than just
 identical -- queries and is therefore able to utilize sparse and unpaired information. Theoretically, we show that
-benchmark prediction using \PKPS is query-efficient relative to methods that only use information from dense and paired portions of the evaluation data. 
+benchmark prediction using \PKPS is query-efficient relative to methods that only use information from dense and paired portions of the evaluation data.
 Empirically, we show that \PKPS
 outperforms baselines on benchmark prediction across two large benchmark suites.
 \end{abstract}
@@ -106,7 +102,7 @@ query-efficient as methods that only use information from paired responses
 \item \emph{Empirical:} we show
 that \PKPS matches the accuracy of the sample score with up to an $8\times$ smaller
 query budget and, when ensembled with low-rank matrix completion, reduces score
-matrix completion error by up to 28\%. Our empirical evaluation spans two large benchmark suites. 
+matrix completion error by up to 28\%. Our empirical evaluation spans two large benchmark suites.
 \end{enumerate}
 
 \begin{table}[t!]
@@ -135,12 +131,31 @@ Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
 Sample score       & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
 IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
 LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
-DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
-\PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{0.120}$ & $\underline{0.103}$ & $\mathbf{0.171}$ & $\underline{0.076}$ & $\underline{0.058}$ & $\mathbf{0.082}$ & $\underline{0.070}$ & $\mathbf{0.108}$ \\
-Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $\mathbf{0.073}$ & $\mathbf{0.049}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
+DKPS               & $0.171$ & $0.111$ & --- & --- & --- & $0.116$ & $0.078$ & --- & --- & --- \\
+\PKPS              & $\underline{0.137}$ & $0.109$ & $\mathbf{0.120}$ & $\underline{0.104}$ & $\mathbf{0.171}$ & $\underline{0.070}$ & $\underline{0.060}$ & $\mathbf{0.081}$ & $\underline{0.070}$ & $\mathbf{0.108}$ \\
+Ensemble           & $\mathbf{0.126}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\mathbf{0.100}$ & $\underline{0.172}$ & $\mathbf{0.068}$ & $\mathbf{0.050}$ & $\mathbf{0.081}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+% \begin{tabular}{lccccc ccccc}
+% \toprule
+%  & \multicolumn{5}{c}{\textbf{HELM suite} ($18$ tasks, $93$ models)}
+%  & \multicolumn{5}{c}{\textbf{EEE suite} ($16$ tasks, $45$ models)} \\
+% \cmidrule(lr){2-6}\cmidrule(lr){7-11}
+%  & \multicolumn{2}{c}{Query-eff.} & \multicolumn{3}{c}{Completion}
+%  & \multicolumn{2}{c}{Query-eff.} & \multicolumn{3}{c}{Completion} \\
+% Method & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}93$) & (sp.)
+%        & ($m{=}1$) & ($m{=}8$) & ($n{=}10$) & ($n{=}45$) & (sp.) \\
+% \midrule
+% Sample score       & $0.292$ & $\underline{0.092}$ & --- & --- & --- & $0.224$ & $0.081$ & --- & --- & --- \\
+% IRT                & $0.348$ & $0.343$ & --- & --- & --- & $0.165$ & $0.139$ & --- & --- & --- \\
+% LRMC               & --- & --- & $0.139$ & $0.105$ & $0.208$ & --- & --- & $0.109$ & $0.096$ & $0.144$ \\
+% DKPS               & $0.168$ & $0.109$ & --- & --- & --- & $0.116$ & $0.077$ & --- & --- & --- \\
+% \PKPS              & $\underline{0.136}$ & $0.108$ & $\mathbf{0.120}$ & $\underline{0.103}$ & $\mathbf{0.171}$ & $\underline{0.076}$ & $\underline{0.058}$ & $\mathbf{0.082}$ & $\underline{0.070}$ & $\mathbf{0.108}$ \\
+% Ensemble           & $\mathbf{0.125}$ & $\mathbf{0.073}$ & $\mathbf{0.120}$ & $\mathbf{0.099}$ & $\mathbf{0.171}$ & $\mathbf{0.073}$ & $\mathbf{0.049}$ & $\mathbf{0.082}$ & $\mathbf{0.069}$ & $\mathbf{0.108}$ \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
 
 \subsection{Related Work}
 \label{sec:related}
@@ -186,7 +201,7 @@ For our purposes, a model is a random mapping
 $f:\mathcal{Q}\to\mathcal{X}$ from a query space to a response space.
 A task is a pair $(Q^{(t)}, s^{(t)})$, where $Q^{(t)}\subseteq\mathcal{Q}$ is a
 collection of queries with $M^{(t)}:=|Q^{(t)}|$ and $s^{(t)}$ is a scoring function
-mapping a model and a query collection to a nonnegative real number. 
+mapping a model and a query collection to a nonnegative real number.
 Model $i$'s true score on task
 $t$ is $y_i^{(t)}:=s^{(t)}(f_{i},Q^{(t)}) \in \mathbb{R}_{\ge 0}$.
 
@@ -200,7 +215,7 @@ $\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is an estimate of
 $y_{i}^{(t)}$.
 
 Evaluation data is \emph{sparse} when few models have
-$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections 
+$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
 $\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 given model pair and note that $\rho_{ii'}^{(t)}\approx1$ for all pairs in highly curated
@@ -232,7 +247,7 @@ matrix.
 We assume access to the responses for each observed (model, task, query) triple and
 to two embedding functions $g_{Q}$ and $g_{R}$ that map
 queries and responses to $\mathbb{R}^{p_{Q}}$ and $\mathbb{R}^{p_{R}}$, respectively.
-Let $q_{1},q_{2},\hdots$ enumerate the observed queries and let
+Let $q_{1},q_{2},\hdots, q_{M} $ enumerate the observed queries and let
 $x_{ij}$ denote the embedded response $f_{i}(q_{j})$ and $u_{j}$ denote the embedded
 query $q_{j}$.
 
@@ -269,7 +284,7 @@ Unless otherwise stated we analyze and apply \PKPS under this assumption.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig_concept.pdf}
+\includegraphics[width=\textwidth]{fig_concept.pdf}
 \caption{An illustration of the difference between the Product Kernel Perspective
 Space (\PKPS) and the previously proposed Data Kernel Perspective Space (DKPS).
 \textbf{(a)} Top: two models respond to different sets of queries. Bottom: queries
@@ -410,7 +425,7 @@ We evaluate \PKPS on synthetic data and on two large benchmark suites.
 $v_i \in \mathbb{R}^{5}$ and $T$ tasks with latent vectors $t_k \in \mathbb{R}^{5}$,
 scores $v_i\cdot t_k+\epsilon$ with additive noise $ \epsilon $, and queries drawn near each task center ($u_j = t_k +
 \eta_j$ with isotropic noise $\eta_j$).
-Each model answers $m$ queries per task. 
+Each model answers $m$ queries per task.
 We control unpairedness via
 $\rho=m_{ii'}/m$ and sparsity via a probability of observing a task
 $p_{\mathrm{task}}$ and, conditioned on observing a task, a probability of answering
@@ -418,7 +433,7 @@ a query $p_{\mathrm{query}}$.
 
 \paragraph{Benchmark suites.}
 We consider two large benchmark suites.
-The first consists of $18$ tasks from HELM-Lite \citep{helm} 
+The first consists of $18$ tasks from HELM-Lite \citep{helm}
 -- $7$ math subjects (MATH, \citealp{hendrycks2021math}), $5$ translation pairs
 (WMT-14, \citealp{bojar2014wmt}), medical multiple choice
 (MedQA, \citealp{jin2021medqa}), and $5$ legal subjects
@@ -438,8 +453,8 @@ We study a dense 45 model and 16 task submatrix so that true scores are availabl
 sparsity and pairedness can be controlled.
 The tasks include MATH-MC
 levels $1$--$5$ \citep{hendrycks2021math}, GSM-MC \citep{cobbe2021gsm8k},
-GPQA-Diamond \citep{rein2023gpqa}, and nine categories from JudgeBench
-\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}. 
+GPQA-Diamond \citep{rein2023gpqa}, nine categories from JudgeBench
+\citep{tan2024judgebench} and RewardBench~2 \citep{malik2025rewardbench2}.
 
 Both suites were chosen because they include item-level responses -- most large
 public benchmark leaderboards only include scores.
@@ -537,13 +552,13 @@ Figure~\ref{fig:qe}a--c shows the MAE for \PKPS, DKPS, IRT, the sample score, an
 the ensemble on the HELM suite.
 Each model answers its own independently sampled queries and we predict its true
 full-evaluation score.
-At $m{=}1$, \PKPS attains $0.136$ and the ensemble $0.125$ versus $0.292$ for the sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences, better on all $18$ tasks), so \PKPS with one query matches the sample score at four (a).
+At $m{=}1$, \PKPS attains $0.137$ and the ensemble $0.126$ versus $0.292$ for the sample score (Wilcoxon $p{=}8\times10^{-6}$ on average task error differences, better on all $18$ tasks), so \PKPS with one query matches the sample score at four (a).
 As the budget grows, the sample score's noise falls below the representations'
 residual bias and it eventually overtakes them.
 The ensemble follows the better of its two components
 throughout (a).
 \PKPS improves with the number of reference models
-(b; $0.157\!\to\!0.124$) and with the task coverage (c; $0.154\!\to\!0.128$),
+(b; $0.157\!\to\!0.124$) and with the task coverage (c; $0.161\!\to\!0.130$),
 while DKPS is flat.
 IRT is poorly identified without a shared item block and is worse than the sample
 score throughout.
@@ -579,8 +594,8 @@ At the full cohort the methods converge and the ensemble remains best on average
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig_suite_query_efficiency.pdf}\\[2pt]
-\includegraphics[width=0.9\textwidth]{fig_qe_conditional.pdf}
+\includegraphics[width=\textwidth]{fig_suite_query_efficiency.pdf}\\[2pt]
+\includegraphics[width=\textwidth]{fig_qe_conditional.pdf}
 \caption{Query-efficiency on the HELM suite.
 \textbf{(a--c)} MAE against the true full-evaluation score when each model answers $m$ unpaired queries per observed cell
 ($\pm1$ SEM), as a function of budget $m$, cohort size $n$, and task coverage
@@ -591,7 +606,7 @@ coverage. $\blacktriangledown$ indicates the per-row mean.}
 \label{fig:qe}
 \end{figure}
 
-\paragraph{The completion gains are modest but hold across cells.}
+\paragraph{The completion gains are modest but consistent.}
 Figure~\ref{fig:completion}e--h shows the distribution of the per-missing-cell
 difference between LRMC's and the ensemble's absolute errors, by dataset (e),
 cohort (f), coverage (g), and query depth (h).
@@ -601,8 +616,8 @@ $54\%$ of missing cells -- but the mean gain is positive in every row.
 \paragraph{The results are qualitatively similar on the Every Eval Ever suite.}
 The second suite shows the same behavior with larger margins (lever sweeps in
 Appendix~\ref{app:eee}).
-At $m{=}1$, \PKPS attains a third of the sample score's error ($0.076$ versus
-$0.224$) and matches the accuracy the sample score reaches at $m{=}8$ ($0.081$).
+At $m{=}1$, \PKPS attains less than a third of the sample score's error ($0.070$ versus
+$0.224$), below the accuracy the sample score reaches at $m{=}8$ ($0.081$).
 On missing cells, the ensemble outperforms LRMC everywhere, including
 the full cohort (Wilcoxon $p{=}3\times10^{-5}$, better on every task), which is not significant on HELM.
 Table~\ref{tab:suite} shows the performance of all methods on both tasks and both suites.
@@ -612,13 +627,13 @@ The ensemble is the best or tied in every column.
 the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
 Ablations of the regression method, the response kernel, the ensemble weighting rule, and
-the incidental query overlap in the EEE pools are in Appendix~\ref{app:abl}.
+the incidental query overlap are in Appendix~\ref{app:abl}.
 Our observations are generally robust across these choices.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig_suite_completion.pdf}\\[2pt]
-\includegraphics[width=0.9\textwidth]{fig_completion_conditional.pdf}
+\includegraphics[width=\textwidth]{fig_suite_completion.pdf}\\[2pt]
+\includegraphics[width=\textwidth]{fig_completion_conditional.pdf}
 \caption{Score completion on the HELM suite. \textbf{(a--d)} MAE on missing cells
 ($\pm1$ SEM) when a fraction $p_{\mathrm{task}}$ of (model, task) cells is observed at
 query depth $p_{\mathrm{query}}$, as a function of task coverage, query depth, number of
@@ -684,17 +699,10 @@ as Moltbook, where no two agents respond to the same stimuli.
 \label{app:details}
 
 \paragraph{Suite.} $18$ tasks over four datasets from HELM-Lite \citep{helm}: MATH ($7$
-subjects), WMT-14 ($5$ translation directions), MedQA, and LegalBench ($5$ subsets), on the
-$93$ models evaluated on all four; Table~\ref{tab:helmsuite} lists every task with its
-query count (the loader subsamples each task to at most $120$ queries with a fixed seed, so
-datasets contribute comparably). MATH and WMT-14 responses are free text and are embedded
-with \texttt{gemini-embedding-001} ($3072$-d). MedQA and LegalBench responses are
-single-token answers and encoded one-hot. Queries share a single \texttt{gemini-embedding-001}
-embedding space. Each dataset's responses occupy a disjoint block: with a linear
-$k_R$, cross-dataset response similarity is exactly zero, and a within-domain query
-bandwidth keeps $k_Q$ near zero across datasets, so the product kernel factorizes by
-dataset. Response and query embeddings are reduced by PCA fit on observed rows
-only, with dimension chosen by the second Zhu--Ghodsi elbow.
+subjects), WMT-14 ($5$ translation directions), MedQA, and LegalBench ($5$ subsets),
+restricted to the $93$ models evaluated on all four. Table~\ref{tab:helmsuite} lists
+every task with its query count; the loader subsamples each task to at most $120$
+queries with a fixed seed, so datasets contribute comparably.
 
 \begin{table}[h]
 \centering
@@ -754,16 +762,30 @@ qwen\_qwen2.5-7b-instruct-turbo, snowflake\_snowflake-arctic-instruct, tiiuae\_f
 tiiuae\_falcon-7b, upstage\_solar-pro-241126, writer\_palmyra-x-004, writer\_palmyra-x-v2,
 writer\_palmyra-x-v3.\par}
 
-\paragraph{\PKPS.} RBF query kernel with bandwidth selected per run by leave-one-model-out
-$K$-NN ($K{=}8$) on the observed scores over the grid
-$\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance, plus the
-near-delta (DKPS) limit; linear response kernel on real data, RBF on synthetic. Response
-blocks are capped at $48$ PCA components per dataset and the shared query space at $64$;
-each (model, query) pair uses one sampled response ($r{=}1$). Models are embedded by
-classical MDS with $d{=}8$ throughout, following \citet{dkps_qeff} and fixed a priori
-($d$ = latent dimension on synthetic). Appendix~\ref{app:sens} shows the results are
-insensitive to $d$ over $4$--$24$, and that the cross-validated bandwidth tracks the best
-fixed choice.
+\paragraph{Representations.} All queries and responses are embedded with
+\texttt{gemini-embedding-001} ($3072$-d). MATH and WMT-14 responses are free text and
+are embedded directly. MedQA and LegalBench responses are single-token answers
+(multiple-choice letters and class indices); each is standardized to the text it
+denotes before embedding---the option text the letter selects, recovered from the
+MedQA source data and verified against model behavior on $999$ of $1000$ instances,
+and the class name the index encodes. Queries share one PCA space (capped at $64$
+components) and responses another, both fit on observed rows only; the response
+space's dimension is set to the total that separate per-dataset reductions would
+retain (second Zhu--Ghodsi elbow per dataset, at most $48$ components each; $92$ on
+this suite), and response vectors are unit-normalized. Nothing separates the datasets
+by construction: the query kernel, whose bandwidth is set from within-dataset
+distances, determines how much weight cross-dataset comparisons receive.
+
+\paragraph{Kernels.} The query kernel is an RBF whose bandwidth is selected per run by
+leave-one-model-out $K$-NN ($K{=}8$) on the observed scores, over the grid
+$\sigma\in\{0.03,0.1,0.3,1,3\}\times\mathrm{median}$ pairwise query distance plus the
+near-delta (DKPS) limit; Appendix~\ref{app:sens} shows the cross-validated bandwidth
+tracks the best fixed choice. The response kernel is linear on real data and RBF on
+synthetic. Each (model, query) pair uses one sampled response ($r{=}1$).
+
+\paragraph{Model embedding.} Models are embedded by classical MDS with $d{=}8$
+throughout, following \citet{dkps_qeff} and fixed a priori ($d$ = latent dimension on
+synthetic); Appendix~\ref{app:sens} probes the choice of $d$.
 
 \paragraph{Regressor.} All embedding methods share one regressor pipeline: logit-transformed
 scores, per-task standardization to unit variance, a two-way (model $+$ task) additive
@@ -791,8 +813,6 @@ family, selected on a $21$-point grid by leave-one-family-out validation against
 other families' cached full scores (the same information the regressor trains on); on
 missing cells, \PKPS and LRMC are blended with a weight fit by held-out cross-validation
 against observed scores. No quantity ever uses the scores of the family being predicted.
-Appendix~\ref{app:abl} compares this rule to a closed-form inverse-variance weighting
-and to the fixed $m/M$ schedule of \citet{dkps_qeff}.
 
 \paragraph{Sweeps and reporting.}\begin{sloppypar} All real-data sweeps use $16$ seeds; curves and table
 entries report the per-seed mean over tasks, then the mean ($\pm1$ SEM) over seeds. Query
@@ -832,6 +852,7 @@ are precomputed once through the embedding API and cached. Embedding the EEE sui
 minutes and under \$$2$ of API credit; each $16$-seed sweep completes in minutes (EEE) to
 hours (HELM) on the same node.
 
+
 \section{The Every Eval Ever suite}
 \label{app:eee}
 
@@ -852,8 +873,10 @@ model answered every item; sub-tasks (MATH-MC
 levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks
 (Table~\ref{tab:eeesuite}). Every domain is free text (including the
 judging benchmarks' rationales), so all responses and queries are embedded with
-\texttt{gemini-embedding-001} and blocked by benchmark exactly as in
-Appendix~\ref{app:details}. Each cell's observable pool is $32$ queries drawn with a
+\texttt{gemini-embedding-001} directly, and the response space is built exactly as in
+Appendix~\ref{app:details}: one shared PCA over all five benchmarks (dimension $83$,
+matched to the per-benchmark total), unit-normalized, with the query kernel gating
+cross-benchmark comparisons. Each cell's observable pool is $32$ queries drawn with a
 model-dependent seed, so two models share only incidental queries (median
 $\rho_{ii'}^{(t)}=0.09$, mean $0.18$, largest on the smallest tasks); the
 query-efficiency budget $m$ and the completion depth $p_{\mathrm{query}}$ subsample this
@@ -911,9 +934,9 @@ zai-org/glm-5-fp8.\par}
 \includegraphics[width=\textwidth]{fig_eee_query_efficiency.pdf}
 \caption{Query-efficient evaluation on the Every Eval Ever suite ($45$ models, $16$
 tasks; MAE against the true full-evaluation score, $\pm1$ SEM over $16$ seeds). The protocol
-matches Figure~\ref{fig:qe}. \PKPS and the Ensemble are the most accurate at every
-budget; DKPS trails because the query pools are unpaired, and IRT is poorly
-identified.}
+matches Figure~\ref{fig:qe}. The Ensemble is the most accurate at every budget and
+\PKPS at every budget up to $m{=}16$; DKPS trails because the query pools are
+unpaired, and IRT is poorly identified.}
 \label{fig:eeeqe}
 \end{figure}
 
@@ -931,18 +954,23 @@ outperform LRMC at every operating point.}
 \label{app:sens}
 
 Figure~\ref{fig:sens} probes the two representation hyperparameters on the
-query-efficiency experiment ($16$ seeds throughout). \textbf{MDS dimension (a, b).}
-Repeating the budget sweep at $d\in\{4,8,24\}$ moves \PKPS's MAE by less than
-$0.005$ at every budget on both suites (at the smallest budgets, smaller $d$ is very
-slightly better---fewer coordinates to estimate from one noisy query per cell); the
-paper's choice ($d{=}8$, following \citealp{dkps_qeff}) is never the worst point at any
-budget. \textbf{Query bandwidth (c).} Fixing the
+query-efficiency experiment ($16$ seeds throughout).
+
+\textbf{MDS dimension (a, b).}
+Repeating the budget sweep at $d\in\{4,8,24\}$, the $d{=}4$ and $d{=}8$ curves are
+within $0.003$ of each other at every budget on both suites (at the smallest budgets,
+smaller $d$ is very slightly better---fewer coordinates to estimate from one noisy
+query per cell), while $d{=}24$ costs up to $0.013$ at the smallest EEE budgets and up
+to $0.018$ at the largest HELM budgets; the paper's choice ($d{=}8$, following
+\citealp{dkps_qeff}) is never the worst point at any budget.
+
+\textbf{Query bandwidth (c).} Fixing the
 bandwidth at each grid multiplier instead of cross-validating traces the expected curve:
 near-delta multipliers and the exact-matching limit ($k_Q(u,u')=\mathbf{1}\{u=u'\}$,
 abbreviated $\delta$) are substantially worse
 (unpaired pools leave them little to compare), broad multipliers are best, and the
 leak-free cross-validated choice matches the best fixed multiplier on both suites
-($0.126$ vs.\ $0.125$ on HELM, $0.069$ vs.\ $0.068$ on EEE)---the one hyperparameter
+($0.124$ vs.\ $0.123$ on HELM, $0.065$ vs.\ $0.064$ on EEE)---the one hyperparameter
 that matters is the one the method selects automatically. Sensitivity to the number of
 reference models is part of the main experiments (the cohort sweeps of
 Figures~\ref{fig:qe}b and \ref{fig:completion}d).
@@ -952,47 +980,175 @@ Figures~\ref{fig:qe}b and \ref{fig:completion}d).
 \includegraphics[width=\textwidth]{fig_sensitivity.pdf}
 \caption{Sensitivity analyses on the query-efficiency experiment ($\pm1$ SEM, $16$
 seeds). \textbf{(a, b)} \PKPS MAE against budget at MDS dimension $d\in\{4,8,24\}$
-(paper choice in red; sample dashed); the curves are nearly indistinguishable on both
-suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth fixed at each grid
+(the paper's choice $d{=}8$ drawn heavier; sample dashed); $d{=}4$ and $d{=}8$ are
+nearly indistinguishable on both suites, while $d{=}24$ trails at the extremes.
+\textbf{(c)} MAE at $m{=}2$ with the query bandwidth fixed at each grid
 multiplier ($\delta$ $=$ exact matching); dotted lines mark the cross-validated
 selection, which matches the best fixed choice on both suites.}
 \label{fig:sens}
 \end{figure}
 
-\section{Pipeline ablations}
-\label{app:abl}
+% \section{The Every Eval Ever suite}
+% \label{app:eee}
 
-Each ablation repeats the query-efficiency budget sweep ($16$ seeds, both suites)
-with one pipeline choice changed; all other settings match Appendix~\ref{app:details}.
+% The second suite is built from the Every Eval Ever datastore \citep{eee2026}, an
+% MIT-licensed, community-maintained collection of item-level evaluation results in a
+% unified format (inputs, raw model outputs, and per-item scores). The full store
+% covers $36$ benchmarks and $165$ models with only $15\%$ of (model, benchmark)
+% pairs evaluated (median $5$ benchmarks per model), and $59\%$ of model pairs share
+% no benchmark. Within a benchmark, $26$ of the $33$ with at least two models are
+% essentially fully paired ($23$ with identical item sets across every model pair),
+% while the seven arena-style benchmarks (six Fibble arenas and Wordle arena) are
+% natively unpaired: mean per-pair overlap $0.27$--$0.66$, median zero on six of the
+% seven, and per-model coverage of the item union $0.15$--$0.33$---in interactive
+% evaluation, the queries a model sees depend on its matchups. We take the five benchmarks with the
+% widest item-level model coverage---MATH-MC, GSM-MC, GPQA-Diamond, JudgeBench, and
+% RewardBench~2---restricted to the $45$ models present on all five, for which every
+% model answered every item; sub-tasks (MATH-MC
+% levels $1$--$5$; four JudgeBench and five RewardBench~2 categories) give $16$ tasks
+% (Table~\ref{tab:eeesuite}). Every domain is free text (including the
+% judging benchmarks' rationales), so all responses and queries are embedded with
+% \texttt{gemini-embedding-001} and blocked by benchmark exactly as in
+% Appendix~\ref{app:details}. Each cell's observable pool is $32$ queries drawn with a
+% model-dependent seed, so two models share only incidental queries (median
+% $\rho_{ii'}^{(t)}=0.09$, mean $0.18$, largest on the smallest tasks); the
+% query-efficiency budget $m$ and the completion depth $p_{\mathrm{query}}$ subsample this
+% pool, and the prediction target is always the cell's full-depth mean over all items, which
+% is never embedded.
+% All scores are binary, so IRT applies to every task (on the HELM suite it excludes WMT).
+% Figures~\ref{fig:eeeqe} and \ref{fig:eeecomp} repeat the lever sweeps of
+% Figures~\ref{fig:qe} and \ref{fig:completion} on this suite; Table~\ref{tab:suite}
+% summarizes.
 
-\paragraph{Ensemble weighting.} We compare the paper's cross-validated scalar weight
-against two alternatives: a closed-form inverse-variance rule (the sample score weighted
-by $e^2_{\PKPS}/(e^2_{\PKPS}+\tilde p(1-\tilde p)/m)$ per cell, with $\tilde p$ the
-\PKPS estimate and $e^2_{\PKPS}$ the depth-weighted, noise-debiased disagreement with
-the observed samples) and the fixed schedule $\alpha=m/M$ of \citet{dkps_qeff}. The
-cross-validated weight is best at every budget on both suites: on HELM it improves on the
-inverse-variance rule from $0.132$ to $0.125$ at $m{=}1$ and from $0.077$ to $0.073$ at
-$m{=}8$; on EEE from $0.084$ to $0.073$ and from $0.052$ to $0.049$. The $m/M$ schedule
-trails both on HELM ($0.096$ at $m{=}8$) and is close to the cross-validated weight on
-EEE, where the small pools ($M{=}32$) let $m/M$ reach $1$.
+% \begin{table}[h]
+% \centering
+% \caption{EEE suite composition: $16$ tasks over five benchmarks, with the number of items
+% per (model, task) cell. Every task is fully answered by all $45$ shared models; each
+% cell's observable pool is $32$ items, sampled per model.}
+% \label{tab:eeesuite}
+% \footnotesize
+% \begin{tabular}{llr @{\hspace{2em}} llr}
+% \toprule
+% Benchmark & Task & Items & Benchmark & Task & Items \\
+% \midrule
+% MATH-MC & level 1 & 430 & JudgeBench & coding & 42 \\
+% MATH-MC & level 2 & 882 & JudgeBench & knowledge & 154 \\
+% MATH-MC & level 3 & 1115 & JudgeBench & math & 56 \\
+% MATH-MC & level 4 & 1199 & JudgeBench & reasoning & 98 \\
+% MATH-MC & level 5 & 1288 & RewardBench~2 & factuality & 475 \\
+% GSM-MC & gsm\_mc & 1319 & RewardBench~2 & focus & 495 \\
+% GPQA-Diamond & gpqa\_diamond & 198 & RewardBench~2 & math & 183 \\
+% RewardBench~2 & precise if & 160 & RewardBench~2 & safety & 450 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
 
-\paragraph{Regressor.} Replacing the distance-weighted $K$-NN regressor with ordinary
-least squares helps slightly on HELM ($0.132$ vs.\ $0.136$ at $m{=}1$; $0.080$ vs.\
-$0.085$ at $m{=}32$), consistent with \citet{dkps_qeff}, but hurts on EEE, increasingly
-so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $K$-NN as the robust
-default across suites.
+% \paragraph{Model coverage (EEE).} The $45$ models shared by all five benchmarks span $13$
+% developers:
+% {\footnotesize\ttfamily\raggedright cohere/c4ai-command-a-03-2025, cohere/c4ai-command-r-08-2024,
+% cohere/c4ai-command-r-plus-08-2024, cohere/c4ai-command-r7b-12-2024,
+% cohere/command-a-reasoning-08-2025, deepseek/deepseek-r1-0528,
+% deepseek/deepseek-v3-1-terminus, deepseek/deepseek-v3-2, deepseek/deepseek-v3-2-speciale,
+% deepseek/deepseek-v4-flash-fp8, deepseek/deepseek-v4-pro, google/gemini-3-1-pro-preview,
+% google/gemma-2-27b-it, google/gemma-2-9b-it, google/gemma-3-12b-it, google/gemma-3-27b-it,
+% google/gemma-4-e2b-it, google/gemma-4-e4b-it, llm360/k2-v2-instruct,
+% meta/llama-4-maverick-17b-128e-instruct-fp8, meta/meta-llama-3-1-8b-instruct,
+% minimax/minimax-m2-5, mistral/mistral-small-4-119b-2603, moonshot/kimi-k2-5,
+% moonshot/kimi-k2-6, moonshot/kimi-k2-thinking, openai/gpt-5-5, openai/gpt-5-mini,
+% openai/gpt-5-nano, openai/gpt-oss-120b, openai/gpt-oss-20b,
+% qwen/qwen3-30b-a3b-thinking-2507, qwen/qwen3-5-122b-a10b, qwen/qwen3-5-2b,
+% qwen/qwen3-5-397b-a17b, qwen/qwen3-6-35b-a3b, qwen/qwen3-6-plus,
+% qwen/qwen3-next-80b-a3b-thinking, stepfun/step-3-5-flash, xiaomi/mimo-v2-flash,
+% zai-org/glm-4-6-fp8, zai-org/glm-4-7-flash, zai-org/glm-4-7-fp8, zai-org/glm-5-1-fp8,
+% zai-org/glm-5-fp8.\par}
 
-\paragraph{Response kernel.} An RBF response kernel in place of the linear one changes
-\PKPS's MAE by at most $0.003$ at every budget on both suites; the linear choice is
-justified by the block-diagonal factorization (Appendix~\ref{app:details}) at no
-accuracy cost.
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\textwidth]{fig_eee_query_efficiency.pdf}
+% \caption{Query-efficient evaluation on the Every Eval Ever suite ($45$ models, $16$
+% tasks; MAE against the true full-evaluation score, $\pm1$ SEM over $16$ seeds). The protocol
+% matches Figure~\ref{fig:qe}. \PKPS and the Ensemble are the most accurate at every
+% budget; DKPS trails because the query pools are unpaired, and IRT is poorly
+% identified.}
+% \label{fig:eeeqe}
+% \end{figure}
 
-\paragraph{Incidental overlap.} The EEE pools share ${\sim}10\%$ of items across
-models by chance. Enforcing exactly disjoint query sets (true $\rho=0$) changes \PKPS
-by at most $0.005$ at $m\le8$ ($0.080$ vs.\ $0.076$ at $m{=}1$), and IRT becomes
-inapplicable outright---no shared item block exists. At $m\ge16$ the disjointness
-constraint exhausts the $32$-item pools and mechanically shortens the sample score's
-effective depth, so comparisons there reflect the constraint rather than the methods.
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\textwidth]{fig_eee_completion.pdf}
+% \caption{Score completion on the Every Eval Ever suite (MAE on missing cells, $\pm1$
+% SEM; solid $n{=}45$, dashed $n{=}10$). The protocol matches
+% Figure~\ref{fig:completion}. Unlike on the HELM suite, \PKPS and the Ensemble
+% outperform LRMC at every operating point.}
+% \label{fig:eeecomp}
+% \end{figure}
+
+% \section{Sensitivity analyses}
+% \label{app:sens}
+
+% Figure~\ref{fig:sens} probes the two representation hyperparameters on the
+% query-efficiency experiment ($16$ seeds throughout). \textbf{MDS dimension (a, b).}
+% Repeating the budget sweep at $d\in\{4,8,24\}$ moves \PKPS's MAE by less than
+% $0.005$ at every budget on both suites (at the smallest budgets, smaller $d$ is very
+% slightly better---fewer coordinates to estimate from one noisy query per cell); the
+% paper's choice ($d{=}8$, following \citealp{dkps_qeff}) is never the worst point at any
+% budget. \textbf{Query bandwidth (c).} Fixing the
+% bandwidth at each grid multiplier instead of cross-validating traces the expected curve:
+% near-delta multipliers and the exact-matching limit ($k_Q(u,u')=\mathbf{1}\{u=u'\}$,
+% abbreviated $\delta$) are substantially worse
+% (unpaired pools leave them little to compare), broad multipliers are best, and the
+% leak-free cross-validated choice matches the best fixed multiplier on both suites
+% ($0.126$ vs.\ $0.125$ on HELM, $0.069$ vs.\ $0.068$ on EEE)---the one hyperparameter
+% that matters is the one the method selects automatically. Sensitivity to the number of
+% reference models is part of the main experiments (the cohort sweeps of
+% Figures~\ref{fig:qe}b and \ref{fig:completion}d).
+
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\textwidth]{fig_sensitivity.pdf}
+% \caption{Sensitivity analyses on the query-efficiency experiment ($\pm1$ SEM, $16$
+% seeds). \textbf{(a, b)} \PKPS MAE against budget at MDS dimension $d\in\{4,8,24\}$
+% (paper choice in red; sample dashed); the curves are nearly indistinguishable on both
+% suites. \textbf{(c)} MAE at $m{=}2$ with the query bandwidth fixed at each grid
+% multiplier ($\delta$ $=$ exact matching); dotted lines mark the cross-validated
+% selection, which matches the best fixed choice on both suites.}
+% \label{fig:sens}
+% \end{figure}
+
+% \section{Pipeline ablations}
+% \label{app:abl}
+
+% Each ablation repeats the query-efficiency budget sweep ($16$ seeds, both suites)
+% with one pipeline choice changed; all other settings match Appendix~\ref{app:details}.
+
+% \paragraph{Ensemble weighting.} We compare the paper's cross-validated scalar weight
+% against two alternatives: a closed-form inverse-variance rule (the sample score weighted
+% by $e^2_{\PKPS}/(e^2_{\PKPS}+\tilde p(1-\tilde p)/m)$ per cell, with $\tilde p$ the
+% \PKPS estimate and $e^2_{\PKPS}$ the depth-weighted, noise-debiased disagreement with
+% the observed samples) and the fixed schedule $\alpha=m/M$ of \citet{dkps_qeff}. The
+% cross-validated weight is best at every budget on both suites: on HELM it improves on the
+% inverse-variance rule from $0.132$ to $0.125$ at $m{=}1$ and from $0.077$ to $0.073$ at
+% $m{=}8$; on EEE from $0.084$ to $0.073$ and from $0.052$ to $0.049$. The $m/M$ schedule
+% trails both on HELM ($0.096$ at $m{=}8$) and is close to the cross-validated weight on
+% EEE, where the small pools ($M{=}32$) let $m/M$ reach $1$.
+
+% \paragraph{Regressor.} Replacing the distance-weighted $K$-NN regressor with ordinary
+% least squares helps slightly on HELM ($0.132$ vs.\ $0.136$ at $m{=}1$; $0.080$ vs.\
+% $0.085$ at $m{=}32$), consistent with \citet{dkps_qeff}, but hurts on EEE, increasingly
+% so at large budgets ($0.066$ vs.\ $0.055$ at $m{=}32$). We use $K$-NN as the robust
+% default across suites.
+
+% \paragraph{Response kernel.} An RBF response kernel in place of the linear one changes
+% \PKPS's MAE by at most $0.003$ at every budget on both suites; the linear choice is
+% justified by the block-diagonal factorization (Appendix~\ref{app:details}) at no
+% accuracy cost.
+
+% \paragraph{Incidental overlap.} The EEE pools share ${\sim}10\%$ of items across
+% models by chance. Enforcing exactly disjoint query sets (true $\rho=0$) changes \PKPS
+% by at most $0.005$ at $m\le8$ ($0.080$ vs.\ $0.076$ at $m{=}1$), and IRT becomes
+% inapplicable outright---no shared item block exists. At $m\ge16$ the disjointness
+% constraint exhausts the $32$-item pools and mechanically shortens the sample score's
+% effective depth, so comparisons there reflect the constraint rather than the methods.
 
 \section{Proofs of Theorems~\ref{prop:conc} and \ref{thm:qeff}}
 \label{app:proof}
