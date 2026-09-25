@@ -21,7 +21,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from rich import print as rprint
 
-load_dotenv(Path(__file__).resolve().parents[2] / '.env')
+load_dotenv(Path(__file__).resolve().parents[3] / '.env')
 from dkps.embed import embed_api  # noqa: E402
 
 csv.field_size_limit(sys.maxsize)

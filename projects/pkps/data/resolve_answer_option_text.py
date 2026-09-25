@@ -41,8 +41,8 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-load_dotenv(Path(__file__).resolve().parents[4] / '.env')
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+load_dotenv(Path(__file__).resolve().parents[3] / '.env')
 from pipeline.loaders import data_path      # noqa: E402
 from dkps.embed import embed_api            # noqa: E402
 

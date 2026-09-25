@@ -10,7 +10,7 @@ subdivides each benchmark the way MATH subjects subdivide MATH.
 Where several runs exist for the same (benchmark, model), the newest (manifest
 `added_at`) is kept. Output: data/eee/eee_<benchmark>.parquet.
 
-Usage (from projects/pkps/helm/):
+Usage (from projects/pkps/scripts/):
     python data/eee.py --download          # fetch manifest + sample files (cached)
     python data/eee.py --extract           # normalize to parquet
 """
@@ -27,7 +27,7 @@ from pathlib import Path
 import pandas as pd
 
 BASE = 'https://huggingface.co/datasets/evaleval/EEE_datastore/resolve/main/'
-DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
+DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[3] / 'data')
 DEST = DATA / 'eee'
 BENCHMARKS = ['math-mc', 'gsm-mc', 'gpqa-diamond', 'judgebench', 'reward-bench-2']
 

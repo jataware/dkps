@@ -15,5 +15,5 @@ def run(n,pt,pq,sw,s):
     return rows
 jobs=[delayed(run)(n,pt,pq,sw,s) for (n,pt,pq,sw) in specs for s in range(8)]
 rows=[r for sub in Parallel(n_jobs=-1)(jobs) if sub for r in sub]
-pd.DataFrame(rows).to_csv('/home/paperspace/projects/dkps/projects/pkps/helm/results-pkps-unified/comp_cond_cells.csv',index=False)
+pd.DataFrame(rows).to_csv('/home/paperspace/projects/dkps/projects/pkps/scripts/results-pkps-unified/comp_cond_cells.csv',index=False)
 print('comp_cond_cells.csv',len(rows))

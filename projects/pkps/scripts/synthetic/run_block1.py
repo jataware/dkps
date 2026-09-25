@@ -106,7 +106,7 @@ def main():
     parser.add_argument('--output-dir', default=None)
     args = parser.parse_args()
 
-    output_dir = Path(args.output_dir or f'projects/pkps/synthetic/results/{args.preset}')
+    output_dir = Path(args.output_dir or f'projects/pkps/scripts/synthetic/results/{args.preset}')
     results = run_block1_experiments(args.experiment, args.preset)
     save_block1_results(results, output_dir)
 

@@ -22,7 +22,7 @@ from rich import print as rprint
 
 from dkps.embed import _aembed_google_chunk, embed_api
 
-DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
+DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[3] / 'data')
 TSV = DATA / 'helm/wmt_14.tsv'
 OUTDIR = DATA / 'exports'
 MODEL = 'gemini-embedding-001'

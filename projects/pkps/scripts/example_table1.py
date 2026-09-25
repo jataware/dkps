@@ -7,7 +7,7 @@ score. Table 1 (16-seed means): sample 0.292 | IRT 0.348 | DKPS 0.168 | PKPS 0.1
 Ensemble 0.125. This script runs one seed (default 0) and prints the same five MAEs;
 the seed-0 values are sample 0.302 | IRT 0.360 | DKPS 0.161 | PKPS 0.137 | Ens 0.128.
 
-Run from projects/pkps/helm (the loaders read exports/ relative to this directory):
+Run from projects/pkps/scripts (the loaders read exports/ relative to this directory):
 
     pixi run python example_table1.py --seed 0 --m 1
 """

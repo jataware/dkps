@@ -15,5 +15,5 @@ def run(m,n,p,sw,s):
     return rows
 jobs=[delayed(run)(m,n,p,sw,s) for (m,n,p,sw) in specs for s in range(8)]
 rows=[r for sub in Parallel(n_jobs=-1)(jobs) if sub for r in sub]
-pd.DataFrame(rows).to_csv('/home/paperspace/projects/dkps/projects/pkps/helm/results-pkps-rd1/qe_cond_cells.csv',index=False)
+pd.DataFrame(rows).to_csv('/home/paperspace/projects/dkps/projects/pkps/scripts/results-pkps-rd1/qe_cond_cells.csv',index=False)
 print('qe_cond_cells.csv',len(rows))

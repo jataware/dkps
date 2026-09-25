@@ -40,7 +40,7 @@ tests/         test_leakage.py — leak-free check on the estimators
 
 ## Reproduce
 
-Run everything from this directory (`projects/pkps/helm/`):
+Run everything from this directory (`projects/pkps/scripts/`):
 
 ```bash
 bash install.sh            # pixi environment + dependencies
@@ -71,7 +71,7 @@ ensemble weight is a scalar per held-out family chosen by leave-one-family-out
 CV (see the Pipeline ablations appendix for the alternatives).
 
 The synthetic study (paper Figure 2) is generated separately from
-`projects/pkps/synthetic/` at the repo root; the routing paper's experiments live
+`projects/pkps/scripts/synthetic/` at the repo root; the routing paper's experiments live
 in `projects/routing/experiments/` (own README). Raw data, results, and embeddings are
 large and git-ignored; see `data/download/` and `data/eee.py` to fetch them.
 

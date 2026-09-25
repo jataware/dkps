@@ -12,12 +12,12 @@ both the new base and the archived published protocols (8/8 validation checks).
       rewrite, two new ablation paragraphs, updated ablation/sensitivity numbers).
       The full old→new list is in the conversation; the verified numbers behind it are
       archived in the repo history (commit 103b4d8 and its predecessors).
-- [ ] Re-upload the 7 regenerated figure PDFs from `projects/pkps/paper/figures/`:
+- [ ] Re-upload the 7 regenerated figure PDFs from `projects/pkps/writing/figures/`:
       `fig_suite_query_efficiency`, `fig_qe_conditional`, `fig_suite_completion`,
       `fig_completion_conditional`, `fig_eee_query_efficiency`, `fig_eee_completion`,
       `fig_sensitivity` (no caption changes).
 - [ ] After the Overleaf edit, paste the updated `main.tex` back into
-      `projects/pkps/paper/` so the local mirror, `main.pdf`, and `main.bbl` can be
+      `projects/pkps/writing/` so the local mirror, `main.pdf`, and `main.bbl` can be
       recompiled and recommitted.
 
 ## 2. Paper writing still open

@@ -4,7 +4,7 @@ This repository contains the **DKPS/PKPS method code** and the experiments for
 two papers:
 
 1. **PKPS paper** — *Predicting Benchmark Scores from Sparse and Unpaired
-   Cached Responses* (`paper/main.tex`): the Product Kernel Perspective Space,
+   Cached Responses* (`projects/pkps/writing/main.tex`): the Product Kernel Perspective Space,
    a generalization of DKPS to unpaired evaluation data, with query-efficiency
    and matrix-completion results on two benchmark suites.
 2. **Routing paper** (in progress, `projects/routing/experiments/`): query-aware model
@@ -98,12 +98,12 @@ missing = ens.predict()                                  # every cell without an
 
 ### Reproducing a paper result
 
-`projects/pkps/helm/example_table1.py` reproduces one cell of Table 1 end to end with
+`projects/pkps/scripts/example_table1.py` reproduces one cell of Table 1 end to end with
 the classes above -- HELM suite, query-efficient evaluation at `m = 1` query per
 cell, seed 0:
 
 ```bash
-cd projects/pkps/helm
+cd projects/pkps/scripts
 pixi run python example_table1.py --m 1 --seed 0
 #  sample score  0.302
 #  IRT           0.360   (binary tasks only)
@@ -118,7 +118,7 @@ records, fit the five estimators, score against the full-benchmark scores. The
 two protocol choices it makes -- `bandwidth='cv'` around the within-domain
 median query distance, and `holdout='family'` -- are the paper's.
 
-`projects/pkps/helm/validate_package.py` does this for **every** Table 1 operating
+`projects/pkps/scripts/validate_package.py` does this for **every** Table 1 operating
 point on both suites (query efficiency at `m ∈ {1, 8}`; completion at the three
 cohort/coverage settings), 16 seeds each, replaying the experiment scripts'
 sampling and comparing per-(seed, task, method) MAEs to the result CSVs those
@@ -127,7 +127,7 @@ scripts produced. All rows agree to 0.
 ### Tests
 
 ```bash
-pixi run pytest tests            # 14 tests: API, incremental update == fresh fit,
+pixi run pytest tests            # 21 tests: API, incremental update == fresh fit,
                                  # equality with the pipeline functions, leakage
 ```
 
@@ -245,14 +245,16 @@ Practical notes:
 dkps/                    the package (see above; the only thing pip installs)
 tests/                   package tests (pixi run pytest tests)
 data/                    shared local payloads (downloads, embeddings, caches) --
-                         untracked; rebuilt by projects/pkps/helm/data/ scripts;
+                         untracked; rebuilt by projects/pkps/data/ scripts;
                          override the location with DKPS_DATA
 projects/                the research monorepo (never part of the built package)
   pkps/                  the PKPS paper, self-contained
-    paper/               LaTeX + final figure PDFs (pdflatex main.tex)
-    helm/                real-data pipeline for BOTH suites (HELM 18x93; EEE 16x45)
-                         -> own README; example_table1.py + validate_package.py here
-    synthetic/           synthetic study (paper Fig. 2)
+    writing/             LaTeX + final figure PDFs (pdflatex main.tex)
+    scripts/             real-data pipeline for BOTH suites (HELM 18x93; EEE 16x45)
+                         -> own README; example_table1.py + validate_package.py here;
+                         scripts/synthetic/ holds the synthetic study (paper Fig. 2)
+    data/                data-prep scripts (downloads, embedding, answer-text
+                         standardization) that build the shared data/ payloads
     artifacts/           committed one-off outputs (early synthetic report, figures)
   routing/               routing paper: paper/ + experiments/ (own README)
   legacy/                earlier analyses (hayden/, joke/, oos_scratch.py)
@@ -264,10 +266,10 @@ Conventions used throughout:
   git-ignored; only code, papers, and final figure PDFs are committed.
 - **Leak-free evaluation.** All hyperparameters (incl. the PKPS query
   bandwidth) are selected by cross-validation on observed/anchor data only;
-  `projects/pkps/helm/tests/test_leakage.py` verifies this by corrupting held-out
+  `projects/pkps/scripts/tests/test_leakage.py` verifies this by corrupting held-out
   scores. The routing code asserts the analogous leave-query-out invariant.
 - Environment: [pixi](https://pixi.sh) — `pixi install`, then run scripts with
-  `pixi run python ...`. Loaders in `projects/pkps/helm` use paths relative to that
+  `pixi run python ...`. Loaders in `projects/pkps/scripts` use paths relative to that
   directory; run them from there (the routing scripts handle this themselves).
 
 ## Quick starts
@@ -275,7 +277,7 @@ Conventions used throughout:
 ```bash
 pixi install
 
-# PKPS paper, real data (from projects/pkps/helm/):
+# PKPS paper, real data (from projects/pkps/scripts/):
 bash run_experiments.sh            # all sweeps + figures, 16 seeds
 
 # PKPS paper, synthetic study (from repo root):
@@ -290,11 +292,11 @@ pixi run python -m projects.routing.experiments.run_combined   # combined unlabe
 
 The pipelines read cached artifacts that are not in git (large / paid):
 
-- `projects/pkps/helm/exports/` — response & query embedding parquets for both
+- `projects/pkps/scripts/exports/` — response & query embedding parquets for both
   suites (Gemini `gemini-embedding-001`, plus one-hot blocks for
-  multiple-choice datasets). Built by `projects/pkps/helm/data/` scripts from the
+  multiple-choice datasets). Built by `projects/pkps/data/` scripts from the
   raw HELM dumps / EEE datastore; requires `GEMINI_API_KEY` to rebuild.
-- `projects/pkps/helm/data/` — raw downloads (see `data/download/*.sh` and
+- `projects/pkps/data/` — raw downloads (see `data/download/*.sh` and
   `data/eee.py` for the EEE datastore).
 
 If you are on the existing machine, everything is already in place; otherwise

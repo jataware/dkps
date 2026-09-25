@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reproduce the real-data results: query-efficient evaluation (Result 1) and
 # matrix completion (Result 2) on the 18-task, 93-model suite, plus the per-cell
-# conditional dumps and the paper figures. Run from projects/pkps/helm/.
+# conditional dumps and the paper figures. Run from projects/pkps/scripts/.
 # Outputs: results-pkps-rd1/ (query efficiency) and results-pkps-unified/ (completion).
 set -e
 cd "$(dirname "$0")"

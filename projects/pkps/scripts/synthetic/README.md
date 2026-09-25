@@ -11,7 +11,7 @@ DKPS (identity kernel) vs the sample score.
 pixi run python -m projects.pkps.synthetic.run_block1        # all panels, 50 seeds
 ```
 
-Results and the figure land in `projects/pkps/synthetic/results/paper/`
+Results and the figure land in `projects/pkps/scripts/synthetic/results/paper/`
 (`fig_synthetic.pdf` is copied into `paper/figures/`). To re-plot from the
 saved CSVs without re-running:
 
@@ -19,7 +19,7 @@ saved CSVs without re-running:
 from pathlib import Path
 import pandas as pd
 from projects.pkps.synthetic.plots import save_figure
-d = Path('projects/pkps/synthetic/results/paper')
+d = Path('projects/pkps/scripts/synthetic/results/paper')
 save_figure(d, {p.stem: pd.read_csv(p) for p in d.glob('*.csv')})
 ```
 
