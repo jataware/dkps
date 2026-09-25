@@ -264,7 +264,7 @@ Conventions used throughout:
 
 - **Results stay local.** `results*/` outputs and everything under `data/` are
   git-ignored; only code, papers, and final figure PDFs are committed.
-- **Leak-free evaluation.** All hyperparameters (incl. the PKPS query
+- **Held-out evaluation.** All hyperparameters (incl. the PKPS query
   bandwidth) are selected by cross-validation on observed/anchor data only;
   `projects/pkps/scripts/tests/test_leakage.py` verifies this by corrupting held-out
   scores. The routing code asserts the analogous leave-query-out invariant.

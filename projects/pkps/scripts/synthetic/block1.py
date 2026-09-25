@@ -83,7 +83,7 @@ def _sample_baseline(scores, observed):
 
 def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
     """Embed models in the perspective space and predict held-out scores by kNN.
-    PKPS (rbf) selects its query bandwidth by leak-free CV; DKPS (delta) is the fixed limit.
+    PKPS (rbf) selects its query bandwidth by CV; DKPS (delta) is the fixed limit.
     `data` is assumed already PCA-reduced (see _reduce_df).
     """
     if dkps_kwargs.get('query_kernel') == 'rbf':
@@ -120,7 +120,7 @@ def _embed(data, **dkps_kwargs):
 
 def _cv_loo_obs(Z, target, mask, k=8):
     """Mean leave-one-model-out kNN error predicting the OBSERVED target from the other models
-    in the perspective Z (per task). Leak-free criterion for bandwidth selection -- uses only
+    in the perspective Z (per task). Bandwidth-selection criterion -- uses only
     observed scores, never the held-out cells we report."""
     import numpy as np
     errs = []

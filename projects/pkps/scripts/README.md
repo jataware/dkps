@@ -24,7 +24,7 @@ data/          data acquisition and preparation
 pipeline/      core library (imported, not run directly)
   loaders.py       load the (model x task) score + embedding tensors
   perspective.py   PKPS embedding + matrix-completion crossfit
-  crossval.py      leak-free joint-observation CV loader
+  crossval.py      joint-observation CV loader
   query_select.py  query-efficiency helpers (dense block, leave-one-out regression)
   baselines.py     APW baseline (IRT and matrix completion live in the dkps package)
 experiments/   runnable drivers (all take --suite {helm,eee})
