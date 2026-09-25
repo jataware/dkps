@@ -24,7 +24,7 @@ from rich import print as rprint
 
 from dkps.embed import embed_api
 
-DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[3] / 'data')
+DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
 TSV = DATA / 'helm/math.tsv'
 OUT = DATA / 'exports/math_query_google_embeddings.parquet'
 MODEL = 'gemini-embedding-001'

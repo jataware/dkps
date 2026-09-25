@@ -28,10 +28,10 @@ from rich import print as rprint
 
 load_dotenv()
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dkps.embed import embed_api
 
-DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[3] / 'data')
+DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
 D = DATA / 'eee'
 OUT = DATA / 'exports'
 CAP = 32                      # per-cell query pool (observation budget)

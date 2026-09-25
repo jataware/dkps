@@ -27,7 +27,7 @@ from pathlib import Path
 import pandas as pd
 
 BASE = 'https://huggingface.co/datasets/evaleval/EEE_datastore/resolve/main/'
-DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[3] / 'data')
+DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
 DEST = DATA / 'eee'
 BENCHMARKS = ['math-mc', 'gsm-mc', 'gpqa-diamond', 'judgebench', 'reward-bench-2']
 

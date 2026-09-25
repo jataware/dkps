@@ -245,7 +245,7 @@ Practical notes:
 dkps/                    the package (see above; the only thing pip installs)
 tests/                   package tests (pixi run pytest tests)
 data/                    shared local payloads (downloads, embeddings, caches) --
-                         untracked; rebuilt by projects/pkps/data/ scripts;
+                         untracked; rebuilt by projects/pkps/scripts/data/ scripts;
                          override the location with DKPS_DATA
 projects/                the research monorepo (never part of the built package)
   pkps/                  the PKPS paper, self-contained
@@ -253,8 +253,8 @@ projects/                the research monorepo (never part of the built package)
     scripts/             real-data pipeline for BOTH suites (HELM 18x93; EEE 16x45)
                          -> own README; example_table1.py + validate_package.py here;
                          scripts/synthetic/ holds the synthetic study (paper Fig. 2)
-    data/                data-prep scripts (downloads, embedding, answer-text
-                         standardization) that build the shared data/ payloads
+    data/                gzipped canonical result CSVs the figures render from
+                         (tracked; prep scripts live in scripts/data/)
     artifacts/           committed one-off outputs (early synthetic report, figures)
   routing/               routing paper: paper/ + experiments/ (own README)
   legacy/                earlier analyses (hayden/, joke/, oos_scratch.py)
@@ -294,9 +294,9 @@ The pipelines read cached artifacts that are not in git (large / paid):
 
 - `projects/pkps/scripts/exports/` — response & query embedding parquets for both
   suites (Gemini `gemini-embedding-001`, plus one-hot blocks for
-  multiple-choice datasets). Built by `projects/pkps/data/` scripts from the
+  multiple-choice datasets). Built by `projects/pkps/scripts/data/` scripts from the
   raw HELM dumps / EEE datastore; requires `GEMINI_API_KEY` to rebuild.
-- `projects/pkps/data/` — raw downloads (see `data/download/*.sh` and
+- `projects/pkps/scripts/data/` — raw downloads (see `data/download/*.sh` and
   `data/eee.py` for the EEE datastore).
 
 If you are on the existing machine, everything is already in place; otherwise
