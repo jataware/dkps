@@ -1,4 +1,4 @@
-\begin{thebibliography}{51}
+\begin{thebibliography}{50}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -18,12 +18,6 @@ Aranyak Acharyya, Joshua Agterberg, Youngser Park, and Carey~E. Priebe.
 \newblock Concentration bounds on response-based vector embeddings of black-box
   generative models.
 \newblock \emph{arXiv preprint arXiv:2511.08307}, 2025.
-
-\bibitem[Backlund and Petersson(2025)]{backlund2025vendingbench}
-Axel Backlund and Lukas Petersson.
-\newblock {Vending-Bench}: A benchmark for long-term coherence of autonomous
-  agents.
-\newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
 
 \bibitem[Batzner et~al.(2026)Batzner, Nelaturu, Stachura, et~al.]{eee2026}
 Jan Batzner, Sree~Harsha Nelaturu, Damian Stachura, et~al.

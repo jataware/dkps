@@ -56,21 +56,19 @@ Evaluating a generative model is necessary for understanding its capabilities.
 As the capabilities of generative models increase \citep{wei2022emergent, bubeck2023sparks},
 their applicability expands to more domains---often necessitating the creation of benchmarks for, e.g., mathematics \citep{hendrycks2021math}, law
 \citep{guha2023legalbench}, finance \citep{islam2023financebench}, venture capital
-\citep{chen2025vcbench}, agentic tasks \citep{liu2023agentbench}, and even running a
-vending machine business \citep{backlund2025vendingbench}.
+\citep{chen2025vcbench}, and agentic tasks \citep{liu2023agentbench}.
 The current benchmarking landscape is correspondingly vast: BIG-bench alone contains
 more than 200 tasks \citep{srivastava2023beyond}, HELM tracks dozens of scenarios
 across multiple releases \citep{helm}, and a recent compilation includes 133 different
 benchmarks for frontier models \citep{benchpress}.
 As such, a model is rarely evaluated on all benchmarks: of the (model, task) pairs in
 the compilation above, only 23\% have a reported score.
-Further, benchmarks evolve -- queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
+Further, benchmarks evolve (i.e., queries are added \citep{chollet2025arcagi2}, refreshed to avoid contamination
 \citep{white2024livebench}, or subsampled to reduce cost
-\citep{perlitz2024efficient} -- and two models evaluated on the same benchmark may have responded to different sets of queries.
+\citep{perlitz2024efficient}) and models evaluated on the same benchmark may have responded to different sets of queries.
 
 Benchmark prediction
-attempts to alleviate the resource burden of evaluation by leveraging
-already-available information rather than computing scores solely from newly generated
+attempts to alleviate the resource burden of evaluation by using existing information rather than computing scores solely from newly generated
 responses.
 There are two main benchmark prediction tasks: query-efficient evaluation and
 (model, task) score completion.
@@ -195,13 +193,14 @@ $\tilde{y}_{i}^{(t)}:=s^{(t)}(f_{i},Q_{i}^{(t)})$ is an estimate of
 $y_{i}^{(t)}$.
 
 Evaluation data is \emph{sparse} when few models have
-$m_{i}^{(t)}>0$ for a given task, and \emph{unpaired} when the sizes of cross-model query set intersections
+$m_{i}^{(t)}>0$ for a given task. It is \emph{unpaired} when the sizes of cross-model query set intersections
 $m_{ii'}^{(t)}:=|Q_{i}^{(t)}\cap Q_{i'}^{(t)}|$ are small. We let
 $\rho_{ii'}^{(t)}:=m_{ii'}^{(t)}/m_{i}^{(t)}$ be the ratio of shared queries for a
 given model pair and note that $\rho_{ii'}^{(t)}\approx1$ for all pairs in highly curated
 leaderboards and $\rho_{ii'}^{(t)}\approx0$ in deployed evaluation settings.
 The goal of benchmark prediction is to estimate a model's score from the available
 evaluation data.
+
 The two tasks introduced in \S\ref{sec:introduction} are the two regimes of the
 observation count $m_i^{(t)}$:
 \begin{enumerate}[wide, labelwidth=1pt, labelindent=12pt]
@@ -266,14 +265,15 @@ Unless otherwise stated we analyze and apply \PKPS under this assumption.
 \centering
 \includegraphics[width=\textwidth]{fig_concept.pdf}
 \caption{An illustration of the difference between the Product Kernel Perspective
-Space (\PKPS) and the previously proposed Data Kernel Perspective Space (DKPS).
+Space (\PKPS) and the Data Kernel Perspective Space (DKPS).
 \textbf{(a)} Top: two models respond to different sets of queries. Bottom: queries
-represented as vectors, colored by which model has responded to them. \textbf{(b)} The query kernel used by DKPS: only
-information from queries both models have responded to is included in $ D $. \textbf{(c)} The query kernel used by \PKPS: information is weighted by
-query similarity in the embedding space. \textbf{(d--e$'$)} A toy unpaired benchmark prediction
-example. Top: restricted to the rare shared queries, DKPS is noisy and correlates poorly
-with benchmark score (MAE $0.31$). Bottom: \PKPS leverages unpaired queries and is highly
-correlated with score (MAE $0.07$).}
+represented as vectors, colored by which model has responded to them. \textbf{(b)} The query kernel used by DKPS.
+Only
+information from queries both models have responded to is included. \textbf{(c)} The query kernel weighs
+query similarity in the embedding space. \textbf{(d--e$'$)} A benchmark prediction
+example. Left: each dot is a model colored by its benchmark score. Right: true benchmark score versus predicted benchmark score. Restricted to the rare shared queries, DKPS (top) is noisy and correlates poorly
+with benchmark score (MAE $0.31$). \PKPS (bottom) leverages unpaired queries and the is highly
+correlated with true score (MAE $0.07$).}
 \label{fig:concept}
 \end{figure}
 
@@ -285,30 +285,29 @@ its efficiency in sparse and unpaired benchmark prediction.
 The main result of this section establishes that the representations
 concentrate around their population counterparts at a rate governed by the overlap of
 the query distributions.
-For the analysis, we model the evaluation data of Section~\ref{sec:setting} as
+We model the evaluation data of Section~\ref{sec:setting} as
 sampled (task, query, response) triples: conditional on model $i$, each triple
 independently draws a task, then a query from the task, and finally the model's
-response.
+response (formalized in Definition~\ref{def:pop} of Appendix~\ref{app:proof}).
 We formally define the population \PKPS in Definition~\ref{def:pop} of
 Appendix~\ref{app:proof}; broadly, it is defined by replacing the sums of
-Eq.~\eqref{eq:A} with expectations under this sampling.
+Eq.~\eqref{eq:A} with expectations.
 
-Our concentration results require bounded query and response kernels, bounded
+Our concentration result requires bounded query and response kernels, bounded
 embedded responses, a positive cross-model query kernel mass, and a rank-$d$
 spectral gap in the population Gram matrix (see
 Assumptions~\ref{ass:bound}--\ref{ass:spec}, Appendix~\ref{app:proof}).
 The required boundedness and the spectral gap are standard in spectral-embedding
 analyses \citep{yu2015useful, acharyya2024consistent, acharyya2025concentration}.
 The atypical requirement in our setting is the positive cross-model query kernel
-mass, though this holds trivially under a strictly positive $k_Q$ and importantly
-does not assume that any individual query is shared.
+mass, though this holds trivially under a strictly positive $k_Q$ and does not assume that any individual query is shared.
 
 Let $(\psi_1,\dots,\psi_n)$ denote the population \PKPS, $\kappa=\inf_{i,i'}\mathbb{E}[k_Q(u,u')]$ the cross-model
 query kernel mass, and $\lambda_d$ the $d$-th largest eigenvalue of the population Gram matrix.
 \begin{theorem}[Concentration of \PKPS representations]
 \label{prop:conc}
 Suppose Assumptions~\ref{ass:bound}--\ref{ass:spec} hold and that every model has
-responded to at least $m$ queries, $\min_i|Q_i|\ge m$. Then for any
+responded to at least $m$ queries. Then for any
 $\delta\in(0,1)$, with probability at least $1-\delta$ there is an orthogonal $W$ such
 that
 $\max_i\|\hat\psi_i-W\psi_i\|\le
@@ -330,8 +329,7 @@ models (Eq.~\eqref{eq:mds}), then train a decision function that uses the
 representations as proxies for the models.
 
 Fix a task $t$ and let $f_{0},f_{1},\hdots,f_{n}$ be i.i.d.\ draws from a model
-distribution, observed through the sampled (task, query, response) triples of
-Section~\ref{sec:theory}.
+distribution.
 Our goal is to predict the true score of $f_{0}$ on task $t$,
 $y_{0}:=s^{(t)}(f_{0},Q^{(t)})$.
 The (model, task) pairs with $m_{i}^{(t)}>0$ and model $ f_{0}$'s responses from tasks $ t' \neq t $ provide information potentially
@@ -339,57 +337,70 @@ relevant to predicting $y_{0}$.
 
 We embed all $n{+}1$ models jointly via Eq.~\eqref{eq:mds}, fit a regressor $\hat h^{(t)}:\mathbb{R}^{d}\to\mathcal{Y}$ on
 the observed pairs $\{(\hat\psi_{i},\tilde{y}_{i}^{(t)})\}_{i=1}^{n}$, and
-predict $\hat y^{(t)}(f_{0})=\hat h^{(t)}(\hat\psi_{0})$.
+predict $\hat y^{(t)}_{0}=\hat h^{(t)}(\hat\psi_{0})$.
 We note that Eq.~\eqref{eq:A} uses no
 score information, so the target model is embedded alongside the reference models.
 Out-of-sample extensions exist (see, e.g., \citealp{trosset2008out, 10.3389/fnhum.2022.930291}).
 
 \citet{dkps_qeff} established that nearest neighbor regression using representations
 from paired DKPS is query efficient relative to the sample score.
-The main result of this section shows that benchmark prediction with the \PKPS is
+The main result of this section shows that benchmark prediction with \PKPS is
 query-efficient relative to paired DKPS.
-Beyond Assumptions~\ref{ass:bound}--\ref{ass:spec}, our result requires a bounded
-and Lipschitz score on the population perspective space, and a model
-distribution that has positive mass everywhere (Assumptions~\ref{ass:score} and~\ref{ass:support},
-Appendix~\ref{app:proof}).
-In the following, MSE denotes mean squared error,
-$m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$, and $\sigma_q^2$
-denotes the per-query score variance.
+Beyond Assumptions~\ref{ass:noise}--\ref{ass:spec}, our result requires a bounded
+and Lipschitz score on the population perspective space and a model
+distribution that has positive mass everywhere
+(Assumptions~\ref{ass:score} and~\ref{ass:support}, Appendix~\ref{app:proof}).
+The strict part of Definition~\ref{def:qeff} additionally requires that no two
+query designs share an atom, so that independently sampled query sets are
+disjoint almost surely (Assumption~\ref{ass:gap}).
+In the following, MSE denotes mean squared error and
+$m$ denotes a per-model query budget with $\min_{i}|Q_{i}|\ge m$.
 We assume the query kernel is from a family
 of bounded kernels indexed by a bandwidth $\sigma$ whose
-$\sigma\to0$ limit is such that $ k_{0}(u, u') > 0 $ if $ u = u' $ and $ 0 $ otherwise. The RBF kernel ($k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$) is
-such an example.
+$\sigma\to0$ limit is such that $ k_{0}(u, u') > 0 $ if $ u = u' $ and $ 0 $
+otherwise (e.g., $k_{\sigma}(u,u')=\exp(-\|u-u'\|^{2}/2\sigma^{2})$).
 
 \begin{definition}[Query efficiency; following \citealp{dkps_qeff}]
 \label{def:qeff}
-Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$ reference models.
-The sequence of estimators $(h_{1}, h_{2}, \hdots)$ is \emph{query-efficient relative to} $(h'_{1}, h'_{2}, \hdots )$ if there exists $N$ such that
-$\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$.
+Fix a per-model query budget $m$ and let $h_n$ denote a score estimator using $n$
+reference models. The sequence $(h_{1}, h_{2}, \hdots)$ is \emph{query-efficient
+relative to} $(h'_{1}, h'_{2}, \hdots)$ if there exists $N$ such that
+$\mathrm{MSE}(h_n)\le\mathrm{MSE}(h'_n)$ with high probability for all $n\ge N$,
+with the inequality strict for at least one $n^{*}\ge N$.
 \end{definition}
 We write $h_{n,\sigma}^{(K)}$ for an estimator that uses a $K$-nearest-neighbor
 regressor on the \PKPS constructed with a query kernel with bandwidth $\sigma$.
-Since $k_{0}$ matches only identical queries, $h_{n,0}^{(K)}$ is $K$-nearest-neighbor
-regression on the paired DKPS.
+Since $k_{0}$ only puts positive mass on identical queries, $h_{n,0}^{(K)}$ is
+$K$-nearest-neighbor regression on the paired DKPS.
+Let $\hat h_{n}^{(K)}$ denote the cross-validated \PKPS estimator, where the
+bandwidth is selected on held-out reference models over a finite grid containing
+$\sigma=0$.
+A nonzero bandwidth is chosen only when the estimated improvement
+exceeds the validation confidence radius (Appendix~\ref{app:proof}).
 \begin{theorem}[\PKPS is query efficient relative to paired DKPS]
 \label{thm:qeff}
-Under Assumptions~\ref{ass:bound}--\ref{ass:noise}, for every pairing fraction
-$\rho\in[0,1]$ and every sequence
-$(h_{1,0}^{(K'_{1})}, h_{2,0}^{(K'_{2})}, \hdots)$ there exists a sequence
-$(h_{1,\sigma_{1}}^{(K_{1})}, h_{2,\sigma_{2}}^{(K_{2})}, \hdots)$ that is query-efficient relative to
-$(h_{1,0}^{(K'_{1})}, h_{2,0}^{(K'_{2})}, \hdots)$.
+Suppose Assumptions~\ref{ass:noise}--\ref{ass:support} hold. For every pairing
+fraction $\rho\in[0,1]$ and every $K$, with high probability for all $n$
+sufficiently large,
+$
+\mathrm{MSE}\big(\hat h_{n}^{(K)}\big)\;\le\;\mathrm{MSE}\big(h_{n,0}^{(K)}\big).
+$
+If Assumption~\ref{ass:gap} holds and $v:=\mathrm{Var}(y_{0})>0$, then for every
+$0<c<v$ there are budgets and a bandwidth $\sigma^{\star}$ such that, whenever
+the grid contains $\sigma^{\star}$, with high probability for all $n$
+sufficiently large,
+$
+\mathrm{MSE}\big(\hat h_{n}^{(K)}\big)\;\le\;\mathrm{MSE}\big(h_{n,0}^{(K)}\big)-c.
+$
+In particular, $(\hat h_{n}^{(K)})$ is query-efficient relative to
+$(h_{n,0}^{(K)})$.
 \end{theorem}
-
-Theorem \ref{thm:qeff} states that with enough reference models that have responded to at least $ m $ queries, prediction with \PKPS is at least as good as prediction with DKPS.
-Paired DKPS is the $\sigma=0$ member of the family, so \PKPS can never do worse.
-The inequality is strict when pairing is scarce: at
-$\rho=0$, a $\sigma=0$ estimator predicts independently of the target model and its MSE
-is floored at $\mathrm{Var}(y_{0})$, while a positive bandwidth attains any $\epsilon$
-(Lemma~\ref{lem:noisy} and Appendix~\ref{app:proof}).
-In practice, the bandwidth is selected by cross-validation over a finite grid containing
-the paired limit, which attains the best grid member up to a vanishing validation error
-(Appendix~\ref{app:proof}).
-We note that query-efficiency is transitive and that Theorem~\ref{thm:qeff}, together with
-Theorem 2 of \citet{dkps_qeff}, implies that $ h_{n,\sigma}^{(K)} $ is query-efficient relative to the sample score.
+Theorem~\ref{thm:qeff} states that \PKPS is never worse than paired DKPS at any
+pairing level. Further, under Assumption~\ref{ass:gap} it is strictly better
+than paired DKPS. Hence, \PKPS is query-efficient relative to paired DKPS.
+We note that query-efficiency is transitive and that Theorem~\ref{thm:qeff},
+together with Theorem 2 of \citet{dkps_qeff}, implies that $\hat h_{n}^{(K)}$ is
+query-efficient relative to the sample score.
 
 The same machinery covers (model, task) score completion ($m_i^{(t)}=0$): since
 Eq.~\eqref{eq:A} uses only responses, a model that has answered none of task $t$'s
@@ -463,7 +474,7 @@ $y_{i}^{(t)}$:
     (i.e., $\alpha\,\hat{y}^{(t)}_{i,\mathrm{LRMC}}+(1-\alpha)\,\hat{y}^{(t)}_{i,\mathrm{PKPS}}$).
 \end{enumerate}
 Both the query kernel RBF bandwidth and the convex coefficient for the ensemble are
-selected via leak-free cross-validation on the observed data (Appendix~\ref{app:details}).
+selected via cross-validation on the observed data (Appendix~\ref{app:details}).
 Following \citet{benchpress}, all methods operate on a pre-processed score matrix:
 observed scores are logit-transformed, standardized per task, and centered by a
 two-way (model, task) additive bias.
@@ -548,13 +559,13 @@ The ensemble matches or outperforms LRMC at every operating point, and the margi
 largest when observations are scarce: at the small cohort it is more accurate at
 every task coverage (a), query depth (b), and number of tasks (c)
 ($0.120$ versus $0.139$; Wilcoxon
-$p{=}8\times10^{-4}$, better on $16$ of $18$ tasks).
+$p{=}1\times10^{-3}$, better on $15$ of $18$ tasks).
 LRMC requires many models to estimate its factors: with $n{=}10$, additional tasks
 do not close the gap (c), and sweeping the number of reference models shows the ensemble is accurate
 from $n{=}20$ while LRMC approaches it only near the full cohort (d).
 At the full cohort the methods converge and the ensemble remains best on average
-($0.099$ versus $0.105$), although the per-task difference is no longer significant
-($10$ of $18$ tasks).
+(($0.100$ versus $0.105$)), although the per-task difference is not significant
+(better on $9$ of $18$ tasks).
 
 \begin{figure}[t]
 \centering
@@ -588,10 +599,10 @@ Table~\ref{tab:suite} shows the performance of all methods on both tasks and bot
 The ensemble is the best or tied in every column.
 
 \paragraph{The results are insensitive to representation and pipeline choices.} Varying
-the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.005$, and the
+the MDS dimension over $4$--$24$ moves \PKPS's MAE by less than $0.02$, and the
 cross-validated bandwidth matches the best fixed choice (Appendix~\ref{app:sens}).
 Ablations of the regression method, the response kernel, the ensemble weighting rule, and
-the incidental query overlap are in Appendix~\ref{app:abl}.
+the incidental query overlap are also in Appendix~\ref{app:sens}.
 Our observations are generally robust across these choices.
 
 \begin{figure}[t]
@@ -613,22 +624,13 @@ responses --- a realistic setting outside of highly curated leaderboards and eva
 We prove that the \PKPS is query-efficient relative to its fully-paired counterpart and show that, as $\rho\to0$, paired methods such as DKPS and IRT degrade sharply while \PKPS does not.
 The same representations support both benchmark prediction tasks and the ensemble dominates both.
 
-\paragraph{Practical deployment.} [PLACEHOLDER] (i) \textit{Stochastic scoring functions.}
-Our analysis assumes the mapping from a response to its score is deterministic.
-Many modern evaluation frameworks use LLM-as-judge scoring \citep{zheng2023judging},
-where scores are stochastic and may depend on contextual factors beyond the
-individual response.
-If each score takes the form $s(f(q))+\epsilon$ with $\epsilon$ i.i.d., repeated
-scoring recovers the current setting in the limit and the extension is conceptually
-straightforward.
-(ii) \textit{Beyond uniform observation.}
-Assumption~\ref{ass:noise} models observed cells as uniform subsamples, and our
-experiments induce sparsity and unpairedness by uniform masking.
-Missingness in deployed evaluation data is not uniform: which models are evaluated
-on which benchmarks correlates with developer, release date, and expected
-performance.
-Extending the analysis to modeled observation processes is a natural and important next step.
-
+\paragraph{Practical deployment.}
+Our results suggest a simple workflow for practical deployment: (i) maintain the
+cached responses---and, where available, per-response scores---that evaluation
+already produces; (ii) fit \PKPS on the cache; and (iii) predict with a simple
+regression in the perspective space, optionally ensembled with the sample score.
+As shared caches like the Every Eval Ever datastore grow, each new upload
+improves the perspective space, and the cumulative savings grow with them.
 
 \paragraph{Limitations and future work.}
 (i) \textit{Stochastic scoring functions.}
@@ -954,8 +956,7 @@ to $0.018$ at the largest HELM budgets; the paper's choice ($d{=}8$, following
 bandwidth at each grid multiplier instead of cross-validating traces the expected curve:
 near-delta multipliers and the exact-matching limit ($k_Q(u,u')=\mathbf{1}\{u=u'\}$,
 abbreviated $\delta$) are substantially worse
-(unpaired pools leave them little to compare), broad multipliers are best, and the
-leak-free cross-validated choice matches the best fixed multiplier on both suites
+(unpaired pools leave them little to compare), broad multipliers are best, and the cross-validated choice matches the best fixed multiplier on both suites
 ($0.124$ vs.\ $0.123$ on HELM, $0.065$ vs.\ $0.064$ on EEE)---the one hyperparameter
 that matters is the one the method selects automatically. Sensitivity to the number of
 reference models is part of the main experiments (the cohort sweeps of
@@ -977,7 +978,7 @@ selection, which matches the best fixed choice on both suites.}
 \section{Proofs of Theorems~\ref{prop:conc} and \ref{thm:qeff}}
 \label{app:proof}
 
-\paragraph{Formal definitions and assumptions.} We collect the formal statements referenced in Section~\ref{sec:method}.
+\paragraph{Formal definitions and assumptions.} We state the formal statements referenced in Section~\ref{sec:method}.
 \begin{definition}[Population \PKPS]
 \label{def:pop}
 Let each model $i$'s (task, query, response) triples be drawn i.i.d.\ from a design
@@ -993,6 +994,10 @@ the \emph{population perspectives} $\psi_1,\dots,\psi_n\in\mathbb{R}^d$ (the row
 $\Psi^*\in\mathbb{R}^{n\times d}$) are the rank-$d$ spectral embedding of the centered
 Gram matrix $B^*=-\tfrac12 J D^{*2} J$, where $J=I-\tfrac1n\mathbf{1}\mathbf{1}^\top$.
 \end{definition}
+\begin{assumption}[Observation model]\label{ass:noise}
+Each scoring function is the mean of bounded per-query scores, and each observed cell
+$Q_{i}^{(t)}$ is a uniform subsample of $Q^{(t)}$ at the budget $m$.
+\end{assumption}
 \begin{assumption}[Boundedness]\label{ass:bound}
 Kernels and embedded responses are bounded.
 \end{assumption}
@@ -1010,9 +1015,11 @@ The benchmark score is bounded and $\gamma$-Lipschitz on the population perspect
 The model distribution places mass on every neighborhood of the population perspective
 space.
 \end{assumption}
-\begin{assumption}[Observation model]\label{ass:noise}
-Each scoring function is the mean of bounded per-query scores, and each observed cell
-$Q_{i}^{(t)}$ is a uniform subsample of $Q^{(t)}$ at the budget $m$.
+\begin{assumption}[Pairing deficiency]\label{ass:gap}
+The cross-model mass of the exact-matching kernel vanishes:
+$\kappa_{0}=\sup_{i\neq i'}\mathbb{E}[k_{0}(u,u')]=0$ for independent queries
+$u\sim P_{i}$, $u'\sim P_{i'}$, where $k_{0}(u,u')=\mathbf{1}\{u=u'\}$;
+equivalently, no two query designs share an atom.
 \end{assumption}
 
 \paragraph{Population quantities.} Throughout, the quantities of
@@ -1114,25 +1121,45 @@ $96B_R\bar B$---so the theorem holds for every $m$ after enlarging $C$ by a cons
 factor.
 \end{proof}
 
-\begin{proof}[Proof of Theorem~\ref{thm:qeff}]
-Taking $\sigma_{n}=0$ and
-$K_{n}=K'_{n}$ makes $h_{n,\sigma_{n}}^{(K_{n})}=h_{n,0}^{(K'_{n})}$ for every $n$:
-the two sequences have equal MSE at every $n$, and Definition~\ref{def:qeff} is
-satisfied with $N=1$.
-\end{proof}
+The remainder of this appendix proves Theorem~\ref{thm:qeff}. The first claim is a
+cross-validation transfer argument with a guarded selection rule. The second claim
+combines a lower bound on the MSE of every paired estimator under
+Assumption~\ref{ass:gap} with the achievability lemmas below
+(Lemmas~\ref{lem:exact} and \ref{lem:noisy}).
 
-The remainder of this appendix quantifies when the improvement is strict.
-Lemmas~\ref{lem:exact} and \ref{lem:noisy} show that positive bandwidths attain any
-$\epsilon$ with polynomially many queries; the contrast paragraph shows that the
-$\sigma=0$ members degrade as $\rho\to0$; and the closing paragraphs show that
-cross-validation selects such a bandwidth from data, with a strict margin at
-$\rho=0$.
+\begin{proof}[Proof of Theorem~\ref{thm:qeff}(i)]
+Split the reference models into a training set $T$ and a validation set $V$ with
+$|V|=n_v$. For each $\sigma$ in the finite grid $\Sigma\ni0$, build the
+perspective space on $T$, embed any model outside $T$ out of sample by its
+Eq.~\eqref{eq:A} comparison row to $T$, and let $\hat y_{\sigma}$ be $K$-nearest-neighbor regression on
+$T$'s (perspective, score) pairs, with validation loss
+$\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_{\sigma}(f_i)-y_i)^2$.
+Let $\tau=\sqrt{\log(2|\Sigma|/\delta')/2n_v}$ be the validation confidence
+radius. The guarded selection is
+\[
+\hat\sigma=\begin{cases}
+\arg\min_{\sigma\in\Sigma}\hat L(\sigma) & \text{if }\min_{\sigma}\hat L(\sigma)\le\hat L(0)-2\tau,\\[2pt]
+0 & \text{otherwise.}
+\end{cases}
+\]
+Conditional on $T$, the validation losses are i.i.d.\ across the draw of
+validation models and bounded in $[0,1]$, so by Hoeffding's inequality and a
+union bound over $\Sigma$, with probability at least $1-\delta'$,
+$\sup_{\sigma\in\Sigma}|\hat L(\sigma)-L(\sigma)|\le\tau$, where $L(\sigma)$ is
+the MSE on a fresh target. On this event, if $\hat\sigma\ne0$ then
+\[
+L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(0)-2\tau+\tau\;\le\;L(0),
+\]
+and if $\hat\sigma=0$ the two estimators coincide; either way
+$\mathrm{MSE}(\hat h_{n}^{(K)})\le\mathrm{MSE}(h_{n,0}^{(K)})$, since the
+$\sigma=0$ member coincides with paired DKPS on the shared queries with the same
+regressor (Section~\ref{sec:qeff}). This holds at every $(m,\rho)$.
+\end{proof}
 
 \begin{lemma}[Achievability with exact reference scores]
 \label{lem:exact}
 Suppose the reference scores are observed exactly ($\tilde{y}_{i}^{(t)}=y_{i}$).
-Under Assumptions~\ref{ass:bound}--\ref{ass:support}, for any $\epsilon>0$ there
-exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
+Under Assumptions~\ref{ass:noise}--\ref{ass:support}, for any $\epsilon>0$ there exist a bandwidth $\sigma$ and $(n,m)$, with $m$ polynomial in
 $(1/\epsilon,1/\kappa,n)$ and independent of $\rho$, at which
 $\mathrm{MSE}(h_{n,\sigma}^{(1)})\le\epsilon$ with high probability.
 \end{lemma}
@@ -1207,46 +1234,31 @@ independence of the reference noises is where unpairedness \emph{helps}.
 ($k_{0}(u,u')>0$ iff $u=u'$), only identical query pairs enter the double sum, so the
 $U$-statistic runs over the $\rho m$ shared queries
 and the rate in Lemma~\ref{lem:conc} becomes $O_P\big((\rho m)^{-1/2}\big)$: DKPS's
-guarantee requires $\rho m\to\infty$ and vacates in the unpaired limit $\rho\to0$,
-where its distance is undefined (Section~\ref{sec:method}).
+guarantee requires $\rho m\to\infty$ and vacates under Assumption~\ref{ass:gap},
+where the cross-model mass $\kappa_{0}$ is zero and its distance is undefined
+(Section~\ref{sec:method}).
 
-\paragraph{Bandwidth selection by cross-validation.} Cross-validation attains
-the best grid member up to $\epsilon$. Split the reference models into a training
-set $T$ and a validation set $V$ with $|V|=n_v$. For each $\sigma$ in a finite grid
-$\Sigma$ containing $0$, build the
-perspective space on $T$, embed any model outside $T$ out of sample by its
-Eq.~\eqref{eq:A} comparison row to $T$ (the standard out-of-sample MDS coordinate), and let
-$\hat y_\sigma$ be nearest-neighbor regression on $T$'s (perspective, score) pairs. The
-selected bandwidth is $\hat\sigma=\arg\min_{\sigma\in\Sigma}\hat L(\sigma)$ with
-$\hat L(\sigma)=\tfrac1{n_v}\sum_{i\in V}(\hat y_\sigma(f_i)-y_i)^2$. Conditional on
-$T$, the validation losses are i.i.d.\ across the draw of validation models and bounded
-in $[0,1]$, so by Hoeffding's inequality and a union bound over $\Sigma$, with
-probability at least $1-\delta'$,
-$\sup_{\sigma\in\Sigma}|\hat L(\sigma)-L(\sigma)|\le
-\tau=\sqrt{\log(2|\Sigma|/\delta')/2n_v}$, where $L(\sigma)$ is the MSE on a fresh
-target. On this event,
-\[
-L(\hat\sigma)\;\le\;\hat L(\hat\sigma)+\tau\;\le\;\hat L(0)+\tau
-\;\le\;L(0)+2\tau,
-\]
-and $L(0)$ is the paired-DKPS MSE since the $\sigma=0$ member coincides with paired
-DKPS on the shared queries with the same regressor (Section~\ref{sec:qeff}). Taking
-$n_v$ large enough that $2\tau\le\epsilon$ transfers the guarantee to the
-cross-validated estimator at every $(m,\rho)$.
-
-\paragraph{Strict improvement at $\rho=0$.} If some
-$\sigma^\star\in\Sigma$ has $\Delta=L(0)-L(\sigma^\star)>0$, the deviation event
-above gives $L(\hat\sigma)\le L(\sigma^\star)+2\tau=L(0)-\Delta+2\tau$,
-strict for $2\tau<\Delta$. At $\rho=0$ with nonatomic designs,
-$\Pr(q_j=q'_l)=0$ for every pair of independently drawn queries, so almost surely every
-identity-matched sum is empty: any measurable completion of the $\sigma=0$ member
-predicts as a function of the reference data alone, independent of the target, whence
-$L(0)=v+\mathbb{E}[(\mathbb{E}y_{0}-\hat y)^2]\ge v$ with $v=\mathrm{Var}(y_{0})$,
-while under
-Assumptions~\ref{ass:bound}--\ref{ass:support} the achievability argument
-supplies a bandwidth
-attaining $\mathrm{MSE}\le\epsilon$, so $\Delta\ge v-\epsilon$ and the margin is at
-least $v-\epsilon-2\tau\ge v-2\epsilon$. In practice we use leave-one-model-out
-validation and a joint embedding (Section~\ref{sec:experiments}); the split protocol is
-analyzed for independence of the validation losses.
+\begin{proof}[Proof of Theorem~\ref{thm:qeff}, second claim]
+\emph{Floor.} Under Assumption~\ref{ass:gap}, $\Pr(q_j=q'_l)=0$ for every pair of
+independently drawn queries, so almost surely every identity-matched sum is
+empty: any measurable completion of a $\sigma=0$ estimator predicts as a function
+of the reference data alone, independent of the target. Hence
+$\mathrm{MSE}(h_{n,0}^{(K)})=v+\mathbb{E}[(\mathbb{E}y_{0}-\hat y)^2]\ge v$
+(indeed for every neighbor count and every completion).
+\emph{Achievability.} Fix $0<c<v$ and set $\epsilon_0=(v-c)/2$. Apply
+Lemma~\ref{lem:noisy} at the fixed $K$ with growing budgets: the perspective and
+neighbor-distance terms are handled exactly as there
+(Assumption~\ref{ass:overlap} supplies $\kappa>0$), and the noise term
+$\sigma_q^2/(m_{n}K)$ vanishes as $m_{n}\to\infty$. This yields a bandwidth
+$\sigma^\star$ and budgets $m_{n}$ polynomial in $(n,1/\kappa,1/\epsilon_0)$ such
+that $L(\sigma^\star)\le\epsilon_0/2$ with high probability for $n$ large.
+Include $\sigma^\star$ in the grid, and choose $n_v$ large enough that
+$3\tau\le v-\epsilon_0/2$ and $2\tau\le\epsilon_0/2$. On the deviation event of
+the first claim's proof, the guard triggers:
+$\hat L(\sigma^\star)\le L(\sigma^\star)+\tau\le\epsilon_0/2+\tau\le\hat
+L(0)-2\tau$, using $\hat L(0)\ge L(0)-\tau\ge v-\tau$. Then
+$\mathrm{MSE}(\hat h_{n}^{(K)})\le\hat L(\hat\sigma)+\tau\le\epsilon_0/2+2\tau
+\le\epsilon_0\le v-c\le\mathrm{MSE}(h_{n,0}^{(K)})-c$. The margin $c>0$ supplies
+the strict clause of Definition~\ref{def:qeff}.
+\end{proof}
 \end{document}
