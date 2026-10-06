@@ -55,14 +55,13 @@ def test_interval_monotone_in_level(fitted):
             assert (b['score_hi'] - b['score_lo']) >= (a['score_hi'] - a['score_lo']) - 1e-12
 
 
-@pytest.mark.parametrize('method', ['conformal', 'knn'])
-def test_coverage_tracks_level(fitted, method):
-    """Leave-one-model-out intervals should cover the true scores at roughly the
-    nominal level (conformal: guaranteed marginally over exchangeable models)."""
+def test_coverage_tracks_level(fitted):
+    """Leave-one-model-out conformal intervals should cover the true scores at
+    roughly the nominal level (guaranteed marginally over exchangeable models)."""
     est, truth = fitted
     pairs = [{'model_id': m, 'task_id': t} for m in est.model_names_
              for t in est.task_names_]
-    out = est.predict(pairs, interval=0.8, interval_method=method)
+    out = est.predict(pairs, interval=0.8)
     hits, n = 0, 0
     for r in out:
         if not np.isfinite(r['score_lo']):
@@ -72,7 +71,7 @@ def test_coverage_tracks_level(fitted, method):
         hits += r['score_lo'] <= truth[mi, ti] <= r['score_hi']
     assert n > 100
     cover = hits / n
-    assert cover >= 0.65, f'{method}: coverage {cover:.2f} far below nominal 0.8'
+    assert cover >= 0.65, f'coverage {cover:.2f} far below nominal 0.8'
 
 
 def test_conformal_infinite_when_too_few_references():
@@ -86,11 +85,10 @@ def test_conformal_infinite_when_too_few_references():
 def test_whiten_intervals_in_unit_range(fitted):
     est, _ = fitted
     pairs = [{'model_id': m, 'task_id': est.task_names_[1]} for m in est.model_names_[:12]]
-    for method in ('conformal', 'knn'):
-        out = est.predict(pairs, interval=0.9, whiten=True, interval_method=method)
-        for r in out:
-            if np.isfinite(r['score_lo']):
-                assert 0.0 <= r['score_lo'] <= r['score_hi'] <= 1.0
+    out = est.predict(pairs, interval=0.9, whiten=True)
+    for r in out:
+        if np.isfinite(r['score_lo']):
+            assert 0.0 <= r['score_lo'] <= r['score_hi'] <= 1.0
 
 
 def test_family_holdout_and_dkps(fitted):
@@ -104,7 +102,7 @@ def test_family_holdout_and_dkps(fitted):
     data, _ = _records(seed=1)
     dk = DKPS().fit(data)
     out = dk.predict([{'model_id': dk.model_names_[0], 'task_id': dk.task_names_[0]}],
-                     interval=0.8, interval_method='knn')
+                     interval=0.8)
     assert out[0]['score_lo'] <= out[0]['score_hat'] <= out[0]['score_hi']
 
 

@@ -224,7 +224,7 @@ class PKPS:
         return self
 
     def predict(self, records=None, k=5, holdout='model', family_fn=None, whiten=False,
-                target='auto', min_train=None, interval=None, interval_method='conformal'):
+                target='auto', min_train=None, interval=None):
         """Predict scores for (model, task) pairs by per-task k-NN regression
         (inverse-distance weights) over the MDS representation.
 
@@ -244,25 +244,19 @@ class PKPS:
             models (the target included, if observed); under 'family' it counts the
             training models outside the target's family.
         interval : None, or a confidence level in (0, 1) (e.g. 0.9). When set, every
-            returned dict also carries 'score_lo' and 'score_hi'.
-        interval_method :
-            'conformal' (default) -- split-conformal over the reference models: each
-                training model on the task is predicted leaving itself (and, under
-                holdout='family', its family) out, and the interval half-width is the
-                finite-sample-corrected (1 - alpha) quantile of those absolute
-                residuals. Valid marginal coverage when models are exchangeable draws
-                (the paper's sampling model); the bounds are +/-inf when the task has
-                too few scored reference models for the requested level
-                (needs at least ceil(level / (1 - level)) calibration points).
-            'knn' -- normal approximation from the weighted dispersion of the target's
-                k neighbors (cheap, locally adaptive, no coverage guarantee).
+            returned dict also carries 'score_lo' and 'score_hi' from a split-conformal
+            interval over the reference models: each training model on the task is
+            predicted leaving itself (and, under holdout='family', its family) out,
+            and the half-width is the finite-sample-corrected (1 - alpha) quantile of
+            those absolute residuals. Valid marginal coverage when models are
+            exchangeable draws (the paper's sampling model); the bounds are +/-inf
+            when the task has too few scored reference models for the requested level
+            (needs at least ceil(level / (1 - level)) calibration points).
         Returns a list of dicts with 'score_hat' (and 'score_lo'/'score_hi') added.
         """
         assert self._fitted, 'call fit() before predict()'
         if interval is not None and not (0.0 < interval < 1.0):
             raise ValueError('interval must be a confidence level in (0, 1)')
-        if interval_method not in ('conformal', 'knn'):
-            raise ValueError(f'unknown interval_method: {interval_method}')
         if min_train is None:
             min_train = 3 if (holdout == 'family' or whiten) else 1
         fam = family_fn or family
@@ -311,22 +305,6 @@ class PKPS:
                 cal_cache[key] = float(res[rank - 1]) if rank <= len(res) else np.inf
             return cal_cache[key]
 
-        def knn_halfwidth(i, j, rows):
-            """Normal-approximation half-width (regression scale) from the weighted
-            dispersion of the k nearest training targets."""
-            from statistics import NormalDist
-            d = np.linalg.norm(Z[rows] - Z[i], axis=1)
-            nb = np.argsort(d)[:min(k, len(rows))]
-            dd = d[nb]
-            wts = (dd == 0).astype(float) if np.any(dd == 0) else 1.0 / dd
-            yv = T[rows, j][nb]
-            mu = np.average(yv, weights=wts)
-            var = np.average((yv - mu) ** 2, weights=wts)
-            neff = wts.sum() ** 2 / (wts ** 2).sum()
-            # predictive variance: the target's value varies around the local mean
-            # (var) and the mean itself is estimated from ~neff points (var / neff)
-            return NormalDist().inv_cdf(0.5 + interval / 2) * np.sqrt(var * (1.0 + 1.0 / max(neff, 1.0)))
-
         preds, bounds = {}, {}
         for m, t in pairs:
             if t not in tcol:
@@ -347,23 +325,12 @@ class PKPS:
                 preds[(m, t)] = np.nan
                 bounds[(m, t)] = (np.nan, np.nan)
                 continue
-            r, rw = cell_pred(i, j, rows)
+            r, _ = cell_pred(i, j, rows)
             preds[(m, t)] = r
             if interval is None:
                 continue
-            if interval_method == 'conformal':
-                q = conformal_halfwidth(j, rows)
-                lo, hi = r - q, r + q
-            else:
-                q = knn_halfwidth(i, j, rows)
-                if whiten:  # invert the regression-scale endpoints (monotone)
-                    R = np.full_like(Y, np.nan)
-                    R[i, j] = rw - q
-                    lo = float(w.inverse_transform(R)[i, j])
-                    R[i, j] = rw + q
-                    hi = float(w.inverse_transform(R)[i, j])
-                else:
-                    lo, hi = r - q, r + q
+            q = conformal_halfwidth(j, rows)
+            lo, hi = r - q, r + q
             if whiten:  # the whitened pipeline predicts probabilities
                 lo, hi = max(lo, 0.0), min(hi, 1.0)
             bounds[(m, t)] = (lo, hi)
