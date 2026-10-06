@@ -176,6 +176,8 @@ paths = fetch_samples(['gsm-mc', 'gpqa-diamond', 'math-mc'])   # newest run per 
 records = load_records(paths)          # model/task/query/text/score rows, 32 queries per cell
 est = PKPS().fit(records)              # embeds the text, builds the perspective space
 est.predict([{'model_id': 'openai/gpt-oss-20b'}])       # -> score_hat for every task
+est.predict([{'model_id': 'openai/gpt-oss-20b'}],       # add conformal bounds:
+            interval=0.9)                               # -> + score_lo / score_hi
 ```
 
 **Complete benchmarks a model never ran.** A model that answered *none* of a task's
