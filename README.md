@@ -74,8 +74,23 @@ PKPS(
 )
 est.predict(cells, k=5,
             holdout='model',                   # or 'family': leave-one-family-out (query-efficiency protocol)
-            whiten=False)                      # True: logit/standardize/bias residual regression (completion protocol)
+            whiten=False,                      # True: logit/standardize/bias residual regression (completion protocol)
+            interval=0.9,                      # optional: adds score_lo / score_hi to every prediction
+            interval_method='conformal')       # 'conformal' (default) | 'knn'
 ```
+
+**Confidence intervals.** `interval=level` adds `score_lo`/`score_hi` to each
+prediction. The default is split-conformal over the reference models: each scored
+reference on the task is predicted leaving itself (and, under `holdout='family'`,
+its family) out, and the half-width is the finite-sample-corrected quantile of those
+absolute residuals -- valid marginal coverage whenever models are exchangeable
+draws, which is the same sampling model the paper's theory uses. Measured on the
+EEE suite at a one-query budget (leave-one-family-out, all 45x16 cells, 4 seeds):
+82% empirical coverage at nominal 80% and 92% at nominal 90%.
+`interval_method='knn'` is a cheaper normal approximation from the weighted
+dispersion of the k neighbors (~35% narrower, no guarantee; 79% and 87% on the
+same check). Bounds are +/-inf when a task has too few scored references for the
+requested level (conformal needs roughly level/(1-level) calibration models).
 
 ### Quick start (synthetic data, runs anywhere)
 
@@ -127,7 +142,7 @@ scripts produced. All rows agree to 0.
 ### Tests
 
 ```bash
-pixi run pytest tests            # 21 tests: API, incremental update == fresh fit,
+pixi run pytest tests            # 30 tests: API, incremental update == fresh fit,
                                  # equality with the pipeline functions, leakage
 ```
 
