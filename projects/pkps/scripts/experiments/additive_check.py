@@ -11,6 +11,16 @@ call order, so `sample` and `pkps` reproduce the published CSVs) and adds:
              (what responses add on top of score patterns).
   meanresp   PKPS with a flat query kernel: distances between per-model MEAN response
              embeddings (no query information at all).
+  pk_offset  additive, but the target's STRENGTH is read off the perspective (K-NN over
+             the references' offsets) instead of its own sample scores.
+  hybrid     additive with the strength a nested-tuned blend of the sample-based and the
+             perspective-based estimate, plus a nested-weighted K-NN residual: score
+             patterns + responses.
+  hybrid_mean  the same hybrid on the flat-kernel (mean-response) perspective.
+  resid      K-NN on a perspective built from QUERY-RESIDUALIZED responses: each response
+             minus the kernel-weighted mean response of other models to similar queries
+             (pools the query kernel across all models instead of pairwise).
+  hybrid_res the hybrid on that perspective.
   ens_*      the paper's ensemble (alpha * sample + (1 - alpha) * X, one alpha per held-out
              family) with X in {pkps, additive, pkps_add, meanresp}.
 
@@ -41,6 +51,7 @@ from experiments.query_efficiency import _cv_bandwidth              # noqa: E402
 
 LAMS = [0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
 ALPHAS = np.linspace(0, 1, 21)
+WS = [(w, g) for w in (0.0, 0.25, 0.5, 0.75, 1.0) for g in (0.0, 0.5, 1.0)]   # (strength blend, residual weight)
 K = 5
 
 
@@ -58,6 +69,40 @@ def knn_predict(Dz, y, tr_idx, te_idx):
         zero = dd == 0
         out[a] = yy[zero].mean() if zero.any() else np.average(yy, weights=1.0 / dd)
     return out
+
+
+def resid_reps(X, Qk, qidx, mid, names, sigma, chunk=1500):
+    """Per-model mean of query-residualized responses: each response minus the
+    kernel-weighted mean response of OTHER models to similar queries (leave-own-model-out
+    Nadaraya-Watson in the query embedding). sigma -> inf recovers the mean-response
+    representation up to a constant; sigma -> 0 compares only identical queries.
+    X: (N, p) responses; Qk: (U, q) unique query embeddings; qidx: (N,) row -> unique query."""
+    U, p = Qk.shape[0], X.shape[1]
+    S = np.zeros((U, p)); np.add.at(S, qidx, X)
+    c = np.bincount(qidx, minlength=U).astype(float)
+    inv = 1.0 / (2.0 * sigma * sigma)
+    Num = np.empty((U, p)); Den = np.empty(U)
+    q2 = (Qk ** 2).sum(1)
+    for a in range(0, U, chunk):
+        d2 = np.maximum(q2[a:a + chunk, None] + q2[None] - 2.0 * Qk[a:a + chunk] @ Qk.T, 0.0)
+        Kc = np.exp(-d2 * inv)
+        Num[a:a + chunk] = Kc @ S; Den[a:a + chunk] = Kc @ c
+    gmean = X.mean(0)
+    reps = np.zeros((len(names), p))
+    for r, mm in enumerate(names):
+        rows = np.where(mid == mm)[0]
+        qi = qidx[rows]
+        uq, loc = np.unique(qi, return_inverse=True)
+        Si = np.zeros((len(uq), p)); np.add.at(Si, loc, X[rows])
+        ci = np.bincount(loc, minlength=len(uq)).astype(float)
+        d2 = np.maximum(q2[uq, None] + q2[None, uq] - 2.0 * Qk[uq] @ Qk[uq].T, 0.0)
+        Kii = np.exp(-d2 * inv)
+        num = Num[uq] - Kii @ Si
+        den = Den[uq] - Kii @ ci
+        ok = den > 1e-8
+        mhat = np.where(ok[:, None], num / np.where(ok, den, 1.0)[:, None], gmean)
+        reps[r] = (X[rows] - mhat[loc]).mean(0)
+    return reps
 
 
 def task_stats(Yref, tr):
@@ -124,35 +169,61 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
     mid = model_id[keep]
     Xbar = np.stack([resp_X[keep][mid == mm].mean(0) for mm in names])
     Zm = H._mds_full(squareform(pdist(Xbar)), names, models, mds_dim)
-    Dz = {'pkps': squareform(pdist(Zp)), 'meanresp': squareform(pdist(Zm))}
+    # query-residualized responses, bandwidth chosen by the same observed-score CV
+    uqc, qidx = np.unique(qid_code[keep], return_inverse=True)
+    Qk = Qu[uqc].astype(np.float64)
+    Xk = resp_X[keep].astype(np.float64)
+    RES_GRID = list(qmed * np.array([0.1, 0.3, 1.0, 3.0]))
+    Zr_all = {sg: H._mds_full(squareform(pdist(resid_reps(Xk, Qk, qidx, mid, names, sg))),
+                              names, models, mds_dim) for sg in RES_GRID}
+    sig_res = _cv_bandwidth(Zr_all, sample_mat, obs)
+    Zr = Zr_all[sig_res] if sig_res is not None else Zr_all[RES_GRID[2]]
+    Dz = {'pkps': squareform(pdist(Zp)), 'meanresp': squareform(pdist(Zm)),
+          'resid': squareform(pdist(Zr))}
 
     Yref = score_mat if refs == 'full' else np.where(obs, sample_mat, np.nan)
     truth = score_mat
     ce = obs & np.isfinite(sample_mat) & np.isfinite(truth)
     all_idx = np.arange(n)
-    BASE = ['pkps', 'meanresp', 'additive', 'pkps_add']
+    BASE = ['pkps', 'meanresp', 'resid', 'additive', 'pkps_add', 'pk_offset', 'hybrid', 'hybrid_mean', 'hybrid_res']
+    HYB = {'hybrid': 'pkps', 'hybrid_mean': 'meanresp', 'hybrid_res': 'resid'}
 
-    def predict_group(tr, te_idx, lam):
-        """Predictions for the models in te_idx from the reference set `tr` (bool mask)."""
+    def predict_group(tr, te_idx, lam, loto=False):
+        """Predictions for the models in te_idx from the reference set `tr` (bool mask).
+        loto: the target's sample-based offset excludes each cell's own task (used only to
+        tune against sample scores when no full score exists). Returns the finished
+        predictions plus the components the hybrids are assembled from."""
         tr_idx = all_idx[tr]
         mu, sd = task_stats(Yref, tr)
         P = {b: np.full((len(te_idx), T), np.nan) for b in BASE}
         zs_te = (sample_mat[te_idx] - mu) / sd                 # target's standardized samples
-        a_te = offsets(zs_te, lam)
+        a_te = offsets(zs_te, lam, leave_one_task_out=loto)
         P['additive'] = np.clip(mu + sd * a_te, 0, 1)
         zref = (Yref - mu) / sd
         b_ref = offsets(zref, 0.0 if refs == 'full' else lam)
         R = zref - b_ref                                        # references' additive residuals
+        C = {'mu': mu, 'sd': sd, 'a': a_te}
+        for nm, key in HYB.items():                             # strength read off the perspective
+            bh = knn_predict(Dz[key], b_ref[:, 0], tr_idx, te_idx)
+            rh = np.stack([knn_predict(Dz[key], R[:, t], tr_idx, te_idx) for t in range(T)], 1)
+            C[nm] = (bh, rh)
+        P['pk_offset'] = np.clip(mu + sd * C['hybrid'][0][:, None], 0, 1)
+        P['pkps_add'] = np.clip(mu + sd * (a_te + C['hybrid'][1]), 0, 1)
         for t in range(T):
             P['pkps'][:, t] = np.clip(knn_predict(Dz['pkps'], Yref[:, t], tr_idx, te_idx), 0, 1)
             P['meanresp'][:, t] = np.clip(knn_predict(Dz['meanresp'], Yref[:, t], tr_idx, te_idx), 0, 1)
-            rhat = knn_predict(Dz['pkps'], R[:, t], tr_idx, te_idx)
-            P['pkps_add'][:, t] = np.clip(mu[t] + sd[t] * (a_te[:, t] + rhat), 0, 1)
-        return P, (mu, sd)
+            P['resid'][:, t] = np.clip(knn_predict(Dz['resid'], Yref[:, t], tr_idx, te_idx), 0, 1)
+        return P, C
+
+    def hybrid_pred(C, nm, wg):
+        (w, gam), (bh, rh) = wg, C[nm]
+        return np.clip(C['mu'] + C['sd'] * (w * C['a'] + (1 - w) * bh[:, None] + gam * rh), 0, 1)
 
     out = {b: np.full((n, T), np.nan) for b in BASE}
     ens = {b: np.full((n, T), np.nan) for b in BASE} if refs == 'full' else {}
     lam_used, alpha_used = [], {b: [] for b in BASE}
+    w_used = {nm: [] for nm in ('hybrid', 'hybrid_mean', 'hybrid_res')}
+    g_used = {nm: [] for nm in ('hybrid', 'hybrid_mean', 'hybrid_res')}
     ufams = sorted(set(fams))
     for f in ufams:
         te = fams == f
@@ -179,22 +250,39 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
                     lam_err[li] += np.abs(pred - sample_mat[gi])[msk].sum()
         lam = LAMS[int(np.argmin(lam_err))]
         lam_used.append(lam)
-        # ---- test-family predictions (references = every other family)
-        P, _ = predict_group(tr, te_idx, lam)
-        for b in BASE:
-            out[b][te_idx] = P[b]
-        if refs != 'full':
-            continue
-        # ---- alpha: nested predictions for the other families (never see f)
+        # ---- nested predictions for the other families (never see f)
+        loto = refs != 'full'                # no full score to tune against: predict held-out samples
+        tune_y = truth if refs == 'full' else sample_mat
         inner = {b: np.full((n, T), np.nan) for b in BASE}
+        w_err = {nm: np.zeros(len(WS)) for nm in HYB}
+        inner_C = []
         for g in inner_fams:
             gi = all_idx[fams == g]
             tr2 = tr & (fams != g)
             if tr2.sum() < 3:
                 continue
-            Pg, _ = predict_group(tr2, gi, lam)
+            Pg, Cg = predict_group(tr2, gi, lam, loto=loto)
+            inner_C.append((gi, Cg))
             for b in BASE:
                 inner[b][gi] = Pg[b]
+            msk_g = obs[gi] & np.isfinite(sample_mat[gi]) & np.isfinite(tune_y[gi])
+            for nm in HYB:
+                for wi, w in enumerate(WS):
+                    e = np.abs(hybrid_pred(Cg, nm, w) - tune_y[gi])
+                    w_err[nm][wi] += np.nansum(np.where(msk_g, e, 0.0))
+        w_star = {nm: WS[int(np.argmin(w_err[nm]))] for nm in HYB}
+        for nm in HYB:
+            w_used[nm].append(w_star[nm][0]); g_used[nm].append(w_star[nm][1])
+            for gi, Cg in inner_C:
+                inner[nm][gi] = hybrid_pred(Cg, nm, w_star[nm])
+        # ---- test-family predictions (references = every other family)
+        P, C = predict_group(tr, te_idx, lam)
+        for nm in HYB:
+            P[nm] = hybrid_pred(C, nm, w_star[nm])
+        for b in BASE:
+            out[b][te_idx] = P[b]
+        if refs != 'full':
+            continue
         for b in BASE:
             msk = ce & tr[:, None] & np.isfinite(inner[b])
             if msk.sum() >= 5:
@@ -236,7 +324,10 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
                              mae=float(np.abs(Pm[h, t] - truth[h, t]).mean()) if h.any() else np.nan))
     info = dict(m=m, n_models=n, p_task=p_task, refs=refs, seed=seed,
                 sig_mult=float(sig_star / qmed) if sig_star is not None else np.nan,
+                sig_res=float(sig_res / qmed) if sig_res is not None else np.nan,
                 lam=float(np.mean(lam_used)),
+                **{f'w_{nm}': float(np.mean(v)) if v else np.nan for nm, v in w_used.items()},
+                **{f'g_{nm}': float(np.mean(v)) if v else np.nan for nm, v in g_used.items()},
                 **{f'alpha_{b}': float(np.mean(v)) if v else np.nan for b, v in alpha_used.items()})
     return rows, info
 
