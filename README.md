@@ -52,17 +52,23 @@ environment variable, `GEMINI_API_KEY` for Google).
 For models `i, i'` with response embeddings `x` to queries `u`,
 
 ```
-S_{ii'} = sum_{j,l} k_Q(u_j, u_l) k_R(x_ij, x_i'l)        Z_{ii'} = sum_{j,l} k_Q(u_j, u_l)
-A_{ii'} = S_{ii'} / sqrt(Z_ii Z_i'i')
-D^2_{ii'} = A_ii + A_i'i' - 2 A_ii'
+Z_i(u) = sum_j k_Q(u, u_j)                     model i's query mass at query u
+F_i(u) = sum_j k_Q(u, u_j) x_ij / Z_i(u)       its kernel-smoothed response at u
+
+D^2_{ii'} = sum_u Z_i(u) Z_i'(u) ||F_i(u) - F_i'(u)||^2 / sum_u Z_i(u) Z_i'(u)
 ```
 
-The query kernel `k_Q` decides which response pairs are comparable and how
-much; the normalization by each model's own query mass keeps models with
-different numbers of queries comparable. For positive-semidefinite kernels `A` is
-a Gram matrix, so `D^2 >= 0` and `D` is a Euclidean distance matrix; nothing is
-clipped. (`normalization='pair'` gives the original `A = S / Z_{ii'}`, which
-agrees on paired data but is not positive semidefinite in general.) `k_Q = delta` (identical queries only) recovers paired DKPS, which is
+with `u` running over every query in the cache. The query kernel `k_Q` decides
+which responses are comparable and how much; two models are compared only where
+both have answered something similar, so models with different query sets or
+different numbers of queries stay comparable. `D^2` is a weighted average of
+squared norms and is therefore never negative. This is `normalization='local'`,
+the default. The original affinity form, `A = S / Z` with `S = sum k_Q k_R`,
+`Z = sum k_Q` and `D^2 = A_ii + A_i'i' - 2 A_ii'`, has the same paired and
+wide-bandwidth limits but can go negative and has to be clipped; it is kept as
+`normalization='pair'`. `normalization='model'` (`A = S / sqrt(Z_ii Z_i'i')`) is
+Euclidean by construction but pushes apart models whose query sets differ.
+`k_Q = delta` (identical queries only) recovers paired DKPS, which is
 what `DKPS` is. Classical MDS of `D` gives each model a coordinate; a per-task
 k-NN regressor from those coordinates onto the other models' scores predicts the
 target cell. Every knob is a constructor argument:
@@ -72,7 +78,7 @@ PKPS(
     query_kwargs=dict(kernel='rbf',            # 'rbf' | 'delta' | 'linear' | 'cosine' | callable
                       bandwidth='cv',          # 'median' | 'cv' (leave-one-model-out grid search) | float
                       bandwidth_ref=None,      # reference scale (None = median query distance)
-                      normalization='model',   # 'model' (Euclidean by construction) | 'pair' (original)
+                      normalization='local',   # 'local' (never negative) | 'pair' (original) | 'model'
                       pooling=False,           # True: pooled query kernel, see below
                       pca_dim='elbow'),        # 'elbow' (Zhu-Ghodsi) | int | None
     response_kwargs=dict(kernel='linear', pca_dim='elbow'),
@@ -155,7 +161,7 @@ scripts produced. All rows agree to 0.
 ### Tests
 
 ```bash
-pixi run pytest tests            # 41 tests: API, incremental update == fresh fit,
+pixi run pytest tests            # 44 tests: API, incremental update == fresh fit,
                                  # equality with the pipeline functions, leakage,
                                  # intervals, distance geometry
 ```

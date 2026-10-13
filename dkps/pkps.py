@@ -28,13 +28,14 @@ from scipy.spatial.distance import cdist, pdist
 from sklearn.neighbors import KNeighborsRegressor
 from graspologic.embed import ClassicalMDS
 
+from .unpaired_dkps import local_dist_sq, _sqrt_nonneg
 from .preprocessing import BlockDiagonalEmbedding, FrozenPCA, Whitener
 from .records import parse_records, merge_records, parse_pairs, pairs_to_records, ScoreTable
 
 
 QUERY_DEFAULTS = dict(kernel='rbf', bandwidth='median', bandwidth_ref=None, bandwidth_mult=1.0,
                       bandwidth_grid=(0.03, 0.1, 0.3, 1.0, 3.0), cv_k=8,
-                      pca_dim='elbow', pca_n_elbows=2, normalization='model', pooling=False)
+                      pca_dim='elbow', pca_n_elbows=2, normalization=None, pooling=False)
 RESPONSE_DEFAULTS = dict(kernel='linear', bandwidth='median', bandwidth_ref=None, bandwidth_mult=1.0,
                          pca_dim='elbow', pca_n_elbows=2, suite_mode='joint')
 MDS_DEFAULTS = dict(dim=None, n_elbows=2)
@@ -135,13 +136,21 @@ class PKPS:
               distance of the (reduced) query embeddings; the paper passes the
               within-domain median).
           bandwidth_mult, bandwidth_grid, cv_k : see above
-          normalization : 'model' (default) | 'pair'. How the affinity
-              S_ab = sum k_Q k_R is normalized by the query kernel mass Z_ab = sum k_Q:
-              'model' uses S_ab / sqrt(Z_aa Z_bb), a Gram matrix for positive-semidefinite
-              kernels, so squared distances are nonnegative and the distances Euclidean;
-              'pair' uses S_ab / Z_ab (the original construction), which is not positive
-              semidefinite in general and is clipped at zero. The two agree when every
-              model answers the same queries.
+          normalization : None (default) | 'local' | 'model' | 'pair'. How query
+              kernel mass is normalized when two models are compared.
+              'pair' is the original A_ab = S_ab / Z_ab with S = sum k_Q k_R and
+              Z = sum k_Q. It compares two models only through queries both have
+              answered something similar to, but D^2 = A_aa + A_bb - 2 A_ab can be
+              negative and is clipped at zero.
+              'local' keeps that behaviour without the defect: D^2 is the average, over
+              the queries where both models have query-kernel mass, of the squared
+              difference between their kernel-smoothed responses
+              (dkps.unpaired_dkps.local_dist_sq). Nonnegative by construction. Needs a
+              linear response kernel and an 'rbf' or 'delta' query kernel.
+              'model' uses A_ab = S_ab / sqrt(Z_aa Z_bb), a Gram matrix for
+              positive-semidefinite kernels (Euclidean distances), at the price of
+              pushing apart models whose query sets differ.
+              None selects 'local' when it applies and 'model' otherwise.
           pooling : False (default) | True. If True, models are represented by the
               mean of their query-residualized responses instead of by pairwise
               affinities: each response has subtracted from it the query-kernel-weighted
@@ -184,8 +193,15 @@ class PKPS:
         self.response_kwargs = {**RESPONSE_DEFAULTS, **(response_kwargs or {})}
         self.mds_kwargs = {**MDS_DEFAULTS, **(mds_kwargs or {})}
         self.embedding_kwargs = {**EMBEDDING_DEFAULTS, **(embedding_kwargs or {})}
-        if self.query_kwargs['normalization'] not in ('model', 'pair'):
+        local_ok = (self.response_kwargs['kernel'] == 'linear'
+                    and self.query_kwargs['kernel'] in ('rbf', 'delta'))
+        if self.query_kwargs['normalization'] is None:
+            self.query_kwargs['normalization'] = 'local' if local_ok else 'model'
+        if self.query_kwargs['normalization'] not in ('local', 'model', 'pair'):
             raise ValueError(f"unknown normalization: {self.query_kwargs['normalization']}")
+        if self.query_kwargs['normalization'] == 'local' and not local_ok:
+            raise ValueError("normalization='local' requires a linear response kernel and "
+                             "an 'rbf' or 'delta' query kernel")
         if self.query_kwargs['pooling']:
             if self.response_kwargs['kernel'] != 'linear':
                 raise ValueError('pooling requires a linear response kernel')
@@ -547,8 +563,8 @@ class PKPS:
         return {None: (float((K_Q * K_R).sum()), float(K_Q.sum()))}
 
     def _recompute_pairs(self, touched):
-        if self.query_kwargs['pooling']:        # pooled distances are rebuilt in _finalize
-            return
+        if self.query_kwargs['pooling'] or self.query_kwargs['normalization'] == 'local':
+            return                              # these distances are rebuilt in _finalize
         self._recompute_pair_cache(touched)
 
     def _recompute_pair_cache(self, touched):
@@ -577,6 +593,8 @@ class PKPS:
         distance and is set to the largest observed distance so the MDS still runs."""
         if self.query_kwargs['pooling']:
             return self._pooled_dist_matrix(s, names)
+        if self.query_kwargs['normalization'] == 'local':
+            return self._fill_undefined(_sqrt_nonneg(self._local_d2[s]))
         n = len(names)
         SZ = self._A[s]
         model_norm = self.query_kwargs['normalization'] == 'model'
@@ -601,15 +619,32 @@ class PKPS:
             assert not (fin < -tol).any(), 'negative squared distance under model normalization'
         with np.errstate(invalid='ignore'):
             D = np.sqrt(np.where(np.isfinite(D2), np.maximum(D2, 0.0), np.nan))
+        return self._fill_undefined(D)
+
+    @staticmethod
+    def _fill_undefined(D):
         if np.isnan(D).any():
             mx = np.nanmax(D) if np.isfinite(D).any() else np.nan
             if not np.isfinite(mx):
                 raise ValueError('all PKPS distances undefined (zero query-kernel mass); '
                                  'increase the query bandwidth')
             warnings.warn('model pairs with zero query-kernel mass: their distance is set to '
-                          'the maximum observed distance', stacklevel=3)
+                          'the maximum observed distance', stacklevel=4)
             D = np.nan_to_num(D, nan=mx)
         return D
+
+    def _stack(self, names):
+        """Row-stacked responses with model and unique-query indices (and the unique
+        query embeddings, if any) for the representations built from all models at once."""
+        md = self._model_data
+        X = np.vstack([md[m]['X'] for m in names])
+        mid = np.concatenate([np.full(len(md[m]['X']), i) for i, m in enumerate(names)])
+        index = {}
+        qidx = np.array([index.setdefault(k, len(index)) for m in names for k in md[m]['qkeys']])
+        first = np.full(len(index), -1)
+        first[qidx[::-1]] = np.arange(len(qidx))[::-1]
+        Q = np.vstack([md[m]['Q'] for m in names])[first] if 'Q' in md[names[0]] else None
+        return X, mid, qidx, Q
 
     def _pooled_dist_matrix(self, s, names, chunk=1500):
         """Euclidean distances between per-model means of query-residualized responses.
@@ -619,20 +654,12 @@ class PKPS:
         other model to queries near u; where no other model has kernel mass, the overall
         mean response is used. The representation is an explicit vector per model, so
         the distances are Euclidean by construction."""
-        md = self._model_data
-        X = np.vstack([md[m]['X'] for m in names])
-        mid = np.concatenate([np.full(len(md[m]['X']), i) for i, m in enumerate(names)])
-        keys = [k for m in names for k in md[m]['qkeys']]
-        index = {}
-        qidx = np.array([index.setdefault(k, len(index)) for k in keys])
-        U, p = len(index), X.shape[1]
-        first = np.full(U, -1)
-        first[qidx[::-1]] = np.arange(len(qidx))[::-1]
+        X, mid, qidx, Qk = self._stack(names)
+        U, p = int(qidx.max()) + 1, X.shape[1]
         Ssum = np.zeros((U, p)); np.add.at(Ssum, qidx, X)
         cnt = np.bincount(qidx, minlength=U).astype(float)
 
         if self.query_kwargs['kernel'] == 'rbf':
-            Qk = np.vstack([md[m]['Q'] for m in names])[first]
             q2 = (Qk ** 2).sum(1)
             inv = 1.0 / (2.0 * s * s)
 
@@ -693,6 +720,11 @@ class PKPS:
             'reference_score'].first().unstack()
         self.reference_scores_ = ref.reindex(index=names, columns=self.task_names_)
 
+        if self.query_kwargs['normalization'] == 'local' and not self.query_kwargs['pooling']:
+            X, mid, qidx, Q = self._stack(names)
+            rbf = self.query_kwargs['kernel'] == 'rbf'
+            self._local_d2 = local_dist_sq(X, mid, len(names), qidx, Q=Q if rbf else None,
+                                           sigmas=self._sigmas)
         Ds = {s: self._dist_matrix(s, names) for s in self._sigmas}
         Zs = {s: self._mds(D) for s, D in Ds.items()}
         if len(self._sigmas) > 1:                                   # CV bandwidth selection
@@ -751,7 +783,7 @@ class DKPS(PKPS):
     """
 
     def __init__(self, response_kwargs=None, mds_kwargs=None, embedding_kwargs=None,
-                 sigma_ratio=None, bandwidth_ref=None, normalization='model'):
+                 sigma_ratio=None, bandwidth_ref=None, normalization=None):
         if sigma_ratio is None:
             qk = dict(kernel='delta', pca_dim=None, normalization=normalization)
         else:

@@ -28,6 +28,95 @@ def pca_reduce_elbow(X, n_elbows=2, max_components=128, random_state=0):
     return Xc @ Vt[:dim].T
 
 
+def local_dist_sq(X, mid, n_models, qidx, Q=None, sigmas=(None,), max_cells=2e7, floor=1e-12):
+    """Locally normalized PKPS squared distances for a linear response kernel.
+
+    For every unique query u in the cache (an "anchor") and every model i, let
+
+        Z_i(u) = sum_a k_Q(u, u_a)                      (model i's query mass at u)
+        F_i(u) = sum_a k_Q(u, u_a) x_ia / Z_i(u)        (its kernel-smoothed response at u)
+
+    with a running over model i's responses. The squared distance is the average
+    squared difference of the smoothed responses over the anchors where both models
+    have query mass,
+
+        D^2(i, j) = sum_u Z_i(u) Z_j(u) ||F_i(u) - F_j(u)||^2 / sum_u Z_i(u) Z_j(u).
+
+    It is a weighted average of squared norms, so it is nonnegative for any query
+    kernel and any cache. With the delta kernel on a shared query set it is the paired
+    DKPS distance (mean per-query squared difference), and as the bandwidth grows it
+    tends to the squared distance between mean responses -- the same two limits as the
+    pair normalization, whose cross term it shares up to a self-convolution of the
+    query kernel.
+
+    Parameters
+    ----------
+    X : (N, p) response embeddings
+    mid : (N,) model index in [0, n_models) of each response
+    qidx : (N,) index in [0, U) of each response's query among the unique queries
+    Q : (U, q) unique query embeddings (RBF query kernel), or None (delta kernel)
+    sigmas : RBF bandwidths; ignored when Q is None
+
+    Returns {sigma: (n_models, n_models) squared distances}; NaN where two models
+    share no query mass. Anchors where a model's mass is below `floor` carry no weight.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    mid, qidx = np.asarray(mid), np.asarray(qidx)
+    N, p = X.shape
+    n = int(n_models)
+    U = int(qidx.max()) + 1 if Q is None else len(Q)
+    order = np.argsort(mid, kind='stable')
+    X, mid, qidx = X[order], mid[order], qidx[order]
+    bounds = np.searchsorted(mid, np.arange(n + 1))
+    sigmas = [None] if Q is None else list(sigmas)
+    num = {s: np.zeros((n, n)) for s in sigmas}
+    den = {s: np.zeros((n, n)) for s in sigmas}
+    if Q is not None:
+        Q = np.asarray(Q, dtype=np.float64)
+        Qr, q2 = Q[qidx], (Q ** 2).sum(1)
+        q2r = q2[qidx]
+    chunk = max(1, int(max_cells // max(N, 1)))
+    for a in range(0, U, chunk):
+        cols = np.arange(a, min(a + chunk, U))
+        if Q is None:
+            sq = None
+        else:
+            sq = np.maximum(q2r[:, None] + q2[cols][None] - 2.0 * Qr @ Q[cols].T, 0.0)
+        for s in sigmas:
+            K = (qidx[:, None] == cols[None]).astype(np.float64) if sq is None \
+                else np.exp(-sq / (2.0 * s * s))                    # (N, C)
+            Z = np.add.reduceat(K, bounds[:-1], axis=0) if N else np.zeros((n, len(cols)))
+            Z[np.diff(bounds) == 0] = 0.0                           # models without responses
+            G = np.stack([K[bounds[i]:bounds[i + 1]].T @ X[bounds[i]:bounds[i + 1]]
+                          for i in range(n)])                       # (n, C, p) = Z_i(u) F_i(u)
+            live = Z > floor
+            Z = np.where(live, Z, 0.0)
+            G[~live] = 0.0
+            q = np.where(live, (G ** 2).sum(2) / np.where(live, Z, 1.0), 0.0)   # Z_i |F_i|^2
+            Gf = G.reshape(n, -1)
+            num[s] += q @ Z.T + Z @ q.T - 2.0 * Gf @ Gf.T
+            den[s] += Z @ Z.T
+    out = {}
+    for s in sigmas:
+        with np.errstate(invalid='ignore', divide='ignore'):
+            D2 = np.where(den[s] > 0, num[s] / den[s], np.nan)
+        D2 = (D2 + D2.T) / 2.0                      # exact symmetry (roundoff only)
+        np.fill_diagonal(D2, 0.0)
+        out[s] = D2
+    return out
+
+
+def _sqrt_nonneg(d2):
+    """Square root of squared distances that are nonnegative by construction: only
+    floating-point roundoff below zero is tolerated (and zeroed)."""
+    d2 = np.asarray(d2, dtype=float)
+    fin = d2[np.isfinite(d2)]
+    tol = 1e-9 * max(1.0, float(np.abs(fin).max()) if fin.size else 1.0)
+    assert not (fin < -tol).any(), 'negative squared distance where none is possible'
+    with np.errstate(invalid='ignore'):
+        return np.sqrt(np.where(np.isfinite(d2), np.maximum(d2, 0.0), np.nan))
+
+
 class ProductKernelPerspectiveSpace:
     """
     PKPS (Product Kernel Perspective Space): extends DKPS to partially-observed
@@ -44,15 +133,23 @@ class ProductKernelPerspectiveSpace:
         S_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l) * k_R(x_aj, x_bl)
         Z_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l)          (query kernel mass)
 
-        A_ab = S_ab / sqrt(Z_aa * Z_bb)     normalization='model' (default)
         A_ab = S_ab / Z_ab                  normalization='pair'
+        A_ab = S_ab / sqrt(Z_aa * Z_bb)     normalization='model'
 
-    With normalization='model' and positive-semidefinite kernels, A is the Gram
-    matrix of v_a = sum_j phi_Q(q_j) (x) phi_R(x_aj) / sqrt(Z_aa), so D^2(i,k) =
-    ||v_i - v_k||^2 >= 0 and the distances are Euclidean. The two normalizations
-    agree whenever all models answer the same queries. normalization='pair' is the
-    original construction; it is not positive semidefinite in general, so its
-    squared distances can be negative and are clipped at zero.
+    normalization='pair' is the original construction. It compares two models only
+    through queries both have answered something similar to, but its three terms are
+    averaged under different weights, so D^2 can be negative and is clipped at zero.
+
+    normalization='local' (default for a linear response kernel) keeps that behaviour
+    and removes the defect: D^2(i,k) is the average, over the queries where both
+    models have query-kernel mass, of the squared difference between their
+    kernel-smoothed responses (see local_dist_sq). It is nonnegative by construction.
+
+    normalization='model' (default otherwise) makes A the Gram matrix of
+    v_a = sum_j phi_Q(q_j) (x) phi_R(x_aj) / sqrt(Z_aa) for positive-semidefinite
+    kernels, so the distances are Euclidean; in exchange two models are pushed apart
+    when their query sets differ. All three agree when every model answers the same
+    queries under the delta kernel.
 
     Parameters
     ----------
@@ -73,8 +170,9 @@ class ProductKernelPerspectiveSpace:
         'shared' — restrict to queries from tasks shared by both models.
         'unshared' — restrict to queries from tasks unique to each model.
         Requires task_id column in data.
-    normalization : 'model' (default) or 'pair'
-        How the affinity is normalized by query kernel mass (see above).
+    normalization : None (default), 'local', 'model' or 'pair'
+        How query kernel mass is normalized (see above). None selects 'local' for a
+        linear response kernel and 'model' otherwise.
     n_components_cmds : int or None
         Embedding dimension for ClassicalMDS.
     n_elbows_cmds : int
@@ -90,10 +188,16 @@ class ProductKernelPerspectiveSpace:
         task_filter=None,
         n_components_cmds=None,
         n_elbows_cmds=2,
-        normalization='model',
+        normalization=None,
     ):
-        if normalization not in ('model', 'pair'):
+        if normalization is None:
+            normalization = 'local' if response_kernel == 'linear' else 'model'
+        if normalization not in ('local', 'model', 'pair'):
             raise ValueError(f'unknown normalization: {normalization}')
+        if normalization == 'local' and (response_kernel != 'linear'
+                                         or query_kernel not in ('rbf', 'delta')):
+            raise ValueError("normalization='local' requires a linear response kernel and "
+                             "an 'rbf' or 'delta' query kernel")
         self.normalization = normalization
         self.query_kernel = query_kernel
         self.response_kernel = response_kernel
@@ -118,7 +222,12 @@ class ProductKernelPerspectiveSpace:
         n = len(model_names)
         dist_sq = np.zeros((n, n))
 
-        if self.task_filter is not None:
+        if self.normalization == 'local':
+            if self.task_filter is not None:
+                raise ValueError("task_filter is not supported with normalization='local'")
+            sig = self.query_bandwidth_ if self.query_kernel == 'rbf' else None
+            dist_sq = self._local_d2(model_data, model_names, [sig])[sig]
+        elif self.task_filter is not None:
             for i in range(n):
                 for k in range(i + 1, n):
                     d2 = self._pairwise_dist_sq_filtered(
@@ -222,6 +331,16 @@ class ProductKernelPerspectiveSpace:
         return self._d2(self._compute_SZ(fa, fa), self._compute_SZ(fb, fb),
                         self._compute_SZ(fa, fb))
 
+    def _local_d2(self, model_data, names, sigmas):
+        X = np.vstack([model_data[m]['emb'] for m in names])
+        mid = np.concatenate([np.full(len(model_data[m]['emb']), i) for i, m in enumerate(names)])
+        qids = np.concatenate([model_data[m]['query_ids'] for m in names])
+        _, first, qidx = np.unique(qids, return_index=True, return_inverse=True)
+        Q = None
+        if self.query_kernel == 'rbf':
+            Q = np.vstack([model_data[m]['query_emb'] for m in names])[first]
+        return local_dist_sq(X, mid, len(names), qidx, Q=Q, sigmas=sigmas)
+
     def _d2(self, sz_a, sz_b, sz_ab):
         """Squared distance from the (S, Z) of the two self pairs and the cross pair."""
         (s_a, z_a), (s_b, z_b), (s_ab, z_ab) = sz_a, sz_b, sz_ab
@@ -238,10 +357,9 @@ class ProductKernelPerspectiveSpace:
         distances are nonnegative by construction, so only floating-point roundoff is
         zeroed; normalization='pair' has no such guarantee and is clipped at zero."""
         d2 = np.asarray(d2, dtype=float)
-        if self.normalization == 'model' and self._psd_kernels():
-            fin = d2[np.isfinite(d2)]
-            tol = 1e-9 * max(1.0, float(np.abs(fin).max()) if fin.size else 1.0)
-            assert not (fin < -tol).any(), 'negative squared distance under model normalization'
+        if self.normalization == 'local' or (self.normalization == 'model'
+                                             and self._psd_kernels()):
+            return _sqrt_nonneg(d2)
         with np.errstate(invalid='ignore'):
             return np.sqrt(np.where(np.isfinite(d2), np.maximum(d2, 0.0), np.nan))
 
@@ -313,6 +431,10 @@ class ProductKernelPerspectiveSpace:
             self.response_bandwidth_ = self._resolve_bandwidth(all_r, self.response_bandwidth)
         sigmas = list(sigmas)
         n = len(names)
+        if self.normalization == 'local':
+            self.model_names_ = names
+            D2 = self._local_d2(model_data, names, sigmas)
+            return names, {s: self._sqrt(D2[s]) for s in sigmas}
 
         def SZ_grid(KR, qsq):
             out = {}
