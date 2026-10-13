@@ -41,9 +41,18 @@ class ProductKernelPerspectiveSpace:
 
         D^2(i,k) = A_ii + A_kk - 2 * A_ik
 
-        A_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l) * k_R(x_aj, x_bl) / Z_ab
+        S_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l) * k_R(x_aj, x_bl)
+        Z_ab = sum_{j in Q_a, l in Q_b} k_Q(q_j, q_l)          (query kernel mass)
 
-    where Z_ab = sum k_Q(q_j, q_l) is the query kernel mass.
+        A_ab = S_ab / sqrt(Z_aa * Z_bb)     normalization='model' (default)
+        A_ab = S_ab / Z_ab                  normalization='pair'
+
+    With normalization='model' and positive-semidefinite kernels, A is the Gram
+    matrix of v_a = sum_j phi_Q(q_j) (x) phi_R(x_aj) / sqrt(Z_aa), so D^2(i,k) =
+    ||v_i - v_k||^2 >= 0 and the distances are Euclidean. The two normalizations
+    agree whenever all models answer the same queries. normalization='pair' is the
+    original construction; it is not positive semidefinite in general, so its
+    squared distances can be negative and are clipped at zero.
 
     Parameters
     ----------
@@ -64,6 +73,8 @@ class ProductKernelPerspectiveSpace:
         'shared' — restrict to queries from tasks shared by both models.
         'unshared' — restrict to queries from tasks unique to each model.
         Requires task_id column in data.
+    normalization : 'model' (default) or 'pair'
+        How the affinity is normalized by query kernel mass (see above).
     n_components_cmds : int or None
         Embedding dimension for ClassicalMDS.
     n_elbows_cmds : int
@@ -79,7 +90,11 @@ class ProductKernelPerspectiveSpace:
         task_filter=None,
         n_components_cmds=None,
         n_elbows_cmds=2,
+        normalization='model',
     ):
+        if normalization not in ('model', 'pair'):
+            raise ValueError(f'unknown normalization: {normalization}')
+        self.normalization = normalization
         self.query_kernel = query_kernel
         self.response_kernel = response_kernel
         self.query_bandwidth = query_bandwidth
@@ -108,18 +123,15 @@ class ProductKernelPerspectiveSpace:
                 for k in range(i + 1, n):
                     d2 = self._pairwise_dist_sq_filtered(
                         model_data[model_names[i]], model_data[model_names[k]])
-                    dist_sq[i, k] = dist_sq[k, i] = max(d2, 0.0) if np.isfinite(d2) else np.nan
+                    dist_sq[i, k] = dist_sq[k, i] = d2
         else:
-            a_self = np.array([
-                self._compute_A(model_data[m], model_data[m]) for m in model_names
-            ])
+            self_SZ = [self._compute_SZ(model_data[m], model_data[m]) for m in model_names]
             for i in range(n):
                 for k in range(i + 1, n):
-                    a_ik = self._compute_A(model_data[model_names[i]], model_data[model_names[k]])
-                    d2 = a_self[i] + a_self[k] - 2 * a_ik
-                    dist_sq[i, k] = dist_sq[k, i] = max(d2, 0.0)
+                    cross = self._compute_SZ(model_data[model_names[i]], model_data[model_names[k]])
+                    dist_sq[i, k] = dist_sq[k, i] = self._d2(self_SZ[i], self_SZ[k], cross)
 
-        self.dist_matrix_ = np.sqrt(np.nan_to_num(dist_sq, nan=np.nan))
+        self.dist_matrix_ = self._sqrt(dist_sq)
         self.model_names_ = model_names
         return self
 
@@ -207,13 +219,43 @@ class ProductKernelPerspectiveSpace:
         if fa is None or fb is None:
             return np.nan
 
-        a_ii = self._compute_A(fa, fa)
-        a_kk = self._compute_A(fb, fb)
-        a_ik = self._compute_A(fa, fb)
-        return a_ii + a_kk - 2 * a_ik
+        return self._d2(self._compute_SZ(fa, fa), self._compute_SZ(fb, fb),
+                        self._compute_SZ(fa, fb))
+
+    def _d2(self, sz_a, sz_b, sz_ab):
+        """Squared distance from the (S, Z) of the two self pairs and the cross pair."""
+        (s_a, z_a), (s_b, z_b), (s_ab, z_ab) = sz_a, sz_b, sz_ab
+        if self.normalization == 'model':
+            if z_a <= 0 or z_b <= 0:
+                return np.nan
+            return s_a / z_a + s_b / z_b - 2 * s_ab / np.sqrt(z_a * z_b)
+        if z_a <= 0 or z_b <= 0 or z_ab <= 0:
+            return np.nan
+        return s_a / z_a + s_b / z_b - 2 * s_ab / z_ab
+
+    def _sqrt(self, d2):
+        """Distances from squared distances. Under normalization='model' the squared
+        distances are nonnegative by construction, so only floating-point roundoff is
+        zeroed; normalization='pair' has no such guarantee and is clipped at zero."""
+        d2 = np.asarray(d2, dtype=float)
+        if self.normalization == 'model' and self._psd_kernels():
+            fin = d2[np.isfinite(d2)]
+            tol = 1e-9 * max(1.0, float(np.abs(fin).max()) if fin.size else 1.0)
+            assert not (fin < -tol).any(), 'negative squared distance under model normalization'
+        with np.errstate(invalid='ignore'):
+            return np.sqrt(np.where(np.isfinite(d2), np.maximum(d2, 0.0), np.nan))
+
+    def _psd_kernels(self):
+        return (self.query_kernel in ('rbf', 'delta')
+                and self.response_kernel in ('linear', 'rbf'))
 
     def _compute_A(self, data_a, data_b):
-        """Compute A_ab = sum(K_Q * K_R) / sum(K_Q)."""
+        """Pair-normalized affinity sum(K_Q * K_R) / sum(K_Q)."""
+        S, Z = self._compute_SZ(data_a, data_b)
+        return S / Z if Z != 0 else np.nan
+
+    def _compute_SZ(self, data_a, data_b):
+        """Return (S_ab, Z_ab) = (sum(K_Q * K_R), sum(K_Q))."""
         if self.query_kernel == 'delta':
             ids_a, ids_b = data_a['query_ids'], data_b['query_ids']
             K_Q = (ids_a[:, None] == ids_b[None, :]).astype(np.float64)
@@ -244,10 +286,7 @@ class ProductKernelPerspectiveSpace:
         else:
             raise ValueError(f'unknown response_kernel: {self.response_kernel}')
 
-        Z = K_Q.sum()
-        if Z == 0:
-            return np.nan
-        return (K_Q * K_R).sum() / Z
+        return float((K_Q * K_R).sum()), float(K_Q.sum())
 
     # ------------------------------------------------------------------
     # Bandwidth-grid distance matrices: the response kernel and query
@@ -275,28 +314,22 @@ class ProductKernelPerspectiveSpace:
         sigmas = list(sigmas)
         n = len(names)
 
-        def A_grid(KR, qsq):
+        def SZ_grid(KR, qsq):
             out = {}
             for s in sigmas:
                 KQ = np.exp(-qsq / (2.0 * s * s))
-                Z = KQ.sum()
-                out[s] = (KQ * KR).sum() / Z if Z > 0 else np.nan
+                out[s] = (float((KQ * KR).sum()), float(KQ.sum()))
             return out
 
-        a_self = {s: np.zeros(n) for s in sigmas}
-        for i, m in enumerate(names):
-            ag = A_grid(*self._kr_qsq(model_data[m], model_data[m]))
-            for s in sigmas:
-                a_self[s][i] = ag[s]
+        self_SZ = [SZ_grid(*self._kr_qsq(model_data[m], model_data[m])) for m in names]
         D2 = {s: np.zeros((n, n)) for s in sigmas}
         for i in range(n):
             for k in range(i + 1, n):
-                ag = A_grid(*self._kr_qsq(model_data[names[i]], model_data[names[k]]))
+                cross = SZ_grid(*self._kr_qsq(model_data[names[i]], model_data[names[k]]))
                 for s in sigmas:
-                    d2 = a_self[s][i] + a_self[s][k] - 2 * ag[s]
-                    D2[s][i, k] = D2[s][k, i] = max(d2, 0.0) if np.isfinite(d2) else np.nan
+                    D2[s][i, k] = D2[s][k, i] = self._d2(self_SZ[i][s], self_SZ[k][s], cross[s])
         self.model_names_ = names
-        return names, {s: np.sqrt(D2[s]) for s in sigmas}
+        return names, {s: self._sqrt(D2[s]) for s in sigmas}
 
 
 # Back-compat alias. (The name PKPS now refers to the high-level estimator in

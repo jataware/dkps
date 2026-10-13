@@ -45,7 +45,7 @@ def _records(data, keep, score_mat=None, samp=None, models=None, tasks=None):
 def _pkps(qmed, bandwidth='cv', cv_k=8):
     # the QE script selects the bandwidth with k=8 LOMO neighbours, the completion script with k=5
     return PKPS(query_kwargs=dict(kernel='rbf', bandwidth=bandwidth, bandwidth_ref=qmed, pca_dim=None,
-                                  cv_k=cv_k),
+                                  cv_k=cv_k, normalization=H.NORMALIZATION),
                 response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=MDS_DIM))
 
 
@@ -69,7 +69,8 @@ def qe_seed(data, m, seed):
     recs = _records(data, keep, score_mat=score_mat)
 
     pk = _pkps(qmed).fit(recs)
-    dk = DKPS(response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=MDS_DIM),
+    dk = DKPS(normalization=H.NORMALIZATION,
+              response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=MDS_DIM),
               sigma_ratio=1e-2, bandwidth_ref=qmed).fit(recs)
     ss = SampleScore().fit(recs)
     binary = [tt for tt in tasks if np.all(np.isin(np.unique(row_score[task_id == tt]), [0.0, 1.0]))]

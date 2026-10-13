@@ -52,13 +52,17 @@ environment variable, `GEMINI_API_KEY` for Google).
 For models `i, i'` with response embeddings `x` to queries `u`,
 
 ```
-A_{ii'} = sum_{j,l} k_Q(u_j, u_l) k_R(x_ij, x_i'l) / sum_{j,l} k_Q(u_j, u_l)
+S_{ii'} = sum_{j,l} k_Q(u_j, u_l) k_R(x_ij, x_i'l)        Z_{ii'} = sum_{j,l} k_Q(u_j, u_l)
+A_{ii'} = S_{ii'} / sqrt(Z_ii Z_i'i')
 D^2_{ii'} = A_ii + A_i'i' - 2 A_ii'
 ```
 
 The query kernel `k_Q` decides which response pairs are comparable and how
-much; the self-normalization keeps models with different numbers of queries
-comparable. `k_Q = delta` (identical queries only) recovers paired DKPS, which is
+much; the normalization by each model's own query mass keeps models with
+different numbers of queries comparable. For positive-semidefinite kernels `A` is
+a Gram matrix, so `D^2 >= 0` and `D` is a Euclidean distance matrix; nothing is
+clipped. (`normalization='pair'` gives the original `A = S / Z_{ii'}`, which
+agrees on paired data but is not positive semidefinite in general.) `k_Q = delta` (identical queries only) recovers paired DKPS, which is
 what `DKPS` is. Classical MDS of `D` gives each model a coordinate; a per-task
 k-NN regressor from those coordinates onto the other models' scores predicts the
 target cell. Every knob is a constructor argument:
@@ -68,6 +72,8 @@ PKPS(
     query_kwargs=dict(kernel='rbf',            # 'rbf' | 'delta' | 'linear' | 'cosine' | callable
                       bandwidth='cv',          # 'median' | 'cv' (leave-one-model-out grid search) | float
                       bandwidth_ref=None,      # reference scale (None = median query distance)
+                      normalization='model',   # 'model' (Euclidean by construction) | 'pair' (original)
+                      pooling=False,           # True: pooled query kernel, see below
                       pca_dim='elbow'),        # 'elbow' (Zhu-Ghodsi) | int | None
     response_kwargs=dict(kernel='linear', pca_dim='elbow'),
     mds_kwargs=dict(dim=8),                    # int, or None for Zhu-Ghodsi selection
@@ -77,6 +83,16 @@ est.predict(cells, k=5,
             whiten=False,                      # True: logit/standardize/bias residual regression (completion protocol)
             interval=0.9)                      # optional: adds score_lo / score_hi to every prediction
 ```
+
+**Pooling.** `query_kwargs=dict(pooling=True)` represents each model by the mean
+of its query-residualized responses: from every response is subtracted the
+query-kernel-weighted mean response of the *other* models to similar queries, and
+the distance between two models is the Euclidean distance between their mean
+residuals. The query kernel then borrows strength from every model in the cache
+instead of only the pair being compared, which matters most when models answer
+different tasks. The representation is an explicit vector per model, so the
+distances are Euclidean by construction. It needs a linear response kernel and an
+`'rbf'` or `'delta'` query kernel.
 
 **Confidence intervals.** `interval=level` adds `score_lo`/`score_hi` to each
 prediction via split conformal over the reference models: each scored reference on
@@ -139,8 +155,9 @@ scripts produced. All rows agree to 0.
 ### Tests
 
 ```bash
-pixi run pytest tests            # 30 tests: API, incremental update == fresh fit,
-                                 # equality with the pipeline functions, leakage
+pixi run pytest tests            # 41 tests: API, incremental update == fresh fit,
+                                 # equality with the pipeline functions, leakage,
+                                 # intervals, distance geometry
 ```
 
 ## For Every Eval Ever users

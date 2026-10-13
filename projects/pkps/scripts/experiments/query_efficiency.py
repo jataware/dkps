@@ -132,7 +132,8 @@ def run_seed(data, m, seed, n_models=None, p_task=1.0, n_paired=None, mds_dim=8,
                        'query_embedding': list(Qu[codes])})
     bw = H.SubsampleMedianBandwidth(max_n=5000)
     est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel=resp_kernel,
-                                          query_bandwidth=bw, response_bandwidth=bw)
+                                          query_bandwidth=bw, response_bandwidth=bw,
+                                          normalization=H.NORMALIZATION)
     # PKPS uses the RBF query kernel at the median bandwidth; DKPS is its delta limit, which
     # dist_matrices reaches as the bandwidth -> 0 (distinct queries stop bridging, so only
     # exact query matches contribute -- standard paired DKPS). One call returns both.

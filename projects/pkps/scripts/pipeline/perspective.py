@@ -54,7 +54,8 @@ def _perspective(rX, Qu, qc, mid, tid, qid, keep, mods, suite, qmed):
         rk, med = 'rbf', float(np.median(pdist(qr if len(qr) <= 400 else qr[:400])))
     bw = H.SubsampleMedianBandwidth()
     est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel=rk,
-                                          query_bandwidth=bw, response_bandwidth=bw)
+                                          query_bandwidth=bw, response_bandwidth=bw,
+                                          normalization=H.NORMALIZATION)
     names, Ds = est.dist_matrices(df, [med])
     return H._mds_full(Ds[med], names, mods, 8)
 

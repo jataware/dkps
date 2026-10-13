@@ -60,9 +60,10 @@ def main():
     #         pca_dim=None; the query bandwidth is chosen by leave-one-model-out CV on a
     #         grid around the within-domain median query distance (qmed); MDS dim 8.
     common = dict(response_kwargs=dict(kernel='linear', pca_dim=None), mds_kwargs=dict(dim=8))
-    pkps = PKPS(query_kwargs=dict(kernel='rbf', bandwidth='cv', bandwidth_ref=qmed, pca_dim=None),
+    pkps = PKPS(query_kwargs=dict(kernel='rbf', bandwidth='cv', bandwidth_ref=qmed, pca_dim=None,
+                                  normalization=H.NORMALIZATION),
                 **common).fit(records)
-    dkps = DKPS(sigma_ratio=0.01, bandwidth_ref=qmed, **common).fit(records)   # paired DKPS (delta limit)
+    dkps = DKPS(sigma_ratio=0.01, bandwidth_ref=qmed, normalization=H.NORMALIZATION, **common).fit(records)   # paired DKPS (delta limit)
     sample = SampleScore().fit(records)
     binary = [t for t in tasks if np.all(np.isin(np.unique(row_score[task_id == t]), [0, 1]))]
     irt = IRT(binary_tasks=binary).fit(records)                                  # WMT tasks are BLEU-scored

@@ -158,7 +158,11 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
                        'query_embedding': list(Qu[qid_code[keep]])})
     bw = H.SubsampleMedianBandwidth(max_n=5000)
     est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='linear',
-                                          query_bandwidth=bw, response_bandwidth=bw)
+                                          query_bandwidth=bw, response_bandwidth=bw,
+                                          normalization='pair')
+    est_mn = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='linear',
+                                             query_bandwidth=bw, response_bandwidth=bw,
+                                             normalization='model')
     SIG_GRID = list(qmed * np.array([0.03, 0.1, 0.3, 1.0, 3.0]))
     names, Ds = est.dist_matrices(df, SIG_GRID)
     Zs = {sg: H._mds_full(Ds[sg], names, models, mds_dim) for sg in SIG_GRID}
@@ -166,6 +170,10 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
     Zp = Zs.get(sig_star)
     if Zp is None:
         Zp = H._mds_full(Ds[SIG_GRID[2]], names, models, mds_dim)
+    _, Dn = est_mn.dist_matrices(df, SIG_GRID)
+    Zn_all = {sg: H._mds_full(Dn[sg], names, models, mds_dim) for sg in SIG_GRID}
+    sig_mn = _cv_bandwidth(Zn_all, sample_mat, obs)
+    Zn = Zn_all[sig_mn] if sig_mn is not None else Zn_all[SIG_GRID[2]]
     mid = model_id[keep]
     Xbar = np.stack([resp_X[keep][mid == mm].mean(0) for mm in names])
     Zm = H._mds_full(squareform(pdist(Xbar)), names, models, mds_dim)
@@ -179,13 +187,13 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
     sig_res = _cv_bandwidth(Zr_all, sample_mat, obs)
     Zr = Zr_all[sig_res] if sig_res is not None else Zr_all[RES_GRID[2]]
     Dz = {'pkps': squareform(pdist(Zp)), 'meanresp': squareform(pdist(Zm)),
-          'resid': squareform(pdist(Zr))}
+          'resid': squareform(pdist(Zr)), 'pkps_mn': squareform(pdist(Zn))}
 
     Yref = score_mat if refs == 'full' else np.where(obs, sample_mat, np.nan)
     truth = score_mat
     ce = obs & np.isfinite(sample_mat) & np.isfinite(truth)
     all_idx = np.arange(n)
-    BASE = ['pkps', 'meanresp', 'resid', 'additive', 'pkps_add', 'pk_offset', 'hybrid', 'hybrid_mean', 'hybrid_res']
+    BASE = ['pkps', 'pkps_mn', 'meanresp', 'resid', 'additive', 'pkps_add', 'pk_offset', 'hybrid', 'hybrid_mean', 'hybrid_res']
     HYB = {'hybrid': 'pkps', 'hybrid_mean': 'meanresp', 'hybrid_res': 'resid'}
 
     def predict_group(tr, te_idx, lam, loto=False):
@@ -213,6 +221,7 @@ def run(data, m, seed, n_models=None, p_task=1.0, refs='full', mds_dim=8):
             P['pkps'][:, t] = np.clip(knn_predict(Dz['pkps'], Yref[:, t], tr_idx, te_idx), 0, 1)
             P['meanresp'][:, t] = np.clip(knn_predict(Dz['meanresp'], Yref[:, t], tr_idx, te_idx), 0, 1)
             P['resid'][:, t] = np.clip(knn_predict(Dz['resid'], Yref[:, t], tr_idx, te_idx), 0, 1)
+            P['pkps_mn'][:, t] = np.clip(knn_predict(Dz['pkps_mn'], Yref[:, t], tr_idx, te_idx), 0, 1)
         return P, C
 
     def hybrid_pred(C, nm, wg):

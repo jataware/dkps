@@ -31,7 +31,8 @@ def _perspective_cv(rX, Qu, qc, mid, tid, qid, keep, mods, qmed, samp, O, k=5):
                        'embedding': list(rX[keep]), 'query_embedding': list(Qu[codes])})
     bw = H.SubsampleMedianBandwidth()
     est = H.ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='linear',
-                                          query_bandwidth=bw, response_bandwidth=bw)
+                                          query_bandwidth=bw, response_bandwidth=bw,
+                                          normalization=H.NORMALIZATION)
     grid = list(qmed * np.array([0.03, 0.1, 0.3, 1.0, 3.0]))
     names, Ds = est.dist_matrices(df, grid)
     Zs = {sg: H._mds_full(Ds[sg], names, mods, 8) for sg in grid}

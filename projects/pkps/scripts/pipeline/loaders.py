@@ -65,6 +65,11 @@ def _matched_total(groups, per_cap):
 
 # Shared payloads (downloads, embedding parquets, caches) live at the repo-level data/
 # directory (override with DKPS_DATA); the prep code stays in this project.
+# Affinity normalization used by every experiment driver. The archived results in
+# projects/pkps/data were generated with the original pair normalization (S_ab / Z_ab);
+# set to 'model' (the package default, S_ab / sqrt(Z_aa Z_bb)) to regenerate them.
+NORMALIZATION = os.environ.get('PKPS_NORMALIZATION', 'pair')
+
 DATA = Path(os.environ.get('DKPS_DATA') or Path(__file__).resolve().parents[4] / 'data')
 
 
@@ -664,7 +669,7 @@ def fit_predict(df_obs, train_score, eval_score, observed, models, predictor='ol
     train_score = observed-pair scores used to fit (sample means under query
     subsampling); eval_score = true full scores used only for held-out MAE.
     """
-    est = DoubleKernelDKPS(**dkps_kwargs)
+    est = DoubleKernelDKPS(**{'normalization': NORMALIZATION, **dkps_kwargs})
     est.fit(df_obs)
     dist = est.dist_matrix_.copy()
 
@@ -733,7 +738,8 @@ def cv_predict_all(df_obs, score_mat, observed, models, k=5, seed=0, mds_dim=8,
         med = float(np.median(pdist(qemb))) if len(qemb) > 1 else 1.0
     bw = SubsampleMedianBandwidth(max_n=5000)
     est = ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel=response_kernel,
-                                        query_bandwidth=bw, response_bandwidth=bw)
+                                        query_bandwidth=bw, response_bandwidth=bw,
+                                        normalization=NORMALIZATION)
     names, Ds = est.dist_matrices(df_obs, [med])
     Z = _mds_full(Ds[med], names, models, mds_dim)
 

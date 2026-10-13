@@ -76,7 +76,7 @@ def _embed_sigma(df, query_kernel, sigma, mds_dim):
               response_bandwidth=H.SubsampleMedianBandwidth(max_n=5000))
     if query_kernel == 'rbf':
         kw['query_bandwidth'] = sigma
-    est = ProductKernelPerspectiveSpace(**kw).fit(df)
+    est = ProductKernelPerspectiveSpace(normalization=H.NORMALIZATION, **kw).fit(df)
     dist = np.nan_to_num(est.dist_matrix_.copy(), nan=np.nanmax(est.dist_matrix_))
     n2r = {m: i for i, m in enumerate(est.model_names_)}
     Z = ClassicalMDS(n_components=min(mds_dim, len(est.model_names_) - 1),
@@ -187,7 +187,8 @@ def run_seed(data, n_paired, n_unpaired, n_models_use, seed, n_query_pool=None,
     # One response-kernel pair-loop yields the whole grid (dist_matrices).
     bw = H.SubsampleMedianBandwidth(max_n=5000)
     est = ProductKernelPerspectiveSpace(query_kernel='rbf', response_kernel='rbf',
-                                        query_bandwidth=bw, response_bandwidth=bw)
+                                        query_bandwidth=bw, response_bandwidth=bw,
+                                        normalization=H.NORMALIZATION)
     scales = (0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0)
     sigmas = [s * med for s in scales]
     names, Ds = est.dist_matrices(df_obs, sigmas)

@@ -100,7 +100,8 @@ def _fit_and_predict(data, scores, observed, k_neighbors=5, **dkps_kwargs):
 def _embed(data, **dkps_kwargs):
     """Fit DoubleKernelDKPS and return model coordinates via ClassicalMDS (a collapsed
     single point if the perspective is degenerate, e.g. DKPS with no shared queries)."""
-    est = DoubleKernelDKPS(**dkps_kwargs)
+    # archived synthetic results use the original pair normalization
+    est = DoubleKernelDKPS(**{'normalization': 'pair', **dkps_kwargs})
     est.fit(data)
     dist = est.dist_matrix_.copy()
     if np.any(np.isnan(dist)):
